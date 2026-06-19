@@ -29,14 +29,17 @@ function LoginContent() {
       localStorage.setItem("userEmail", email);
 
       // Phân quyền theo email
+// Phân quyền theo email
       if (email === "admin@gmail.com") {
         localStorage.setItem("role", "admin");
-
         alert("Đăng nhập Admin thành công!");
         router.push("/admin");
+      } else if (email.endsWith("@lumer.edu.vn")) {
+        localStorage.setItem("role", "faculty");
+        alert("Đăng nhập Giảng viên / Phòng đào tạo thành công!");
+        router.push("/faculty"); // Điều hướng sang trang giảng viên
       } else {
         localStorage.setItem("role", "student");
-
         alert("Đăng nhập thành công!");
         router.push("/home");
       }
