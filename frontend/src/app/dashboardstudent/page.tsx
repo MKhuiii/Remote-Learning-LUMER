@@ -7,51 +7,19 @@ export default function DashboardPage() {
   const [activeTab, setActiveTab] = useState("learning");
 
   return (
-    <div className="min-h-screen bg-slate-100">
-      {/* Navbar */}
-      {/* <nav className="bg-white border-b sticky top-0 z-50 shadow-sm">
-        <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-10">
-            <h1 className="text-3xl font-bold text-[#0066FF]">LUMER</h1>
-
-            <ul className="hidden md:flex gap-8 text-slate-700">
-              <li className="cursor-pointer hover:text-[#0066FF]">Khám phá</li>
-
-              <li className="font-semibold text-[#0066FF] cursor-pointer">
-                Việc học của tôi
-              </li>
-
-              <li className="cursor-pointer hover:text-[#0066FF]">Chứng chỉ</li>
-            </ul>
-          </div>
-
-          <div className="flex items-center gap-4">
-            <input
-              type="text"
-              placeholder="Bạn muốn học gì?"
-              className="hidden md:block border rounded-full px-4 py-2 w-72"
-            />
-
-            <img
-              src="https://i.pravatar.cc/150"
-              alt="avatar"
-              className="w-10 h-10 rounded-full"
-            />
-          </div>
-        </div>
-      </nav> */}
+    <div className="min-h-screen bg-[#F5F7FA]">
       <Navbar />
 
       {/* Hero Banner */}
-      <section className="bg-gradient-to-r from-[#66CCFF] to-[#0066FF] text-white">
+      <section className="bg-blue-500 border-b border-slate-200">
         <div className="max-w-7xl mx-auto px-6 py-12">
-          <span className="bg-white/20 px-4 py-2 rounded-full text-sm">
+          <span className="bg-blue-100 text-[#0056D2] px-4 py-2 rounded-full text-sm font-medium">
             Hệ thống đào tạo trực tuyến
           </span>
 
-          <h1 className="text-5xl font-bold mt-4">LUMER</h1>
+          <h1 className="text-5xl font-bold text-white mt-4">LUMER</h1>
 
-          <p className="text-xl mt-3 text-blue-100">
+          <p className="text-lg text-white mt-3">
             Nền tảng đào tạo từ xa dành cho sinh viên và giảng viên
           </p>
 
@@ -59,41 +27,40 @@ export default function DashboardPage() {
             <img
               src="https://i.pravatar.cc/150"
               alt="avatar"
-              className="w-16 h-16 rounded-full border-4 border-white"
+              className="w-16 h-16 rounded-full border-2 border-slate-200"
             />
 
             <div>
-              <h2 className="text-2xl font-semibold">Xin chào, Trần Minh Tú</h2>
+              <h2 className="text-2xl font-semibold text-white">
+                Xin chào, Trần Minh Tú
+              </h2>
 
-              <p className="text-blue-100">Theo dõi tiến độ học tập của bạn</p>
+              <p className="text-white">Theo dõi tiến độ học tập của bạn</p>
             </div>
           </div>
         </div>
       </section>
 
       {/* Statistics */}
-      <section className="max-w-7xl mx-auto px-6 -mt-10">
+      <section className="max-w-7xl mx-auto px-6 -mt-6">
         <div className="grid md:grid-cols-4 gap-4">
           <StatCard title="3" text="Khóa học đang học" />
-
           <StatCard title="5" text="Khóa học hoàn thành" />
-
           <StatCard title="2" text="Chứng chỉ" />
-
           <StatCard title="4.9" text="Điểm trung bình" />
         </div>
       </section>
 
       {/* Tabs */}
       <section className="max-w-7xl mx-auto px-6 mt-10">
-        <div className="border-b">
+        <div className="border-b border-slate-200">
           <div className="flex gap-8 overflow-x-auto">
             <button
               onClick={() => setActiveTab("learning")}
-              className={`pb-3 font-semibold ${
+              className={`pb-3 font-medium transition ${
                 activeTab === "learning"
-                  ? "border-b-2 border-[#0066FF] text-[#0066FF]"
-                  : "text-slate-500"
+                  ? "border-b-2 border-[#0056D2] text-[#0056D2]"
+                  : "text-slate-500 hover:text-[#0056D2]"
               }`}
             >
               Đang học
@@ -101,10 +68,10 @@ export default function DashboardPage() {
 
             <button
               onClick={() => setActiveTab("completed")}
-              className={`pb-3 font-semibold ${
+              className={`pb-3 font-medium transition ${
                 activeTab === "completed"
-                  ? "border-b-2 border-[#0066FF] text-[#0066FF]"
-                  : "text-slate-500"
+                  ? "border-b-2 border-[#0056D2] text-[#0056D2]"
+                  : "text-slate-500 hover:text-[#0056D2]"
               }`}
             >
               Hoàn thành
@@ -112,10 +79,10 @@ export default function DashboardPage() {
 
             <button
               onClick={() => setActiveTab("certificate")}
-              className={`pb-3 font-semibold ${
+              className={`pb-3 font-medium transition ${
                 activeTab === "certificate"
-                  ? "border-b-2 border-[#0066FF] text-[#0066FF]"
-                  : "text-slate-500"
+                  ? "border-b-2 border-[#0056D2] text-[#0056D2]"
+                  : "text-slate-500 hover:text-[#0056D2]"
               }`}
             >
               Chứng chỉ
@@ -123,10 +90,10 @@ export default function DashboardPage() {
 
             <button
               onClick={() => setActiveTab("profile")}
-              className={`pb-3 font-semibold ${
+              className={`pb-3 font-medium transition ${
                 activeTab === "profile"
-                  ? "border-b-2 border-[#0066FF] text-[#0066FF]"
-                  : "text-slate-500"
+                  ? "border-b-2 border-[#0056D2] text-[#0056D2]"
+                  : "text-slate-500 hover:text-[#0056D2]"
               }`}
             >
               Hồ sơ
@@ -138,11 +105,10 @@ export default function DashboardPage() {
       {/* Content */}
       <section className="max-w-7xl mx-auto px-6 py-8">
         <div className="grid lg:grid-cols-3 gap-6">
-          {/* Main */}
           <div className="lg:col-span-2">
             {activeTab === "learning" && (
-              <div className="bg-white rounded-xl shadow p-6">
-                <h2 className="text-2xl font-bold text-[#0066FF] mb-6">
+              <div className="bg-white rounded-2xl border border-slate-200 p-6">
+                <h2 className="text-2xl font-bold text-slate-900 mb-6">
                   Khóa học đang học
                 </h2>
 
@@ -160,8 +126,8 @@ export default function DashboardPage() {
             )}
 
             {activeTab === "completed" && (
-              <div className="bg-white rounded-xl shadow p-6">
-                <h2 className="text-2xl font-bold text-[#0066FF] mb-6">
+              <div className="bg-white rounded-2xl border border-slate-200 p-6">
+                <h2 className="text-2xl font-bold text-slate-900 mb-6">
                   Khóa học hoàn thành
                 </h2>
 
@@ -175,8 +141,8 @@ export default function DashboardPage() {
             )}
 
             {activeTab === "certificate" && (
-              <div className="bg-white rounded-xl shadow p-6">
-                <h2 className="text-2xl font-bold text-[#0066FF] mb-6">
+              <div className="bg-white rounded-2xl border border-slate-200 p-6">
+                <h2 className="text-2xl font-bold text-slate-900 mb-6">
                   Chứng chỉ
                 </h2>
 
@@ -195,12 +161,12 @@ export default function DashboardPage() {
             )}
 
             {activeTab === "profile" && (
-              <div className="bg-white rounded-xl shadow p-6">
-                <h2 className="text-2xl font-bold text-[#0066FF] mb-6">
+              <div className="bg-white rounded-2xl border border-slate-200 p-6">
+                <h2 className="text-2xl font-bold text-slate-900 mb-6">
                   Hồ sơ cá nhân
                 </h2>
 
-                <div className="space-y-3">
+                <div className="space-y-3 text-slate-700">
                   <p>
                     <strong>Họ tên:</strong> Trần Minh Tú
                   </p>
@@ -223,12 +189,12 @@ export default function DashboardPage() {
 
           {/* Sidebar */}
           <div className="space-y-6">
-            <div className="bg-white rounded-xl shadow p-6">
-              <h2 className="text-xl font-bold text-[#0066FF] mb-4">
+            <div className="bg-white rounded-2xl border border-slate-200 p-6">
+              <h2 className="text-xl font-bold text-slate-900 mb-4">
                 Thông tin học viên
               </h2>
 
-              <div className="space-y-3">
+              <div className="space-y-3 text-slate-600">
                 <p>📚 Đang học: 3 khóa</p>
                 <p>✅ Hoàn thành: 5 khóa</p>
                 <p>🏆 Chứng chỉ: 2</p>
@@ -236,16 +202,14 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            <div className="bg-white rounded-xl shadow p-6">
-              <h2 className="text-xl font-bold text-[#0066FF] mb-4">
+            <div className="bg-white rounded-2xl border border-slate-200 p-6">
+              <h2 className="text-xl font-bold text-slate-900 mb-4">
                 Hoạt động gần đây
               </h2>
 
               <ul className="space-y-3 text-slate-600">
                 <li>Hoàn thành bài học React Hooks</li>
-
                 <li>Nhận chứng chỉ Java Core</li>
-
                 <li>Hoàn thành 70% khóa Next.js</li>
               </ul>
             </div>
@@ -258,8 +222,8 @@ export default function DashboardPage() {
 
 function StatCard({ title, text }: { title: string; text: string }) {
   return (
-    <div className="bg-white rounded-xl shadow p-6 text-center">
-      <h3 className="text-3xl font-bold text-[#0066FF]">{title}</h3>
+    <div className="bg-white rounded-2xl border border-slate-200 p-6 text-center hover:shadow-md transition">
+      <h3 className="text-3xl font-bold text-[#0056D2]">{title}</h3>
 
       <p className="text-slate-500 mt-2">{text}</p>
     </div>
@@ -274,23 +238,23 @@ function CourseProgressCard({
   progress: number;
 }) {
   return (
-    <div className="border rounded-xl p-5">
+    <div className="border border-slate-200 rounded-xl p-5">
       <div className="flex justify-between mb-3">
-        <h3 className="font-semibold text-lg">{title}</h3>
+        <h3 className="font-semibold text-lg text-slate-900">{title}</h3>
 
-        <span className="font-semibold text-[#0066FF]">{progress}%</span>
+        <span className="font-semibold text-[#0056D2]">{progress}%</span>
       </div>
 
-      <div className="w-full bg-slate-200 h-3 rounded-full">
+      <div className="w-full bg-slate-100 h-2 rounded-full">
         <div
-          className="bg-[#0066FF] h-3 rounded-full"
+          className="bg-[#0056D2] h-2 rounded-full"
           style={{
             width: `${progress}%`,
           }}
         />
       </div>
 
-      <button className="mt-4 bg-[#0066FF] text-white px-5 py-2 rounded-lg">
+      <button className="mt-4 bg-[#0056D2] hover:bg-[#0046AE] text-white px-5 py-2 rounded-md font-medium transition">
         Tiếp tục học
       </button>
     </div>
@@ -299,7 +263,7 @@ function CourseProgressCard({
 
 function CompletedCourse({ title }: { title: string }) {
   return (
-    <div className="flex justify-between items-center border rounded-lg p-4">
+    <div className="flex justify-between items-center border border-slate-200 rounded-lg p-4">
       <span>{title}</span>
 
       <span className="text-green-600 font-semibold">✓ Hoàn thành</span>
@@ -309,15 +273,17 @@ function CompletedCourse({ title }: { title: string }) {
 
 function CertificateCard({ title, date }: { title: string; date: string }) {
   return (
-    <div className="border rounded-xl p-4">
-      <h3 className="font-semibold">{title}</h3>
+    <div className="border border-slate-200 rounded-xl p-4">
+      <h3 className="font-semibold text-slate-900">{title}</h3>
 
       <p className="text-sm text-slate-500 mt-1">Ngày cấp: {date}</p>
 
       <div className="flex gap-2 mt-4">
-        <button className="flex-1 bg-sky-300 py-2 rounded-lg">Xem</button>
+        <button className="flex-1 border border-[#0056D2] text-[#0056D2] py-2 rounded-md hover:bg-blue-50 transition">
+          Xem
+        </button>
 
-        <button className="flex-1 bg-[#0066FF] text-white py-2 rounded-lg">
+        <button className="flex-1 bg-[#0056D2] text-white py-2 rounded-md hover:bg-[#0046AE] transition">
           Tải PDF
         </button>
       </div>
