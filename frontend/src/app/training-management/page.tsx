@@ -9,19 +9,19 @@ export default function FacultyDashboard() {
       title: "Chương trình đào tạo mẫu",
       desc: "Quản lý và cấu trúc chi tiết khung chương trình",
       icon: "📋",
-      path: "/curriculum",
+      path: "/training-management/curriculum",
     },
     {
       title: "Phân công giảng dạy",
       desc: "Lịch dạy chi tiết và điều phối công việc giảng viên",
       icon: "👥",
-      path: "#",
+      path: "/training-management/course-assignment",
     },
     {
       title: "Duyệt khóa học",
       desc: "Kiểm tra, đánh giá chất lượng và phê duyệt các khóa học mới",
       icon: "✅",
-      path: "#",
+      path: "/training-management/course-approval",
     },
     {
       title: "Quản lý khóa học",
@@ -38,7 +38,7 @@ export default function FacultyDashboard() {
       {/* Banner */}
       <div className="bg-gradient-to-r from-[#1E88E5] to-[#0066FF] text-white px-8 py-12 md:px-16 relative">
         <h1 className="text-3xl font-bold tracking-wide mb-2">
-          Training-Management
+          Quản LÝ ĐÀO TẠO
         </h1>
         <p className="text-blue-100 text-sm mb-6">
           Quản lý toàn bộ hệ thống chương trình và giảng dạy
@@ -48,7 +48,7 @@ export default function FacultyDashboard() {
           <div className="w-10 h-10 rounded-full bg-white text-blue-600 flex items-center justify-center font-bold text-lg border-2 border-white/50">
             GV
           </div>
-          <span className="font-medium text-sm">Xin chào, Giảng viên</span>
+          <span className="font-medium text-sm">Xin chào, Nguyen Van A</span>
         </div>
       </div>
 
