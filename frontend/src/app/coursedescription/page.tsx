@@ -1,8 +1,45 @@
 export default function CourseDescriptionPage() {
   return (
     <div className="min-h-screen bg-slate-100">
+      {/* Navbar */}
+      <nav className="bg-white border-b sticky top-0 z-50 shadow-sm">
+        <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+          <div className="flex items-center gap-10">
+            <h1 className="text-3xl font-bold text-[#0066FF]">LUMER</h1>
+
+            <ul className="hidden md:flex gap-8 text-black">
+              <li className="cursor-pointer hover:text-[#0066FF]">Khám phá</li>
+
+              <li className="cursor-pointer hover:text-[#0066FF]">
+                Việc học của tôi
+              </li>
+
+              <li className="cursor-pointer hover:text-[#0066FF]">Chứng chỉ</li>
+
+              <li className="font-semibold text-[#0066FF] cursor-pointer">
+                Khóa học
+              </li>
+            </ul>
+          </div>
+
+          <div className="flex items-center gap-4">
+            <input
+              type="text"
+              placeholder="Tìm kiếm khóa học..."
+              className="hidden md:block border rounded-full px-4 py-2 w-72"
+            />
+
+            <img
+              src="https://i.pravatar.cc/150"
+              alt="avatar"
+              className="w-10 h-10 rounded-full"
+            />
+          </div>
+        </div>
+      </nav>
+
       {/* Banner */}
-      <section className="bg-gradient-to-r from-blue-600 to-indigo-700 text-white">
+      <section className="bg-gradient-to-r from-[#66CCFF] to-[#0066FF] text-white">
         <div className="max-w-6xl mx-auto px-6 py-16">
           <span className="bg-white/20 px-3 py-1 rounded-full text-sm">
             Tên nhóm của khóa học
@@ -10,7 +47,7 @@ export default function CourseDescriptionPage() {
 
           <h1 className="text-5xl font-bold mt-4">Tên Khóa Học</h1>
 
-          <p className="mt-4 text-lg text-gray-200 max-w-3xl">
+          <p className="mt-4 text-lg text-blue-100 max-w-3xl">
             Kiến thức mà khóa học này sẽ cung cấp cho bạn, tổng quan kiến thức
             của khóa học.
           </p>
@@ -23,12 +60,13 @@ export default function CourseDescriptionPage() {
             />
 
             <div>
-              <p className="font-semibold">Tên Giảng Viên</p>
-              <p className="text-sm text-gray-300">Chuyên môn của giảng viên</p>
+              <p className="font-semibold text-white">Tên Giảng Viên</p>
+
+              <p className="text-sm text-blue-100">Chuyên môn của giảng viên</p>
             </div>
           </div>
 
-          <button className="mt-8 bg-white text-blue-700 px-8 py-3 rounded-lg font-semibold hover:bg-gray-100">
+          <button className="mt-8 bg-white text-[#0066FF] px-8 py-3 rounded-lg font-semibold hover:bg-blue-50">
             Đăng ký ngay
           </button>
         </div>
@@ -53,18 +91,16 @@ export default function CourseDescriptionPage() {
               Giới thiệu khóa học
             </h2>
 
-            <p className="text-gray-600 leading-8">
+            <p className="text-black leading-8">
               Mô tả về khóa học. Lorem ipsum dolor sit amet consectetur
-              adipisicing elit. Nemo omnis, hic maxime error repellendus
-              doloremque maiores qui laboriosam, asperiores atque neque labore
-              consequatur repellat corporis dolorum! Rem ipsa eum molestiae.
+              adipisicing elit.
             </p>
 
             <h3 className="text-xl font-semibold mt-8 mb-3 text-black">
               Mục tiêu của khóa học
             </h3>
 
-            <ul className="space-y-2 text-gray-700">
+            <ul className="space-y-2 text-black">
               <li>✅ Mục tiêu 1</li>
               <li>✅ Mục tiêu 2</li>
               <li>✅ Mục tiêu 3</li>
@@ -86,7 +122,7 @@ export default function CourseDescriptionPage() {
               <p>📜 Có chứng chỉ</p>
             </div>
 
-            <button className="w-full mt-6 bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700">
+            <button className="w-full mt-6 bg-[#0066FF] text-white py-3 rounded-lg hover:bg-blue-700">
               Học ngay
             </button>
           </div>
@@ -96,12 +132,12 @@ export default function CourseDescriptionPage() {
   );
 }
 
-function InfoCard({ title, text }: { title: string; text: string }) {
+function InfoCard({ title, text }) {
   return (
     <div className="bg-white rounded-xl shadow p-6 text-center">
-      <h3 className="text-3xl font-bold text-blue-600">{title}</h3>
+      <h3 className="text-3xl font-bold text-[#0066FF]">{title}</h3>
 
-      <p className="text-gray-500 mt-2">{text}</p>
+      <p className="text-black mt-2">{text}</p>
     </div>
   );
 }
