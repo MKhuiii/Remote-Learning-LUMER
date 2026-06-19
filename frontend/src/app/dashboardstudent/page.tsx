@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Navbar from "@/components/Navbar";
 
 export default function DashboardPage() {
   const [activeTab, setActiveTab] = useState("learning");
@@ -8,7 +9,7 @@ export default function DashboardPage() {
   return (
     <div className="min-h-screen bg-slate-100">
       {/* Navbar */}
-      <nav className="bg-white border-b sticky top-0 z-50 shadow-sm">
+      {/* <nav className="bg-white border-b sticky top-0 z-50 shadow-sm">
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-10">
             <h1 className="text-3xl font-bold text-[#0066FF]">LUMER</h1>
@@ -38,7 +39,8 @@ export default function DashboardPage() {
             />
           </div>
         </div>
-      </nav>
+      </nav> */}
+      <Navbar />
 
       {/* Hero Banner */}
       <section className="bg-gradient-to-r from-[#66CCFF] to-[#0066FF] text-white">
