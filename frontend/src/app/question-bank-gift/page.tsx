@@ -468,7 +468,6 @@ Trình bày mô hình OSI gồm bao nhiêu tầng và chức năng của từng 
                 <p className="font-bold text-[#0066FF] mb-2">
                   Định dạng Moodle GIFT
                 </p>
-
                 <p className="text-sm">
                   Dùng dấu "=" cho đáp án đúng, dấu "~" cho đáp án sai.
                 </p>
