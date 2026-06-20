@@ -171,7 +171,7 @@ export default function CourseManagementPage() {
               value={keyword}
               onChange={(e) => setKeyword(e.target.value)}
               placeholder="Tìm kiếm khóa học..."
-              className="w-full border border-gray-200 rounded-xl pl-10 pr-4 py-2 text-sm"
+              className="w-full border border-gray-200 rounded-xl pl-10 pr-4 py-2 text-black"
             />
           </div>
 
@@ -185,7 +185,7 @@ export default function CourseManagementPage() {
         </div>
 
         {/* Table */}
-        <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden">
+        <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden text-black">
           <table className="w-full">
             <thead className="bg-slate-50 border-b">
               <tr>
@@ -198,7 +198,7 @@ export default function CourseManagementPage() {
               </tr>
             </thead>
 
-            <tbody>
+            <tbody className="text-black">
               {filteredCourses.map((course) => (
                 <tr key={course.id} className="border-b">
                   <td className="p-4">
@@ -256,88 +256,141 @@ export default function CourseManagementPage() {
 
         {/* Modal */}
         {showModal && (
-          <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+          <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 text-black">
             <div className="bg-white w-full max-w-2xl rounded-2xl p-6">
               <h2 className="font-black text-lg mb-5">
                 {editing ? "Cập nhật khóa học" : "Thêm khóa học"}
               </h2>
 
               <div className="space-y-4">
-                <input
-                  placeholder="Tên khóa học"
-                  value={form.title}
-                  onChange={(e) =>
-                    setForm({
-                      ...form,
-                      title: e.target.value,
-                    })
-                  }
-                  className="w-full border rounded-xl p-3"
-                />
-
-                <textarea
-                  placeholder="Mô tả"
-                  value={form.description}
-                  onChange={(e) =>
-                    setForm({
-                      ...form,
-                      description: e.target.value,
-                    })
-                  }
-                  className="w-full border rounded-xl p-3"
-                />
-
-                <input
-                  placeholder="URL ảnh"
-                  value={form.image}
-                  onChange={(e) =>
-                    setForm({
-                      ...form,
-                      image: e.target.value,
-                    })
-                  }
-                  className="w-full border rounded-xl p-3"
-                />
-
-                <div className="grid grid-cols-2 gap-4">
+                {/* Tên khóa học */}
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Tên khóa học
+                  </label>
                   <input
-                    type="number"
-                    placeholder="Giá"
-                    value={form.price}
+                    value={form.title}
                     onChange={(e) =>
                       setForm({
                         ...form,
-                        price: Number(e.target.value),
+                        title: e.target.value,
                       })
                     }
-                    className="border rounded-xl p-3"
-                  />
-
-                  <input
-                    type="number"
-                    placeholder="Thời hạn"
-                    value={form.duration}
-                    onChange={(e) =>
-                      setForm({
-                        ...form,
-                        duration: Number(e.target.value),
-                      })
-                    }
-                    className="border rounded-xl p-3"
+                    className="w-full border border-gray-300 rounded-xl p-3 focus:ring-2 focus:ring-[#0066FF] focus:outline-none"
                   />
                 </div>
 
-                <input
-                  placeholder="Tag"
-                  value={form.tag}
-                  onChange={(e) =>
-                    setForm({
-                      ...form,
-                      tag: e.target.value,
-                    })
-                  }
-                  className="w-full border rounded-xl p-3"
-                />
+                {/* Mô tả */}
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Mô tả khóa học
+                  </label>
+                  <textarea
+                    rows={4}
+                    value={form.description}
+                    onChange={(e) =>
+                      setForm({
+                        ...form,
+                        description: e.target.value,
+                      })
+                    }
+                    className="w-full border border-gray-300 rounded-xl p-3 focus:ring-2 focus:ring-[#0066FF] focus:outline-none"
+                  />
+                </div>
+
+                {/* Ảnh */}
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    URL ảnh đại diện
+                  </label>
+                  <input
+                    value={form.image}
+                    onChange={(e) =>
+                      setForm({
+                        ...form,
+                        image: e.target.value,
+                      })
+                    }
+                    className="w-full border border-gray-300 rounded-xl p-3 focus:ring-2 focus:ring-[#0066FF] focus:outline-none"
+                  />
+                </div>
+
+                <div className="grid md:grid-cols-2 gap-4">
+                  {/* Giá */}
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Giá khóa học (VNĐ)
+                    </label>
+                    <input
+                      type="number"
+                      value={form.price}
+                      onChange={(e) =>
+                        setForm({
+                          ...form,
+                          price: Number(e.target.value),
+                        })
+                      }
+                      className="w-full border border-gray-300 rounded-xl p-3 focus:ring-2 focus:ring-[#0066FF] focus:outline-none"
+                    />
+                  </div>
+
+                  {/* Thời hạn */}
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Thời hạn học (ngày)
+                    </label>
+                    <input
+                      type="number"
+                      value={form.duration}
+                      onChange={(e) =>
+                        setForm({
+                          ...form,
+                          duration: Number(e.target.value),
+                        })
+                      }
+                      className="w-full border border-gray-300 rounded-xl p-3 focus:ring-2 focus:ring-[#0066FF] focus:outline-none"
+                    />
+                  </div>
+                </div>
+
+                {/* Tag */}
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Danh mục / Tag
+                  </label>
+                  <input
+                    value={form.tag}
+                    onChange={(e) =>
+                      setForm({
+                        ...form,
+                        tag: e.target.value,
+                      })
+                    }
+                    className="w-full border border-gray-300 rounded-xl p-3 focus:ring-2 focus:ring-[#0066FF] focus:outline-none"
+                  />
+                </div>
+
+                {/* Trạng thái */}
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Trạng thái khóa học
+                  </label>
+
+                  <select
+                    value={form.status}
+                    onChange={(e) =>
+                      setForm({
+                        ...form,
+                        status: e.target.value as Course["status"],
+                      })
+                    }
+                    className="w-full border border-gray-300 rounded-xl p-3 focus:ring-2 focus:ring-[#0066FF] focus:outline-none"
+                  >
+                    <option value="Hoạt động">Hoạt động</option>
+                    <option value="Nháp">Nháp</option>
+                    <option value="Ẩn">Ẩn</option>
+                  </select>
+                </div>
               </div>
 
               <div className="flex justify-end gap-3 mt-6">
