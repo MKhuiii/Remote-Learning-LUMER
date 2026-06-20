@@ -10,20 +10,8 @@ export default function AdminDashboard() {
     {
       title: "Quản lý người dùng",
       desc: "Quản lý học viên và giảng viên",
-      route: "/admin/usermanager",
+      route: "/admin/user-management",
       icon: "👥",
-    },
-    {
-      title: "Quản lý khóa học",
-      desc: "Thêm, sửa, xóa khóa học",
-      route: "/admin/courses",
-      icon: "📚",
-    },
-    {
-      title: "Chứng chỉ",
-      desc: "Quản lý chứng chỉ học tập",
-      route: "/admin/certificates",
-      icon: "🏆",
     },
     {
       title: "Báo cáo",

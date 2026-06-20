@@ -32,7 +32,7 @@ export default function DashboardPage() {
 
             <div>
               <h2 className="text-2xl font-semibold text-white">
-                Xin chào, Trần Minh Tú
+                Xin chào, Nguyen Van A
               </h2>
 
               <p className="text-white">Theo dõi tiến độ học tập của bạn</p>
@@ -57,44 +57,40 @@ export default function DashboardPage() {
           <div className="flex gap-8 overflow-x-auto">
             <button
               onClick={() => setActiveTab("learning")}
-              className={`pb-3 font-medium transition ${
-                activeTab === "learning"
+              className={`pb-3 font-medium transition ${activeTab === "learning"
                   ? "border-b-2 border-[#0056D2] text-[#0056D2]"
                   : "text-slate-500 hover:text-[#0056D2]"
-              }`}
+                }`}
             >
               Đang học
             </button>
 
             <button
               onClick={() => setActiveTab("completed")}
-              className={`pb-3 font-medium transition ${
-                activeTab === "completed"
+              className={`pb-3 font-medium transition ${activeTab === "completed"
                   ? "border-b-2 border-[#0056D2] text-[#0056D2]"
                   : "text-slate-500 hover:text-[#0056D2]"
-              }`}
+                }`}
             >
               Hoàn thành
             </button>
 
             <button
               onClick={() => setActiveTab("certificate")}
-              className={`pb-3 font-medium transition ${
-                activeTab === "certificate"
+              className={`pb-3 font-medium transition ${activeTab === "certificate"
                   ? "border-b-2 border-[#0056D2] text-[#0056D2]"
                   : "text-slate-500 hover:text-[#0056D2]"
-              }`}
+                }`}
             >
               Chứng chỉ
             </button>
 
             <button
               onClick={() => setActiveTab("profile")}
-              className={`pb-3 font-medium transition ${
-                activeTab === "profile"
+              className={`pb-3 font-medium transition ${activeTab === "profile"
                   ? "border-b-2 border-[#0056D2] text-[#0056D2]"
                   : "text-slate-500 hover:text-[#0056D2]"
-              }`}
+                }`}
             >
               Hồ sơ
             </button>

@@ -27,7 +27,7 @@ export default function FacultyDashboard() {
       title: "Quản lý khóa học",
       desc: "Chỉnh sửa, cập nhật nội dung bài học và học liệu",
       icon: "📚",
-      path: "#",
+      path: "/training-management/course-management",
     },
   ];
 
