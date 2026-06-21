@@ -14,14 +14,26 @@ function LoginContent() {
   const [rePassword, setRePassword] = useState("");
   const [name, setName] = useState("");
   
-  // State mới để quản lý việc ẩn/hiện mật khẩu
+  // State quản lý ẩn/hiện mật khẩu
   const [showPassword, setShowPassword] = useState(false);
 
   useEffect(() => {
     setIsLoginMode(mode === "login");
-    // Reset lại ẩn mật khẩu và xóa các trường khi đổi chế độ
     setShowPassword(false);
   }, [mode]);
+
+  // Hàm xử lý đăng nhập bằng Google (Giả lập hoạt động)
+  const handleGoogleLogin = () => {
+    alert("Đang chuyển hướng đăng nhập bằng Google...");
+    
+    // Giả lập lưu thông tin sau khi đăng nhập thành công
+    localStorage.setItem("isLoggedIn", "true");
+    localStorage.setItem("userEmail", "google-user@lumer.com");
+    localStorage.setItem("role", "student"); // Hoặc phân quyền mong muốn
+
+    // Chuyển hướng sang trang mong muốn
+    router.push("/dashboard-student");
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -69,13 +81,13 @@ function LoginContent() {
         {!isLoginMode && (
           <div className="space-y-1">
             <label className="text-[11px] font-bold text-gray-500 uppercase">
-              Username
+              Tên Người Dùng 
             </label>
             <input
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="Nguyễn Văn A"
+              placeholder="Họ tên người dùng"
               className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-xs focus:outline-blue-500"
             />
           </div>
@@ -99,7 +111,7 @@ function LoginContent() {
             Mật khẩu
           </label>
           <input
-            type={showPassword ? "text" : "password"} // Thay đổi type dựa vào state
+            type={showPassword ? "text" : "password"}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             placeholder="••••••••"
@@ -113,7 +125,7 @@ function LoginContent() {
               Xác nhận mật khẩu
             </label>
             <input
-              type={showPassword ? "text" : "password"} // Thay đổi type dựa vào state
+              type={showPassword ? "text" : "password"}
               value={rePassword}
               onChange={(e) => setRePassword(e.target.value)}
               placeholder="••••••••"
@@ -138,7 +150,6 @@ function LoginContent() {
             Hiển thị mật khẩu
           </label>
         </div>
-        {/* ------------------------------------------- */}
 
         <button
           type="submit"
@@ -163,6 +174,48 @@ function LoginContent() {
             : "Đã có tài khoản? Quay lại đăng nhập"}
         </button>
       </div>
+
+      {/* --- PHẦN TIẾP TỤC VỚI GOOGLE ĐÃ ĐƯỢC THÊM VÀO ĐÂY --- */}
+      <div className="mt-6">
+        <div className="relative flex items-center justify-center">
+          <div className="absolute inset-0 flex items-center">
+            <div className="w-full border-t border-gray-200"></div>
+          </div>
+          <span className="relative bg-white px-3 text-xs text-gray-400">
+            Or continue with
+          </span>
+        </div>
+
+        <div className="mt-4 flex justify-center">
+          <button
+            type="button"
+            onClick={handleGoogleLogin}
+            className="flex items-center space-x-2 border border-gray-200 rounded-full px-5 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-50 transition cursor-pointer shadow-2xs"
+          >
+            {/* SVG Logo Google chuẩn */}
+            <svg className="w-4 h-4" viewBox="0 0 24 24">
+              <path
+                fill="#4285F4"
+                d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v3.92h6.58c-.28 1.48-1.12 2.74-2.38 3.58v2.96h3.84c2.24-2.06 3.53-5.1 3.53-8.65z"
+              />
+              <path
+                fill="#34A853"
+                d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.84-2.96c-1.08.72-2.45 1.16-4.09 1.16-3.15 0-5.81-2.13-6.76-5.01H1.17v3.07C3.16 21.18 7.31 24 12 24z"
+              />
+              <path
+                fill="#FBBC05"
+                d="M5.24 14.28a7.17 7.17 0 0 1 0-4.56V6.65H1.17a11.94 11.94 0 0 0 0 10.7l4.07-3.07z"
+              />
+              <path
+                fill="#EA4335"
+                d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.31 0 3.16 2.82 1.17 6.65l4.07 3.07c.95-2.88 3.61-5.01 6.76-5.01z"
+              />
+            </svg>
+            <span>Google</span>
+          </button>
+        </div>
+      </div>
+      {/* --------------------------------------------------- */}
     </div>
   );
 }
