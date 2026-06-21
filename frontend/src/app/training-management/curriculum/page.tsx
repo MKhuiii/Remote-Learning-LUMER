@@ -3,69 +3,46 @@ import React, { useState, useMemo } from "react";
 import Link from "next/link";
 import Navbar from "@/components/Navbar";
 
-// Định nghĩa cấu trúc Lộ trình học tập chuẩn hệ thống LUMER (Đã bỏ instructor)
+// Định nghĩa cấu trúc Lộ trình học tập chuẩn hệ thống LUMER (Đã bỏ code và modulesList)
 interface Program {
   id: string;
-  code: string;
   title: string;
   description: string;
-  modulesCount: number;
   duration: string; 
   certificateName: string; 
   status: "Đang mở" | "Bản nháp" | "Đóng";
-  modulesList: string[]; 
+  syllabusFileName: string; // Trường lưu tên file chương trình khóa học
 }
 
 export default function LumerCurriculumManagement() {
-  // Dữ liệu giả lập ban đầu (Đã gỡ bỏ thông tin Giảng viên phụ trách)
+  // Dữ liệu giả lập ban đầu
   const [programs, setPrograms] = useState<Program[]>([
     {
       id: "program-1",
-      code: "LMR-DATA-2026",
       title: "Chương trình chuyên sâu Phân tích Dữ liệu (Data Analytics)",
       description: "Lộ trình từ cơ bản đến nâng cao về SQL, Python, Excel và trực quan hóa dữ liệu với PowerBI.",
-      modulesCount: 5,
       duration: "4 tháng (8 giờ/tuần)",
       certificateName: "LUMER Certified Data Analyst Professional",
       status: "Đang mở",
-      modulesList: [
-        "Module 1: Nhập môn Khoa học dữ liệu & Tư duy phân tích",
-        "Module 2: Phân tích dữ liệu chuyên sâu với Microsoft Excel",
-        "Module 3: Truy vấn cấu trúc dữ liệu với SQL",
-        "Module 4: Trực quan hóa dữ liệu trên Dashboard với Power BI",
-        "Module 5: Dự án thực tế tốt nghiệp (Capstone Project)"
-      ]
+      syllabusFileName: "Syllabus_Data_Analytics_2026.pdf"
     },
     {
       id: "program-2",
-      code: "LMR-FRONT-2026",
       title: "Chương trình đào tạo Kỹ sư Front-End Next.js chuyên sâu",
       description: "Lộ trình làm chủ giao diện web hiện đại, tối ưu SEO với React, Next.js và Tailwind CSS.",
-      modulesCount: 4,
       duration: "3 tháng (10 giờ/tuần)",
       certificateName: "LUMER Advanced Next.js Developer Certificate",
       status: "Đang mở",
-      modulesList: [
-        "Module 1: Bản chất Javascript nâng cao & Thao tác DOM",
-        "Module 2: Xây dựng UI Component-Driven với React.js",
-        "Module 3: Kiến trúc App Router & Server Component trong Next.js",
-        "Module 4: Tích hợp API bảo mật và Triển khai ứng dụng (Deploy)"
-      ]
+      syllabusFileName: "Syllabus_NextJS_Advanced.pdf"
     },
     {
       id: "program-3",
-      code: "LMR-UXUI-2026",
       title: "Khung đào tạo Chuyên gia Thiết kế Trải nghiệm Người dùng (UI/UX)",
       description: "Học tư duy thiết kế Product chuyên nghiệp, nghiên cứu hành vi người dùng và Prototype chuyên sâu trên Figma.",
-      modulesCount: 3,
       duration: "2 tháng",
       certificateName: "LUMER UI/UX Professional Design Certification",
       status: "Bản nháp",
-      modulesList: [
-        "Module 1: Nghiên cứu người dùng & Xây dựng Persona",
-        "Module 2: Thiết kế Wireframe & Hệ thống Grid/Layout",
-        "Module 3: Thiết kế UI độ phân giải cao & Làm hiệu ứng ứng dụng trên Figma"
-      ]
+      syllabusFileName: "Syllabus_UIUX_Design.pdf"
     }
   ]);
 
@@ -75,31 +52,38 @@ export default function LumerCurriculumManagement() {
   const [isOpenModal, setIsOpenModal] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
 
-  // Form State điền thông tin (Đã loại bỏ thuộc tính instructor)
+  // Form State điền thông tin
   const [formData, setFormData] = useState({
-    code: "",
     title: "",
     description: "",
-    modulesCount: 3,
     duration: "",
     certificateName: "",
     status: "Bản nháp" as Program["status"],
-    modulesListText: "" 
+    syllabusFileName: "" 
   });
 
-  // Tìm kiếm lọc dữ liệu (Đã bỏ lọc theo instructor)
+  // Tìm kiếm lọc dữ liệu theo Tên chương trình
   const filteredPrograms = useMemo(() => {
     return programs.filter(p => 
-      p.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
-      p.code.toLowerCase().includes(searchTerm.toLowerCase())
+      p.title.toLowerCase().includes(searchTerm.toLowerCase())
     );
   }, [programs, searchTerm]);
+
+  // Xử lý khi chọn file chương trình khóa học
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      setFormData({
+        ...formData,
+        syllabusFileName: e.target.files[0].name
+      });
+    }
+  };
 
   // Mở modal Thêm mới
   const openAddModal = () => {
     setEditingId(null);
     setFormData({
-      code: "", title: "", description: "", modulesCount: 3, duration: "", certificateName: "", status: "Bản nháp", modulesListText: ""
+      title: "", description: "", duration: "", certificateName: "", status: "Bản nháp", syllabusFileName: ""
     });
     setIsOpenModal(true);
   };
@@ -109,14 +93,12 @@ export default function LumerCurriculumManagement() {
     e.stopPropagation(); 
     setEditingId(p.id);
     setFormData({
-      code: p.code,
       title: p.title,
       description: p.description,
-      modulesCount: p.modulesCount,
       duration: p.duration,
       certificateName: p.certificateName,
       status: p.status,
-      modulesListText: p.modulesList.join("\n")
+      syllabusFileName: p.syllabusFileName
     });
     setIsOpenModal(true);
   };
@@ -136,25 +118,18 @@ export default function LumerCurriculumManagement() {
   // Submit Form dữ liệu
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.code || !formData.title) {
-      alert("Vui lòng điền đầy đủ Mã và Tên chương trình đào tạo!");
+    if (!formData.title) {
+      alert("Vui lòng điền đầy đủ Tên chương trình đào tạo!");
       return;
     }
 
-    const standardModulesList = formData.modulesListText
-      .split("\n")
-      .map(m => m.trim())
-      .filter(m => m.length > 0);
-
     const finalData: Omit<Program, "id"> = {
-      code: formData.code,
       title: formData.title,
       description: formData.description,
-      modulesCount: standardModulesList.length || formData.modulesCount,
       duration: formData.duration || "Tự chọn thời gian",
       certificateName: formData.certificateName || "Chứng nhận hoàn thành LUMER",
       status: formData.status,
-      modulesList: standardModulesList.length ? standardModulesList : ["Chưa phân tách module con"]
+      syllabusFileName: formData.syllabusFileName || "Chưa có file đính kèm"
     };
 
     if (editingId) {
@@ -177,7 +152,7 @@ export default function LumerCurriculumManagement() {
       {/* Header Điều Hướng */}
       <div className="max-w-7xl w-full mx-auto px-6 pt-8 pb-2">
         <Link 
-          href="/faculty"
+          href="/training-management"
           className="text-xs text-[#0066FF] font-bold hover:underline mb-3 inline-flex items-center gap-1 no-underline"
         >
           ⬅ Quay về Dashboard Phòng Đào Tạo
@@ -189,7 +164,7 @@ export default function LumerCurriculumManagement() {
               🎓 Quản lý Chương trình đào tạo
             </h1>
             <p className="text-xs text-gray-500 mt-0.5">
-              Thiết kế cấu trúc lộ trình học và phân tách các mô-đun bài học hệ thống.
+              Thiết kế cấu trúc lộ trình học và quản lý file nội dung chương trình đào tạo của hệ thống.
             </p>
           </div>
 
@@ -205,7 +180,7 @@ export default function LumerCurriculumManagement() {
         <div className="mt-5 max-w-sm">
           <input
             type="text"
-            placeholder="Tìm theo tên chương trình hoặc mã danh mục..."
+            placeholder="Tìm theo tên chương trình đào tạo..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full bg-white border border-gray-200 rounded-xl px-4 py-2 text-xs focus:outline-blue-500 shadow-3xs"
@@ -216,7 +191,7 @@ export default function LumerCurriculumManagement() {
       {/* Thân trang: Chia hai khu vực */}
       <div className="max-w-7xl w-full mx-auto px-6 pb-12 mt-4 grid grid-cols-1 lg:grid-cols-3 gap-6">
         
-        {/* BÊN TRÁI: DANH SÁCH CÁC THẺ LỘ TRÌNH */}
+        {/* BÊN TRÁI: DANH SÁCH CÁC THỂ LỘ TRÌNH */}
         <div className="lg:col-span-2 space-y-4">
           <div className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1">Danh sách chương trình khung ({filteredPrograms.length})</div>
           
@@ -231,10 +206,7 @@ export default function LumerCurriculumManagement() {
               }`}
             >
               <div>
-                <div className="flex items-center justify-between gap-2 mb-2">
-                  <span className="text-[10px] font-mono font-bold bg-slate-100 px-2 py-0.5 text-gray-600 rounded">
-                    {p.code}
-                  </span>
+                <div className="flex items-center justify-end gap-2 mb-2">
                   <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold ${
                     p.status === "Đang mở" ? "bg-green-50 text-green-600" : "bg-amber-50 text-amber-600"
                   }`}>
@@ -254,8 +226,8 @@ export default function LumerCurriculumManagement() {
               {/* Chân Thẻ */}
               <div className="border-t border-gray-50 pt-3 mt-1 flex flex-wrap items-center justify-between gap-2 text-[11px]">
                 <div className="flex items-center gap-3 text-gray-500 font-medium">
-                  <span>📚 <b>{p.modulesCount}</b> mô-đun thành phần</span>
                   <span>⏱ {p.duration}</span>
+                  <span className="text-gray-400">📄 {p.syllabusFileName}</span>
                 </div>
                 <div className="space-x-3 text-xs font-bold">
                   <button onClick={(e) => openEditModal(p, e)} className="text-[#0066FF] hover:underline cursor-pointer bg-transparent border-none p-0">Thiết lập</button>
@@ -270,29 +242,29 @@ export default function LumerCurriculumManagement() {
           )}
         </div>
 
-        {/* BÊN PHẢI: CHI TIẾT SƠ ĐỒ PHÂN RÃ HỌC PHẦN */}
+        {/* BÊN PHẢI: CHI TIẾT TÀI LIỆU CHƯƠNG TRÌNH KHÓA HỌC */}
         <div className="lg:col-span-1">
-          <div className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-2">Sơ đồ phân rã học phần</div>
+          <div className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-2">Thông tin chương trình đính kèm</div>
           
           {selectedProgram ? (
             <div className="bg-white border border-gray-100 rounded-2xl p-5 shadow-xs sticky top-4">
               <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Đang xem cấu trúc:</h4>
               <h2 className="text-sm font-black text-gray-900 mb-4 leading-snug">{selectedProgram.title}</h2>
 
-              {/* Timeline Modules */}
-              <div className="space-y-3.5 relative border-l-2 border-slate-100 ml-2 pl-4">
-                {selectedProgram.modulesList.map((mod, idx) => (
-                  <div key={idx} className="relative">
-                    <div className="absolute -left-[23px] top-0.5 w-3 h-3 rounded-full bg-[#0066FF] border-2 border-white shadow-xs"></div>
-                    <div className="text-xs font-semibold text-gray-700 bg-slate-50/50 p-2.5 rounded-xl border border-slate-100">
-                      {mod}
-                    </div>
-                  </div>
-                ))}
+              {/* Box File hiển thị chương trình khóa học */}
+              <div className="bg-slate-50 border border-dashed border-slate-200 rounded-xl p-4 flex flex-col items-center justify-center text-center">
+                <span className="text-2xl mb-1">📋</span>
+                <span className="text-xs font-bold text-gray-700 block max-w-full truncate px-2">
+                  {selectedProgram.syllabusFileName}
+                </span>
+                <p className="text-[10px] text-gray-400 mt-1">File chương trình đào tạo hiện tại</p>
+                <button className="mt-3 px-3 py-1.5 bg-white border border-gray-200 text-gray-600 font-bold text-[10px] rounded-lg hover:bg-gray-50 transition cursor-pointer">
+                  📥 Tải xuống File bài học
+                </button>
               </div>
 
               {/* Khối chứng chỉ */}
-              <div className="mt-6 pt-4 border-t border-gray-100 bg-blue-50/30 p-3.5 rounded-xl border border-blue-100/30">
+              <div className="mt-4 pt-4 border-t border-gray-100 bg-blue-50/30 p-3.5 rounded-xl border border-blue-100/30">
                 <div className="text-[10px] font-bold text-blue-600 uppercase tracking-wider mb-1">🏅 Chứng nhận cấp phát điện tử</div>
                 <div className="text-xs font-bold text-gray-800 leading-tight">
                   {selectedProgram.certificateName}
@@ -300,12 +272,12 @@ export default function LumerCurriculumManagement() {
               </div>
             </div>
           ) : (
-            <div className="bg-white border border-gray-100 rounded-2xl p-6 text-center text-xs text-gray-400">Vui lòng chọn một chương trình đào tạo ở danh sách kế bên để xem phân rã.</div>
+            <div className="bg-white border border-gray-100 rounded-2xl p-6 text-center text-xs text-gray-400">Vui lòng chọn một chương trình đào tạo để xem chi tiết tệp tin.</div>
           )}
         </div>
       </div>
 
-      {/* MODAL POPUP CẤU HÌNH: THÊM / SỬA (Đã xóa bỏ hoàn toàn trường chọn Giảng viên) */}
+      {/* MODAL POPUP CẤU HÌNH: THÊM / SỬA */}
       {isOpenModal && (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-2xl border border-gray-100 w-full max-w-lg p-6 shadow-xl max-h-[90vh] overflow-y-auto">
@@ -314,20 +286,14 @@ export default function LumerCurriculumManagement() {
             </h3>
             
             <form onSubmit={handleSubmit} className="space-y-4 text-xs">
-              <div className="grid grid-cols-3 gap-4">
-                <div className="col-span-1">
-                  <label className="block font-bold text-gray-500 uppercase text-[9px] mb-1">Mã định danh</label>
-                  <input type="text" placeholder="LMR-CNTT" value={formData.code} onChange={(e) => setFormData({...formData, code: e.target.value})} className="w-full border border-gray-200 rounded-xl px-3 py-2 focus:outline-blue-500 font-mono" />
-                </div>
-                <div className="col-span-2">
-                  <label className="block font-bold text-gray-500 uppercase text-[9px] mb-1">Tên chương trình đào tạo</label>
-                  <input type="text" placeholder="Ví dụ: Lập trình di động chuyên sâu" value={formData.title} onChange={(e) => setFormData({...formData, title: e.target.value})} className="w-full border border-gray-200 rounded-xl px-3 py-2 focus:outline-blue-500" />
-                </div>
+              <div>
+                <label className="block font-bold text-gray-500 uppercase text-[9px] mb-1">Tên chương trình đào tạo</label>
+                <input type="text" placeholder="Ví dụ: Lập trình di động chuyên sâu" value={formData.title} onChange={(e) => setFormData({...formData, title: e.target.value})} className="w-full border border-gray-200 rounded-xl px-3 py-2 focus:outline-blue-500" />
               </div>
 
               <div>
                 <label className="block font-bold text-gray-500 uppercase text-[9px] mb-1">Mô tả tóm tắt lộ trình học</label>
-                <textarea rows={2} placeholder="Tóm lược mục tiêu đầu ra của người học..." value={formData.description} onChange={(e) => setFormData({...formData, description: e.target.value})} className="w-full border border-gray-200 rounded-xl px-3 py-2 focus:outline-blue-500" />
+                <textarea rows={3} placeholder="Tóm lược mục tiêu đầu ra của người học..." value={formData.description} onChange={(e) => setFormData({...formData, description: e.target.value})} className="w-full border border-gray-200 rounded-xl px-3 py-2 focus:outline-blue-500" />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
@@ -350,21 +316,21 @@ export default function LumerCurriculumManagement() {
                 <input type="text" placeholder="Ví dụ: LUMER Certified Mobile Developer" value={formData.certificateName} onChange={(e) => setFormData({...formData, certificateName: e.target.value})} className="w-full border border-gray-200 rounded-xl px-3 py-2 focus:outline-blue-500" />
               </div>
 
+              {/* Trường Đẩy File Chương Trình Khóa Học */}
               <div>
-                <div className="flex justify-between items-center mb-1">
-                  <label className="block font-bold text-gray-500 uppercase text-[9px]">Danh sách cấu trúc mô-đun bài học</label>
-                  <span className="text-[10px] text-gray-400 italic">Mỗi mô-đun nhập 1 dòng riêng</span>
+                <label className="block font-bold text-gray-500 uppercase text-[9px] mb-1">Tải lên file chương trình khóa học (.pdf, .docx, .xlsx)</label>
+                <div className="mt-1 flex items-center gap-3">
+                  <label className="bg-slate-100 hover:bg-slate-200 text-gray-700 font-bold px-3 py-2 rounded-xl cursor-pointer transition border border-gray-300 shadow-3xs inline-block">
+                    📁 Chọn tệp tin...
+                    <input type="file" onChange={handleFileChange} className="hidden" accept=".pdf" />
+                  </label>
+                  <span className="text-gray-500 italic text-[11px] truncate max-w-[250px]">
+                    {formData.syllabusFileName || "Chưa có file nào được chọn"}
+                  </span>
                 </div>
-                <textarea
-                  rows={4}
-                  placeholder={"Mô-đun 1: Thiết kế giao diện cơ bản\nMô-đun 2: Làm việc với API kết nối hệ thống\nMô-đun 3: Đồ án thực tập thực tế"}
-                  value={formData.modulesListText}
-                  onChange={(e) => setFormData({...formData, modulesListText: e.target.value})}
-                  className="w-full border border-gray-200 rounded-xl px-3 py-2 focus:outline-blue-500 font-medium leading-relaxed"
-                />
               </div>
 
-              <div className="flex justify-end space-x-2 pt-2 border-t border-gray-100">
+              <div className="flex justify-end space-x-2 pt-4 border-t border-gray-100">
                 <button type="button" onClick={() => setIsOpenModal(false)} className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold rounded-xl cursor-pointer border-none">Hủy</button>
                 <button type="submit" className="px-4 py-2 bg-[#0066FF] hover:bg-blue-700 text-white font-bold rounded-xl cursor-pointer border-none">
                   {editingId ? "Cập nhật dữ liệu" : "Xác nhận tạo mới"}

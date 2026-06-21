@@ -37,7 +37,7 @@ export default function Navbar() {
       case "admin":
         return "/admin";         // Admin click Logo sẽ ở lại/về /admin
       case "faculty":
-        return "/faculty";       // Giảng viên click Logo sẽ ở lại/về /faculty
+        return "/training-management";       // Giảng viên click Logo sẽ ở lại/về /faculty
       case "student":
       default:
         return "/home";          // Sinh viên click Logo sẽ về /home
@@ -50,10 +50,10 @@ export default function Navbar() {
       case "admin":
         return { label: "Quản lý hệ thống", path: "/admin" };
       case "faculty":
-        return { label: "Không gian giảng dạy", path: "/faculty" };
+        return { label: "Không gian giảng dạy", path: "/training-management" };
       case "student":
       default:
-        return { label: "Việc học của tôi", path: "/dashboardstudent" };
+        return { label: "Việc học của tôi", path: "/dashboard-student" };
     }
   };
 

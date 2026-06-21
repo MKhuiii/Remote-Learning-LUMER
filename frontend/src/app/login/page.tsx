@@ -11,16 +11,28 @@ function LoginContent() {
   const [isLoginMode, setIsLoginMode] = useState(true);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [rePassword, setRePassword] = useState("");
   const [name, setName] = useState("");
+  
+  // State mới để quản lý việc ẩn/hiện mật khẩu
+  const [showPassword, setShowPassword] = useState(false);
 
   useEffect(() => {
     setIsLoginMode(mode === "login");
+    // Reset lại ẩn mật khẩu và xóa các trường khi đổi chế độ
+    setShowPassword(false);
   }, [mode]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email || !password || (!isLoginMode && !name)) {
+    
+    if (!email || !password || (!isLoginMode && (!name || !rePassword))) {
       alert("Vui lòng nhập đầy đủ thông tin!");
+      return;
+    }
+
+    if (!isLoginMode && password !== rePassword) {
+      alert("Mật khẩu xác nhận không chính xác!");
       return;
     }
 
@@ -28,8 +40,6 @@ function LoginContent() {
       localStorage.setItem("isLoggedIn", "true");
       localStorage.setItem("userEmail", email);
 
-      // Phân quyền theo email
-// Phân quyền theo email
       if (email === "admin@gmail.com") {
         localStorage.setItem("role", "admin");
         alert("Đăng nhập Admin thành công!");
@@ -37,14 +47,13 @@ function LoginContent() {
       } else if (email.endsWith("@lumer.edu.vn")) {
         localStorage.setItem("role", "faculty");
         alert("Đăng nhập Giảng viên / Phòng đào tạo thành công!");
-        router.push("/faculty"); // Điều hướng sang trang giảng viên
+        router.push("/training-management");
       } else {
         localStorage.setItem("role", "student");
         alert("Đăng nhập thành công!");
-        router.push("/home");
+        router.push("/dashboard-student");
       }
     } else {
-      // Logic Đăng ký giả lập
       localStorage.setItem("registeredUser", JSON.stringify({ name, email }));
       alert("Đăng ký tài khoản thành công! Hãy tiến hành đăng nhập.");
       router.push("/login?mode=login");
@@ -60,7 +69,7 @@ function LoginContent() {
         {!isLoginMode && (
           <div className="space-y-1">
             <label className="text-[11px] font-bold text-gray-500 uppercase">
-              Họ và tên
+              Username
             </label>
             <input
               type="text"
@@ -71,6 +80,7 @@ function LoginContent() {
             />
           </div>
         )}
+
         <div className="space-y-1">
           <label className="text-[11px] font-bold text-gray-500 uppercase">
             Email của bạn
@@ -83,18 +93,52 @@ function LoginContent() {
             className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-xs focus:outline-blue-500"
           />
         </div>
+
         <div className="space-y-1">
           <label className="text-[11px] font-bold text-gray-500 uppercase">
             Mật khẩu
           </label>
           <input
-            type="password"
+            type={showPassword ? "text" : "password"} // Thay đổi type dựa vào state
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             placeholder="••••••••"
             className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-xs focus:outline-blue-500"
           />
         </div>
+
+        {!isLoginMode && (
+          <div className="space-y-1">
+            <label className="text-[11px] font-bold text-gray-500 uppercase">
+              Xác nhận mật khẩu
+            </label>
+            <input
+              type={showPassword ? "text" : "password"} // Thay đổi type dựa vào state
+              value={rePassword}
+              onChange={(e) => setRePassword(e.target.value)}
+              placeholder="••••••••"
+              className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-xs focus:outline-blue-500"
+            />
+          </div>
+        )}
+
+        {/* --- KHU VỰC CHECKBOX HIỂN THỊ MẬT KHẨU --- */}
+        <div className="flex items-center space-x-2 pt-1">
+          <input
+            type="checkbox"
+            id="show-password"
+            checked={showPassword}
+            onChange={(e) => setShowPassword(e.target.checked)}
+            className="w-3.5 h-3.5 text-[#0066FF] border-gray-300 rounded focus:ring-blue-500 cursor-pointer"
+          />
+          <label 
+            htmlFor="show-password" 
+            className="text-xs text-gray-600 select-none cursor-pointer"
+          >
+            Hiển thị mật khẩu
+          </label>
+        </div>
+        {/* ------------------------------------------- */}
 
         <button
           type="submit"

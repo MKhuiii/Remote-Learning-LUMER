@@ -123,5 +123,107 @@ export const mockCourses: Course[] = [
         ]
       }
     ]
+  },
+  // ==================== CÁC KHÓA HỌC ĐƯỢC BỔ SUNG THÊM ====================
+  {
+    id: 'ceh-v12-hacker',
+    title: 'Hacker Mũ Trắng CEH v12 Thực Chiến',
+    description: 'Thực hành thâm nhập hệ thống, quét lỗ hổng mạng, và tìm hiểu phương thức phòng chống mã độc tống tiền (Ransomware).',
+    category: 'An ninh mạng',
+    instructor: 'EC-Council Partner',
+    progress: 0,
+    modules: [
+      {
+        id: 'ceh-m1',
+        title: 'Mô-đun 1: Kỹ thuật quét mạng và rà quét cổng',
+        lessons: [
+          { id: 'ceh-l1', title: 'Làm chủ công cụ Nmap thu thập thông tin', duration: '25 phút' }
+        ]
+      }
+    ]
+  },
+  {
+    id: 'comptia-sec-plus',
+    title: 'Luyện thi chứng chỉ quốc tế CompTIA Security+',
+    description: 'Cung cấp kiến thức nền tảng vững chắc về mật mã học, quản lý định danh IAM, cấu trúc tường lửa và an ninh hạ tầng mạng.',
+    category: 'An ninh mạng',
+    instructor: 'CompTIA Authorized',
+    progress: 0,
+    modules: [
+      {
+        id: 'comp-m1',
+        title: 'Mô-đun 1: Cơ chế mã hóa và giao thức bảo mật',
+        lessons: [
+          { id: 'comp-l1', title: 'Phân biệt mã hóa đối xứng AES và RSA', duration: '15 phút' }
+        ]
+      }
+    ]
+  },
+  {
+    id: 'react-native-app',
+    title: 'Lập trình ứng dụng di động Hybrid với React Native',
+    description: 'Phát triển ứng dụng iOS và Android đa nền tảng từ một mã nguồn duy nhất. Tích hợp bản đồ, định vị GPS và lưu kho dữ liệu.',
+    category: 'Phát triển Web',
+    instructor: 'Meta Developers',
+    progress: 0,
+    modules: [
+      {
+        id: 'rn-m1',
+        title: 'Mô-đun 1: Quản lý luồng giao diện di động',
+        lessons: [
+          { id: 'rn-l1', title: 'Thiết lập Stack và Tab Navigation', duration: '22 phút' }
+        ]
+      }
+    ]
+  },
+  {
+    id: 'nodejs-backend-api',
+    title: 'Xây dựng Backend RESTful API với Node.js & Express',
+    category: 'Phát triển Web',
+    instructor: 'LUMER Academy',
+    description: 'Thiết kế kiến trúc máy chủ backend có khả năng mở rộng tốt, kết nối cơ sở dữ liệu MongoDB, mã hóa mật khẩu mật bảo mật.',
+    modules: [
+      {
+        id: 'node-m1',
+        title: 'Mô-đun 1: Cơ chế Middleware và Định tuyến Routing',
+        lessons: [
+          { id: 'node-l1', title: 'Tạo và phân quyền API kiểm định JWT', duration: '30 phút' }
+        ]
+      }
+    ]
+  },
+  {
+    id: 'deep-learning-ai',
+    title: 'Deep Learning: Học sâu và mạng Nơ-ron nhân tạo',
+    description: 'Đi sâu vào xây dựng kiến trúc mạng nơ-ron (CNN, RNN), xử lý ảnh số máy tính và nhận diện ngôn ngữ tự nhiên thông minh.',
+    category: 'Khoa học Dữ liệu & AI',
+    instructor: 'DeepLearning.AI',
+    progress: 0,
+    modules: [
+      {
+        id: 'dl-m1',
+        title: 'Mô-đun 1: Khởi tạo mạng nơ-ron đa lớp',
+        lessons: [
+          { id: 'dl-l1', title: 'Cơ chế kích hoạt hàm ReLU và Softmax', duration: '28 phút' }
+        ]
+      }
+    ]
+  },
+  {
+    id: 'power-bi-dashboard',
+    title: 'Trực quan hóa và phân tích dữ liệu bằng Power BI',
+    description: 'Học cách kết nối các kho dữ liệu hỗn hợp, viết biểu thức tính toán DAX nâng cao và xây dựng biểu đồ quản trị báo cáo doanh nghiệp.',
+    category: 'Khoa học Dữ liệu & AI',
+    instructor: 'Microsoft Certified Lab',
+    progress: 0,
+    modules: [
+      {
+        id: 'pbi-m1',
+        title: 'Mô-đun 1: Chuẩn hóa mô hình dữ liệu quan hệ',
+        lessons: [
+          { id: 'pbi-l1', title: 'Sử dụng hàm CALCULATE giải bài toán lọc dữ liệu', duration: '20 phút' }
+        ]
+      }
+    ]
   }
 ];
