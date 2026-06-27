@@ -1,4 +1,5 @@
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, status, Depends
+from fastapi.security import OAuth2PasswordRequestForm
 from app.api.v1.deps import SessionDep
 from app.crud.user import crud_user
 from app.schemas.user import UserCreate, UserLogin
@@ -29,9 +30,9 @@ def register(
 @router.post("/login")
 def login(
     session: SessionDep,
-    user: UserLogin
+    user: OAuth2PasswordRequestForm = Depends()
 ):
-    existing_user = crud_user.get_by_email(session, email=user.email)
+    existing_user = crud_user.get_by_email(session, email=user.username)
     if not existing_user or not verify_password(user.password, existing_user.password):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -48,6 +49,7 @@ def login(
     return{
         "message": "Đăng nhập thành công",
         "access_token": access_token,
+        "token_type": "bearer",
         "user": {
             "username": existing_user.username,
             "email": existing_user.email
