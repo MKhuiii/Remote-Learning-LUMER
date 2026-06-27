@@ -17,9 +17,11 @@ class UserUpdate(BaseModel):
     birthdate: date | None = None
     status_id: str | None = None
 
-class UserLogin(BaseModel):
-    email: EmailStr
-    password: str
+class UserRoleUpdate(BaseModel):
+    role_id: int
+
+class UserStatusUpdate(BaseModel):
+    status_id: str
 
 # Thông tin tổng quan của người dùng, hiển thị trên bảng quản lý của admin
 class UserGeneralInfo(BaseModel):
@@ -29,6 +31,7 @@ class UserGeneralInfo(BaseModel):
     email: EmailStr
     create_at: date 
     status_id: str
+
 # Thông tin chi tiết người dùng, hiển thị trong phần hồ sơ chi tiết 
 class UserDetailInfo(BaseModel):
     user_id: UUID 
