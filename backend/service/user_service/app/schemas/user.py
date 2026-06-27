@@ -12,10 +12,13 @@ class UserCreate(BaseModel):
 class UserUpdate(BaseModel):
     role_id: int | None = None
     username: str | None = None
-    email: EmailStr | None = None
     password: str | None = None
     birthdate: date | None = None
     status_id: str | None = None
+
+class UserInfoUpdate(BaseModel):
+    username: str | None = None
+    birthdate: date | None = None
 
 class UserRoleUpdate(BaseModel):
     role_id: int

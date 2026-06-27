@@ -2,11 +2,11 @@ from fastapi import APIRouter, HTTPException, status, Depends
 from sqlmodel import select
 from typing import List
 from app.api.v1.deps import SessionDep
-from app.core.security import RoleChecker
+from app.core.security import RoleChecker, get_current_user_role
 from app.crud.user import crud_user
 from app.crud.role import crud_role
 from app.crud.status_catalog import crud_status
-from app.schemas.user import UserGeneralInfo, UserListQuery, UserCreate, UserDetailInfo, UserUpdate, UserRoleUpdate, UserStatusUpdate
+from app.schemas.user import UserGeneralInfo, UserListQuery, UserCreate, UserDetailInfo, UserUpdate, UserRoleUpdate, UserStatusUpdate, UserInfoUpdate
 from uuid import UUID
 
 router = APIRouter()
@@ -147,7 +147,34 @@ def update_user_status(
     
     return user_data
 
+@router.put("/update-user/{user_id}", response_model=UserDetailInfo)
+def update_user(
+    session: SessionDep,
+    user_id: UUID,
+    user_update: UserInfoUpdate,
+    current_user: dict = Depends(get_current_user_role)
+):
+    db_user = crud_user.get_by_id(session, user_id)
+    is_owner = str(current_user["user_id"]) == str(user_id)
+    is_admin = str(current_user["role_name"]) == "Admin"
+    
+    if not is_owner and not is_admin:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Không có quyền chỉnh sửa dữ liệu"
+        )
+    if db_user is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Người dùng không tồn tại"
+        )
+    updated_user = crud_user.update(session, db_user, user_update)
+    role_name = crud_role.get_name_by_id(session, updated_user.role_id) or "Unknown"
 
+    user_data = updated_user.model_dump()
+    user_data["role_name"] = role_name
+    
+    return user_data
 
     
 
