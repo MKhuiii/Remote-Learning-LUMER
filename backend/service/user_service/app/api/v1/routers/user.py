@@ -5,7 +5,9 @@ from app.api.v1.deps import SessionDep
 from app.core.security import RoleChecker
 from app.crud.user import crud_user
 from app.crud.role import crud_role
-from app.schemas.user import UserGeneralInfo, UserListQuery, UserCreate, UserDetailInfo
+from app.crud.status_catalog import crud_status
+from app.schemas.user import UserGeneralInfo, UserListQuery, UserCreate, UserDetailInfo, UserUpdate, UserRoleUpdate, UserStatusUpdate
+from uuid import UUID
 
 router = APIRouter()
 
@@ -71,4 +73,81 @@ def create_user(
     return{
         "message": "Tạo người " + new_user.username + " thành công!"
     }
+
+@router.get("/get-user/{user_id}", response_model=UserDetailInfo)
+def get_user(
+    session: SessionDep,
+    user_id: UUID,
+    current_user: dict = Depends(RoleChecker(["Admin"]))
+):
+    user = crud_user.get_by_id(session, user_id)
+    if user is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Người dùng không tồn tại"
+        )
+    role_name = crud_role.get_name_by_id(session, user.role_id) or "Unknown"
+    
+    user_data = user.model_dump()
+    user_data["role_name"] = role_name
+    return user_data
+
+@router.patch("/update-role/{user_id}", response_model=UserDetailInfo)
+def update_user_role(
+    session: SessionDep,
+    user_id: UUID, 
+    user_update: UserRoleUpdate, 
+    current_user: dict = Depends(RoleChecker(["Admin"]))
+):
+    db_user = crud_user.get_by_id(session, user_id)
+    if db_user is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Người dùng không tồn tại"
+        )
+    existed_role_id = crud_role.get_by_id(session, user_update.role_id)
+    if existed_role_id is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Vai trò không tồn tại"
+        )
+
+    updated_user = crud_user.update(session, db_user, user_update)
+    role_name = crud_role.get_name_by_id(session, updated_user.role_id) or "Unknown"
+
+    user_data = updated_user.model_dump()
+    user_data["role_name"] = role_name
+    
+    return user_data
+
+@router.patch("/update-status/{user_id}", response_model=UserDetailInfo)
+def update_user_status(
+    session: SessionDep,
+    user_id: UUID,                  
+    status_update: UserStatusUpdate, 
+    current_user: dict = Depends(RoleChecker(["Admin"])) 
+):
+    db_user = crud_user.get_by_id(session, user_id)
+    if db_user is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Người dùng không tồn tại"
+        )
+    existed_status_id = crud_status.get_by_id(session, status_update.status_id)
+    if existed_status_id is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Trạng thái người dùng không tồn tại"
+        )
+    updated_user = crud_user.update(session, db_user, status_update)
+    role_name = crud_role.get_name_by_id(session, updated_user.role_id) or "Unknown"
+
+    user_data = updated_user.model_dump()
+    user_data["role_name"] = role_name
+    
+    return user_data
+
+
+
+    
 
