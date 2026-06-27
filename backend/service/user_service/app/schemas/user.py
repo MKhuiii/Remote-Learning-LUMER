@@ -21,12 +21,24 @@ class UserLogin(BaseModel):
     email: EmailStr
     password: str
 
-class UserInfo(BaseModel):
+# Thông tin tổng quan của người dùng, hiển thị trên bảng quản lý của admin
+class UserGeneralInfo(BaseModel):
     user_id: UUID
     role_name: str
     username: str
     email: EmailStr
+    create_at: date 
     status_id: str
+# Thông tin chi tiết người dùng, hiển thị trong phần hồ sơ chi tiết 
+class UserDetailInfo(BaseModel):
+    user_id: UUID 
+    role_name: str
+    username: str 
+    email: EmailStr 
+    password: str 
+    birthdate: date | None = None
+    create_at: date 
+    status_id: str 
 
 class UserListQuery(BaseModel):
     skip: int

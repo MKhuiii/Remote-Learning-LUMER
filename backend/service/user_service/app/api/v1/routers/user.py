@@ -2,16 +2,18 @@ from fastapi import APIRouter, HTTPException, status, Depends
 from sqlmodel import select
 from typing import List
 from app.api.v1.deps import SessionDep
+from app.core.security import RoleChecker
 from app.crud.user import crud_user
-from app.schemas.user import UserInfo, UserListQuery
-from app.models.role import Role
+from app.crud.role import crud_role
+from app.schemas.user import UserGeneralInfo, UserListQuery, UserCreate, UserDetailInfo
 
 router = APIRouter()
 
-@router.get("/get-user-list", response_model=List[UserInfo])
+@router.get("/get-user-list", response_model=List[UserGeneralInfo])
 def get_user_list(
     session: SessionDep,
-    query: UserListQuery = Depends()
+    query: UserListQuery = Depends(),
+    current_user: dict = Depends(RoleChecker(["Admin"]))
 ):
     if query.status_id is not None and query.role_id is not None:
         raise HTTPException(
@@ -33,20 +35,40 @@ def get_user_list(
     user_info_list = []
     
     if users:  
-        distinct_role_ids = {user.role_id for user in users if user.role_id is not None}
+        # Nếu lọc theo role_id cố định -> Chỉ cần tìm duy nhất 1 tên role
+        if query.role_id is not None:
+            role_name = crud_role.get_name_by_id(session, query.role_id) or "Unknown"
+            role_mapping = {query.role_id: role_name}
+            
+        # Nếu danh sách trả về hỗn hợp nhiều role (Lọc theo status hoặc lấy tất cả)
+        else:
+            distinct_role_ids = list({user.role_id for user in users if user.role_id is not None})
+            role_mapping = crud_role.get_role_mapping_by_ids(session, distinct_role_ids)
         
-        # Select những Role xuất hiện trong danh sách user
-        roles_in_db = session.exec(
-            select(Role).where(Role.role_id.in_(distinct_role_ids))
-        ).all()
-        
-        # Tạo bảng tra cứu 
-        role_mapping = {role.role_id: role.role_name for role in roles_in_db}
-        
-        # Thêm role_name vào user
+        # Thêm role_name vào từng user dựa trên map đã chuẩn bị
         for user in users:
             user_data = user.model_dump()
             user_data["role_name"] = role_mapping.get(user.role_id, "Unknown")
             user_info_list.append(user_data)
 
     return user_info_list
+
+@router.post("/create-user")
+def create_user(
+    session: SessionDep,
+    new_user: UserCreate,
+    current_user: dict = Depends(RoleChecker(["Admin"]))
+
+):
+    # Kiểm tra người dùng đã tồn tại chưa
+    user_existed = crud_user.get_by_email(session, new_user.email)
+    if user_existed:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Email đã tồn tại"
+        )
+    crud_user.create(session, new_user)
+    return{
+        "message": "Tạo người " + new_user.username + " thành công!"
+    }
+

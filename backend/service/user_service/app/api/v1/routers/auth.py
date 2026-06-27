@@ -3,8 +3,8 @@ from app.api.v1.deps import SessionDep
 from app.crud.user import crud_user
 from app.schemas.user import UserCreate, UserLogin
 from app.core.config import settings
-from datetime import datetime, timedelta, timezone
-import jwt
+from app.core.security import create_access_token, verify_password, hash_password
+from app.crud.role import crud_role
 
 router = APIRouter()
 
@@ -19,13 +19,12 @@ def register(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Email đã tồn tại"
         )
+    new_user.password = hash_password(new_user.password)
     db_user = crud_user.create(session, new_user)
 
-    return db_user
-
-SECRET_KEY = settings.SECRET_KEY
-ALGORITHM = settings.ALGORITHM
-
+    return {
+        "message": "Tạo tài khoản thành công"
+    }
 
 @router.post("/login")
 def login(
@@ -33,22 +32,23 @@ def login(
     user: UserLogin
 ):
     existing_user = crud_user.get_by_email(session, email=user.email)
-    if not existing_user or existing_user.password != user.password:
+    if not existing_user or not verify_password(user.password, existing_user.password):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Mật khẩu sai hoặc người dùng không tồn tại"
         )
-    expire_time = datetime.now(timezone.utc) + timedelta(days=settings.ACCESS_TOKEN_EXPIRE_DAYS)
+        
+    role_name = crud_role.get_name_by_id(session, existing_user.role_id) or "User"
     token_data = {
         "sub": str(existing_user.user_id),
-        "exp": expire_time
+        "username": existing_user.username,
+        "role_name": role_name
     }
-    jwt_token = jwt.encode(token_data, SECRET_KEY, ALGORITHM)
+    access_token = create_access_token(token_data)
     return{
         "message": "Đăng nhập thành công",
-        "access_token": jwt_token,
+        "access_token": access_token,
         "user": {
-            "user_id": existing_user.user_id,
             "username": existing_user.username,
             "email": existing_user.email
         }
