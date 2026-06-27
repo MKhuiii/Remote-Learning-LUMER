@@ -2,7 +2,7 @@ from fastapi import APIRouter, HTTPException, status, Depends
 from fastapi.security import OAuth2PasswordRequestForm
 from app.api.v1.deps import SessionDep
 from app.crud.user import crud_user
-from app.schemas.user import UserCreate, UserLogin
+from app.schemas.user import UserCreate
 from app.core.config import settings
 from app.core.security import create_access_token, verify_password, hash_password
 from app.crud.role import crud_role
