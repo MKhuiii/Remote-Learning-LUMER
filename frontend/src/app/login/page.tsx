@@ -2,8 +2,10 @@
 import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Navbar from "@/components/Navbar";
-// Import 2 hàm xử lý API đã tách
-import { loginUser, registerUser } from "@/action/Auth";
+
+// Đổi đường dẫn import sang file AuthUser mới viết
+import { loginUserAction, registerAccount } from "@/action/authUser"; // nó đỏ vì nó hiểu là chữ thường nhưng file là chữ in đỏ vẫn đúng 
+                                                //Hiếu thích chữ IN
 
 function LoginContent() {
   const router = useRouter();
@@ -15,11 +17,8 @@ function LoginContent() {
   const [password, setPassword] = useState("");
   const [rePassword, setRePassword] = useState("");
   const [name, setName] = useState("");
-  
-  // State quản lý ẩn/hiện mật khẩu
   const [showPassword, setShowPassword] = useState(false);
 
-  // Đồng bộ chế độ Login/Register dựa trên URL query
   useEffect(() => {
     setIsLoginMode(mode === "login");
     setShowPassword(false);
@@ -28,34 +27,33 @@ function LoginContent() {
   // ------------------ Xử lý Đăng Ký (UI) ----------------------
   const handleRegisterSubmit = async () => {
     try {
-      const result = await registerUser(name, email, password);
+      const result = await registerAccount(name, email, password);
 
-      if (result.ok) {
-        alert('Đăng ký thành công! Đang chuyển hướng sang trang đăng nhập...');
+      if (result.success) {
+        alert(result.message);
         router.push('/login?mode=login');
       } else {
-        alert(`Đăng ký thất bại: ${result.data.detail || 'Có lỗi xảy ra'}`);
+        alert(`Đăng ký thất bại: ${result.message}`);
       }
     } catch (error: any) {
-      alert(error.message || 'Có lỗi xảy ra khi đăng ký!');
+      alert('Có lỗi xảy ra khi đăng ký!');
     }
   };
 
   // ------------------ Xử lý Đăng Nhập (UI) ----------------------
   const handleLoginSubmit = async () => {
     try {
-      const result = await loginUser(email, password);
-      const dataLogin = result.data;
+      // Gọi trực tiếp Server Action đăng nhập
+      const result = await loginUserAction(email, password);
 
-      if (result.ok) {
-        console.log("Dữ liệu đăng nhập thành công:", dataLogin);
-        alert(dataLogin.message || "Đăng nhập thành công!");
+      if (result.success) {
+        alert(result.message);
 
+        // Lưu vào localStorage phục vụ logic UI cũ của bạn (Token đã được lưu an toàn trong cookie từ phía Server rồi)
         localStorage.setItem("isLoggedIn", "true");
         localStorage.setItem("userEmail", email);
-        localStorage.setItem("token", dataLogin.access_token);
 
-        const userRole = dataLogin.user?.role; 
+        const userRole = result.user?.role; 
 
         if (userRole === "Admin") {
           localStorage.setItem("role", "admin");
@@ -71,15 +69,10 @@ function LoginContent() {
           router.push("/dashboard-student");
         }
       } else {
-        // Trường hợp Backend trả về lỗi validation dạng mảng hoặc chuỗi thường
-        const errorMsg = Array.isArray(dataLogin.detail) 
-          ? dataLogin.detail.map((err: any) => err.msg).join(", ") 
-          : dataLogin.detail;
-        
-        alert(`Đăng nhập thất bại: ${errorMsg || 'Mật khẩu hoặc tài khoản sai'}`);
+        alert(`Đăng nhập thất bại: ${result.message}`);
       }
     } catch (error: any) {
-      alert(error.message || 'Có lỗi xảy ra khi đăng nhập!');
+      alert('Có lỗi xảy ra khi đăng nhập!');
     }
   };
 
@@ -91,15 +84,12 @@ function LoginContent() {
     router.push("/dashboard-student");
   };
 
-  // Điều phối và Validate Client-side
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
     if (!email || !password || (!isLoginMode && (!name || !rePassword))) {
       alert("Vui lòng nhập đầy đủ thông tin!");
       return;
     }
-
     if (!isLoginMode && password !== rePassword) {
       alert("Mật khẩu xác nhận không chính xác!");
       return;
@@ -111,7 +101,6 @@ function LoginContent() {
       handleRegisterSubmit();
     }
   };
-
   return (
     <div className="max-w-md w-full mx-auto mt-16 p-6 bg-white border border-gray-200 rounded-2xl shadow-xs">
       <h2 className="text-xl font-black text-gray-900 mb-6 text-center">
