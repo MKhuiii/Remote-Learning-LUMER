@@ -84,10 +84,3 @@ def init_db() -> None:
             print("Thêm dữ liệu mẫu thành công!")
         else:
             print("Database đã có dữ liệu. Bỏ qua bước thêm dữ liệu mẫu.")
-
-
-# -----Tran Thanh Hieu--------------------------------
-
-
-
-# Thêm đoạn này vào cuối file để chạy trực tiếp bằng lệnh python

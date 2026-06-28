@@ -9,61 +9,26 @@ from app.crud.role import crud_role
 
 router = APIRouter()
 
-# @router.post("/register")
-# def register(
-#         session: SessionDep,
-#         new_user: UserCreate
-# ):
-#     existing_user = crud_user.get_by_email(session, email=new_user.email)
-#     if existing_user:
-#         raise HTTPException(
-#             status_code=status.HTTP_400_BAD_REQUEST,
-#             detail="Email đã tồn tại"
-#         )
-#     new_user.password = hash_password(new_user.password)
-
-#     db_user = crud_user.create(session, new_user)
-#     session.commit() 
-#     session.refresh(db_user)
-#     return {
-#         "message": "Tạo tài khoản thành công"
-#     }
-
-from app.models.user import User # Nhớ import Model User ở đầu file nếu chưa có
-
 @router.post("/register")
-def register(session: SessionDep, new_user: UserCreate):
-    print("REGISTER CALLED")
-    print(new_user)
-    try:
-        existing_user = crud_user.get_by_email(session, email=new_user.email)
-        if existing_user:
-            raise HTTPException(
-                status_code=400,
-                detail="Email đã tồn tại"
-            )
-
-        db_user = User(
-            email=new_user.email,
-            username=new_user.username,
-            password=hash_password(new_user.password),
-            role_id=2,
-            status_id="ACTIVE"
+def register(
+        session: SessionDep,
+        new_user: UserCreate
+):
+    existing_user = crud_user.get_by_email(session, email=new_user.email)
+    if existing_user:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Email đã tồn tại"
         )
+    new_user.password = hash_password(new_user.password)
 
-        session.add(db_user)
-        session.commit()
-        session.refresh(db_user)
+    db_user = crud_user.create(session, new_user)
+    session.commit() 
+    session.refresh(db_user)
+    return {
+        "message": "Tạo tài khoản thành công"
+    }
 
-        return {"message": "OK"}
-
-    except SQLAlchemyError as e:
-        session.rollback()
-        print(e)
-        raise HTTPException(500, str(e))
-
-
-# 
 @router.post("/login")
 def login(
     session: SessionDep,
