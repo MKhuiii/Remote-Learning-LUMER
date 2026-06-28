@@ -1,0 +1,37 @@
+from sqlmodel import Field, SQLModel, Relationship
+from typing import Optional, List, TYPE_CHECKING
+from app.models.curriculum import CourseType
+from app.models.course_tag_link import CourseTagLink
+from uuid import UUID
+from datetime import date
+import uuid
+
+if TYPE_CHECKING:
+    from app.models.tag import Tag
+    from app.models.subject import Subject
+
+class Course(SQLModel, table=True):
+    __tablename__ = "course"
+
+    course_id: UUID = Field(
+        default_factory=uuid.uuid4,
+        primary_key=True, 
+        index=True,
+        nullable=False
+
+    )
+    curriculum_id: UUID = Field(foreign_key="curriculum.curriculum_id", nullable=False)
+    instructor_id: UUID = Field(nullable=False)
+    title: str = Field(nullable=False, max_length=255)
+    course_type: CourseType = Field(nullable=False)
+    description: Optional[str] = Field(default=None)
+    price: int = Field(default=0)
+    created_at: date = Field(default_factory=date.today)
+    status_id:str = Field(
+        foreign_key="status_catalog.status_id", 
+        nullable=False,
+        max_length=50
+    )
+    tags: List["Tag"] = Relationship(back_populates="courses", link_model=CourseTagLink)
+    subjects: List["Subject"] = Relationship(back_populates="course")
+    
