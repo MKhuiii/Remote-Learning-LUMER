@@ -14,7 +14,7 @@ class User(SQLModel, table=True):
     email: EmailStr = Field(unique=True, nullable=False)
     password: str = Field(nullable=False)
     birthdate: Optional[date] = Field(nullable=True, default=None)
-    create_at: date = Field(nullable=False, default=date.today())
+    created_at: date = Field(nullable=False, default_factory=date.today)
     status_id: str = Field(
         foreign_key="status_catalog.status_id", 
         nullable=False, 
