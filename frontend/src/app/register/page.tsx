@@ -11,6 +11,8 @@ export default function RegisterPage() {
     router.push('/login');
   };
 
+
+  
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
       <div className="max-w-md w-full bg-white rounded-xl shadow-md p-8 border border-t-4 border-t-[#0066FF]">

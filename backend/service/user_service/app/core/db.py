@@ -5,8 +5,14 @@ from app.models.role import Role
 from app.models.status_catalog import StatusCatalog, UserStatus
 from app.models.user import User
 from app.models.profile import Profile
-
+from app.core.security import hash_password
 engine = create_engine(settings.USERS_DB_URL)
+
+
+def get_db():
+    with Session(engine) as session:
+        yield session
+
 
 def init_db() -> None:
     import app.models.user
@@ -56,7 +62,7 @@ def init_db() -> None:
                 role_id=1,  # Vai trò quản trị viên
                 username="admin",
                 email="admin@gmail.com",
-                password="admin123",  
+                password=hash_password("admin123"),  
                 status_id="ACTIVE"
             )
             session.add(sample_user)
@@ -78,3 +84,10 @@ def init_db() -> None:
             print("Thêm dữ liệu mẫu thành công!")
         else:
             print("Database đã có dữ liệu. Bỏ qua bước thêm dữ liệu mẫu.")
+
+
+# -----Tran Thanh Hieu--------------------------------
+
+
+
+# Thêm đoạn này vào cuối file để chạy trực tiếp bằng lệnh python

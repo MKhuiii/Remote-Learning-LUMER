@@ -11,7 +11,7 @@ class CRUDUser(CRUDBase[User, UserCreate, UserUpdate, UUID]):
         db_user = self.model.model_validate(obj_in, update={"role_id": 2}) #Gán role cho người dùng mới tạo là user có id là 2
         db.add(db_user)
         db.flush()
-        # Tạo profile người dùng tự động
+        
         auto_profile = Profile(
             user_id=db_user.user_id,
             firstname=db_user.username,
@@ -38,3 +38,4 @@ class CRUDUser(CRUDBase[User, UserCreate, UserUpdate, UUID]):
         statement = select(self.model).where(self.model.email == email)
         return db.exec(statement).first()
 crud_user = CRUDUser(User)
+

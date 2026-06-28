@@ -2,6 +2,8 @@
 import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Navbar from "@/components/Navbar";
+// Import 2 hàm xử lý API đã tách
+import { loginUser, registerUser } from "@/action/Auth";
 
 function LoginContent() {
   const router = useRouter();
@@ -17,24 +19,79 @@ function LoginContent() {
   // State quản lý ẩn/hiện mật khẩu
   const [showPassword, setShowPassword] = useState(false);
 
+  // Đồng bộ chế độ Login/Register dựa trên URL query
   useEffect(() => {
     setIsLoginMode(mode === "login");
     setShowPassword(false);
   }, [mode]);
 
-  // Hàm xử lý đăng nhập bằng Google (Giả lập hoạt động)
+  // ------------------ Xử lý Đăng Ký (UI) ----------------------
+  const handleRegisterSubmit = async () => {
+    try {
+      const result = await registerUser(name, email, password);
+
+      if (result.ok) {
+        alert('Đăng ký thành công! Đang chuyển hướng sang trang đăng nhập...');
+        router.push('/login?mode=login');
+      } else {
+        alert(`Đăng ký thất bại: ${result.data.detail || 'Có lỗi xảy ra'}`);
+      }
+    } catch (error: any) {
+      alert(error.message || 'Có lỗi xảy ra khi đăng ký!');
+    }
+  };
+
+  // ------------------ Xử lý Đăng Nhập (UI) ----------------------
+  const handleLoginSubmit = async () => {
+    try {
+      const result = await loginUser(email, password);
+      const dataLogin = result.data;
+
+      if (result.ok) {
+        console.log("Dữ liệu đăng nhập thành công:", dataLogin);
+        alert(dataLogin.message || "Đăng nhập thành công!");
+
+        localStorage.setItem("isLoggedIn", "true");
+        localStorage.setItem("userEmail", email);
+        localStorage.setItem("token", dataLogin.access_token);
+
+        const userRole = dataLogin.user?.role; 
+
+        if (userRole === "Admin") {
+          localStorage.setItem("role", "admin");
+          alert("Đăng nhập Admin thành công!");
+          router.push("/admin");
+        } else if (userRole === "Faculty") {
+          localStorage.setItem("role", "faculty");
+          alert("Đăng nhập Giảng viên / Phòng đào tạo thành công!");
+          router.push("/training-management");
+        } else {
+          localStorage.setItem("role", "student");
+          alert("Đăng nhập thành công!");
+          router.push("/dashboard-student");
+        }
+      } else {
+        // Trường hợp Backend trả về lỗi validation dạng mảng hoặc chuỗi thường
+        const errorMsg = Array.isArray(dataLogin.detail) 
+          ? dataLogin.detail.map((err: any) => err.msg).join(", ") 
+          : dataLogin.detail;
+        
+        alert(`Đăng nhập thất bại: ${errorMsg || 'Mật khẩu hoặc tài khoản sai'}`);
+      }
+    } catch (error: any) {
+      alert(error.message || 'Có lỗi xảy ra khi đăng nhập!');
+    }
+  };
+
   const handleGoogleLogin = () => {
     alert("Đang chuyển hướng đăng nhập bằng Google...");
-    
-    // Giả lập lưu thông tin sau khi đăng nhập thành công
     localStorage.setItem("isLoggedIn", "true");
     localStorage.setItem("userEmail", "google-user@lumer.com");
-    localStorage.setItem("role", "student"); // Hoặc phân quyền mong muốn
-
-    // Chuyển hướng sang trang mong muốn
+    localStorage.setItem("role", "student");
     router.push("/dashboard-student");
   };
 
+  // Điều phối và Validate Client-side
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -49,26 +106,9 @@ function LoginContent() {
     }
 
     if (isLoginMode) {
-      localStorage.setItem("isLoggedIn", "true");
-      localStorage.setItem("userEmail", email);
-
-      if (email === "admin@gmail.com") {
-        localStorage.setItem("role", "admin");
-        alert("Đăng nhập Admin thành công!");
-        router.push("/admin");
-      } else if (email.endsWith("@lumer.edu.vn")) {
-        localStorage.setItem("role", "faculty");
-        alert("Đăng nhập Giảng viên / Phòng đào tạo thành công!");
-        router.push("/training-management");
-      } else {
-        localStorage.setItem("role", "student");
-        alert("Đăng nhập thành công!");
-        router.push("/dashboard-student");
-      }
+      handleLoginSubmit();
     } else {
-      localStorage.setItem("registeredUser", JSON.stringify({ name, email }));
-      alert("Đăng ký tài khoản thành công! Hãy tiến hành đăng nhập.");
-      router.push("/login?mode=login");
+      handleRegisterSubmit();
     }
   };
 
@@ -163,9 +203,7 @@ function LoginContent() {
         <button
           type="button"
           onClick={() =>
-            router.push(
-              isLoginMode ? "/login?mode=register" : "/login?mode=login",
-            )
+            router.push(isLoginMode ? "/login?mode=register" : "/login?mode=login")
           }
           className="text-xs text-[#0066FF] font-bold hover:underline"
         >
@@ -175,7 +213,7 @@ function LoginContent() {
         </button>
       </div>
 
-      {/* --- PHẦN TIẾP TỤC VỚI GOOGLE ĐÃ ĐƯỢC THÊM VÀO ĐÂY --- */}
+      {/* --- PHẦN TIẾP TỤC VỚI GOOGLE --- */}
       <div className="mt-6">
         <div className="relative flex items-center justify-center">
           <div className="absolute inset-0 flex items-center">
@@ -192,30 +230,16 @@ function LoginContent() {
             onClick={handleGoogleLogin}
             className="flex items-center space-x-2 border border-gray-200 rounded-full px-5 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-50 transition cursor-pointer shadow-2xs"
           >
-            {/* SVG Logo Google chuẩn */}
             <svg className="w-4 h-4" viewBox="0 0 24 24">
-              <path
-                fill="#4285F4"
-                d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v3.92h6.58c-.28 1.48-1.12 2.74-2.38 3.58v2.96h3.84c2.24-2.06 3.53-5.1 3.53-8.65z"
-              />
-              <path
-                fill="#34A853"
-                d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.84-2.96c-1.08.72-2.45 1.16-4.09 1.16-3.15 0-5.81-2.13-6.76-5.01H1.17v3.07C3.16 21.18 7.31 24 12 24z"
-              />
-              <path
-                fill="#FBBC05"
-                d="M5.24 14.28a7.17 7.17 0 0 1 0-4.56V6.65H1.17a11.94 11.94 0 0 0 0 10.7l4.07-3.07z"
-              />
-              <path
-                fill="#EA4335"
-                d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.31 0 3.16 2.82 1.17 6.65l4.07 3.07c.95-2.88 3.61-5.01 6.76-5.01z"
-              />
+              <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v3.92h6.58c-.28 1.48-1.12 2.74-2.38 3.58v2.96h3.84c2.24-2.06 3.53-5.1 3.53-8.65z"/>
+              <path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.84-2.96c-1.08.72-2.45 1.16-4.09 1.16-3.15 0-5.81-2.13-6.76-5.01H1.17v3.07C3.16 21.18 7.31 24 12 24z"/>
+              <path fill="#FBBC05" d="M5.24 14.28a7.17 7.17 0 0 1 0-4.56V6.65H1.17a11.94 11.94 0 0 0 0 10.7l4.07-3.07z"/>
+              <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.31 0 3.16 2.82 1.17 6.65l4.07 3.07c.95-2.88 3.61-5.01 6.76-5.01z"/>
             </svg>
             <span>Google</span>
           </button>
         </div>
       </div>
-      {/* --------------------------------------------------- */}
     </div>
   );
 }
@@ -224,13 +248,7 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen bg-slate-50 text-gray-900 flex flex-col">
       <Navbar />
-      <Suspense
-        fallback={
-          <div className="text-center p-10 text-xs text-gray-400">
-            Đang tải biểu mẫu...
-          </div>
-        }
-      >
+      <Suspense fallback={<div className="text-center p-10 text-xs text-gray-400">Đang tải biểu mẫu...</div>}>
         <LoginContent />
       </Suspense>
     </div>
