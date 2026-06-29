@@ -1,11 +1,12 @@
 from sqlmodel import Field, SQLModel, Relationship
-from typing import Optional, TYPE_CHECKING
+from typing import Optional, TYPE_CHECKING, List
 from uuid import UUID
 import uuid
 
 if TYPE_CHECKING:
     from app.models.course import Course
     from app.models.syllabus import Syllabus
+    from app.models.module import Module
 
 class Subject(SQLModel, table=True):
     __tablename__ = "subject"
@@ -20,5 +21,10 @@ class Subject(SQLModel, table=True):
     title: str = Field(nullable=False, max_length=255)
     order_index: int = Field(default=1, nullable=False)
 
+    # Quan hệ
+    # Một môn học thuộc về một khóa học
     course: Optional["Course"] = Relationship(back_populates="subjects")
+    # Một môn học có một đề cương môn học
     syllabus: Optional["Syllabus"] = Relationship(back_populates="subject")
+    # Một môn học có 1 hoặc nhiều module
+    module: List["Module"] = Relationship(back_populates="subject")

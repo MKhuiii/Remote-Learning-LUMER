@@ -1,0 +1,17 @@
+from sqlmodel import Field, SQLModel, Relationship
+from typing import Optional, TYPE_CHECKING
+from uuid import UUID
+import uuid
+
+if TYPE_CHECKING:
+    from app.models.subject import Subject 
+
+class Module(SQLModel, table=True):
+    module_id: UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    subject_id: UUID = Field(foreign_key="subject.subject_id", nullable=False)
+    title: str = Field(nullable=False, max_length=255)
+    order_index: int = Field(default=1, nullable=False)
+
+    # Quan hệ
+    # Một module thuộc về một môn học
+    subject: Optional["Subject"] = Relationship(back_populates="module")

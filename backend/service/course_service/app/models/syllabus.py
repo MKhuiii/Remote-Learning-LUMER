@@ -21,5 +21,6 @@ class Syllabus(SQLModel, table=True):
         nullable=False,
         max_length=50
     )
-
+    # Quan hệ
+    # Một đề cương môn học chỉ thuộc về 1 môn học
     subject: Optional["Subject"] = Relationship(back_populates="syllabus")
