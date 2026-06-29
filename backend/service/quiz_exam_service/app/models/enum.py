@@ -13,3 +13,8 @@ class SubmissionStatus(str, Enum):
     IN_PROGRESS = "IN_PROGRESS" # Thí sinh đang làm bài (chưa nộp)
     SUBMITTED = "SUBMITTED"     # Đã nộp bài (Chờ chấm điểm nếu có tự luận)
     GRADED = "GRADED"           # Đã chấm xong điểm hoàn toàn
+
+class ReviewStatus(str, Enum):
+    PENDING = "PENDING"       # Được giao nhưng chưa chấm
+    COMPLETED = "COMPLETED"   # Đã chấm xong
+    SKIPPED = "SKIPPED"       # Bị bỏ qua (nếu hết hạn hoặc lý do đặc biệt)
