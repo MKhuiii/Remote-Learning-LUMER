@@ -2,10 +2,7 @@
 import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Navbar from "@/components/Navbar";
-
-// Đổi đường dẫn import sang file AuthUser mới viết
-import { loginUserAction, registerAccount } from "@/action/authUser"; // nó đỏ vì nó hiểu là chữ thường nhưng file là chữ in đỏ vẫn đúng 
-                                                //Hiếu thích chữ IN
+import { loginUserAction, registerAccount } from "@/actions/authUser";
 
 function LoginContent() {
   const router = useRouter();
@@ -53,7 +50,7 @@ function LoginContent() {
         localStorage.setItem("isLoggedIn", "true");
         localStorage.setItem("userEmail", email);
 
-        const userRole = result.user?.role; 
+        const userRole = result.user?.role;
 
         if (userRole === "Admin") {
           localStorage.setItem("role", "admin");
@@ -110,7 +107,7 @@ function LoginContent() {
         {!isLoginMode && (
           <div className="space-y-1">
             <label className="text-[11px] font-bold text-gray-500 uppercase">
-              Tên Người Dùng 
+              Tên Người Dùng
             </label>
             <input
               type="text"
@@ -172,8 +169,8 @@ function LoginContent() {
             onChange={(e) => setShowPassword(e.target.checked)}
             className="w-3.5 h-3.5 text-[#0066FF] border-gray-300 rounded focus:ring-blue-500 cursor-pointer"
           />
-          <label 
-            htmlFor="show-password" 
+          <label
+            htmlFor="show-password"
             className="text-xs text-gray-600 select-none cursor-pointer"
           >
             Hiển thị mật khẩu
@@ -220,10 +217,10 @@ function LoginContent() {
             className="flex items-center space-x-2 border border-gray-200 rounded-full px-5 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-50 transition cursor-pointer shadow-2xs"
           >
             <svg className="w-4 h-4" viewBox="0 0 24 24">
-              <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v3.92h6.58c-.28 1.48-1.12 2.74-2.38 3.58v2.96h3.84c2.24-2.06 3.53-5.1 3.53-8.65z"/>
-              <path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.84-2.96c-1.08.72-2.45 1.16-4.09 1.16-3.15 0-5.81-2.13-6.76-5.01H1.17v3.07C3.16 21.18 7.31 24 12 24z"/>
-              <path fill="#FBBC05" d="M5.24 14.28a7.17 7.17 0 0 1 0-4.56V6.65H1.17a11.94 11.94 0 0 0 0 10.7l4.07-3.07z"/>
-              <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.31 0 3.16 2.82 1.17 6.65l4.07 3.07c.95-2.88 3.61-5.01 6.76-5.01z"/>
+              <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v3.92h6.58c-.28 1.48-1.12 2.74-2.38 3.58v2.96h3.84c2.24-2.06 3.53-5.1 3.53-8.65z" />
+              <path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.84-2.96c-1.08.72-2.45 1.16-4.09 1.16-3.15 0-5.81-2.13-6.76-5.01H1.17v3.07C3.16 21.18 7.31 24 12 24z" />
+              <path fill="#FBBC05" d="M5.24 14.28a7.17 7.17 0 0 1 0-4.56V6.65H1.17a11.94 11.94 0 0 0 0 10.7l4.07-3.07z" />
+              <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.31 0 3.16 2.82 1.17 6.65l4.07 3.07c.95-2.88 3.61-5.01 6.76-5.01z" />
             </svg>
             <span>Google</span>
           </button>
