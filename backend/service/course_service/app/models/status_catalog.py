@@ -3,9 +3,6 @@ from enum import Enum
 from typing import Optional
 import sqlalchemy as sa
 
-# class CourseStatus(str, Enum):
-    
-
 class StatusCatalog(SQLModel, table=True):
     __tablename__ = "status_catalog"
     status_id: str = Field(primary_key=True, index=True, max_length=50)

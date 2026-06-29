@@ -2,11 +2,7 @@ from sqlmodel import Field, SQLModel, Relationship
 from typing import Optional, TYPE_CHECKING
 from uuid import UUID
 import uuid
-from enum import Enum
-
-class CourseType(str, Enum):
-    LONG_TERM = "LONG_TERM"
-    SHORT_TERM = "SHORT_TERM" # Nếu là khóa học ngắn hạn, khóa học chỉ có một môn học
+from app.models.enum import CourseType
 
 if TYPE_CHECKING:
     from app.models.course import Course
