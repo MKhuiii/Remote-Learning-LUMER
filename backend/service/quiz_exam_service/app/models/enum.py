@@ -1,0 +1,15 @@
+from enum import Enum
+
+class QuestionType(str, Enum):
+    MULTIPLE_CHOICE = "MULTIPLE_CHOICE" # Trắc nghiệm (Một hoặc nhiều đáp án)
+    ESSAY = "ESSAY"                     # Tự luận (Hỗ trợ text, LaTeX, đồ thị)
+
+class QuizPlacementType(str, Enum):
+    STANDALONE_LESSON = "STANDALONE_LESSON"  # Là một bài học độc lập trong module
+    INSIDE_LESSON = "INSIDE_LESSON"          # Đính kèm hiển thị bên trong một bài đọc
+    IN_VIDEO = "IN_VIDEO"                    # Nhúng vào mốc thời gian cụ thể của video
+
+class SubmissionStatus(str, Enum):
+    IN_PROGRESS = "IN_PROGRESS" # Thí sinh đang làm bài (chưa nộp)
+    SUBMITTED = "SUBMITTED"     # Đã nộp bài (Chờ chấm điểm nếu có tự luận)
+    GRADED = "GRADED"           # Đã chấm xong điểm hoàn toàn
