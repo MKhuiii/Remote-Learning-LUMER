@@ -19,4 +19,6 @@ class Tag(SQLModel, table=True):
     tag_name: str = Field(nullable=False, max_length=100)
     description: Optional[str] = Field(default=None, max_length=255)
 
+    # Quan hệ
+    # Một tag có thể thuộc 1 hoặc nhiều khóa học
     courses: List["Course"] = Relationship(back_populates="tags", link_model=CourseTagLink)

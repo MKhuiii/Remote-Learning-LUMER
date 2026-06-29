@@ -9,6 +9,7 @@ import uuid
 if TYPE_CHECKING:
     from app.models.tag import Tag
     from app.models.subject import Subject
+    from app.models.curriculum import Curriculum
 
 class Course(SQLModel, table=True):
     __tablename__ = "course"
@@ -18,9 +19,12 @@ class Course(SQLModel, table=True):
         primary_key=True, 
         index=True,
         nullable=False
-
     )
-    curriculum_id: UUID = Field(foreign_key="curriculum.curriculum_id", nullable=False)
+    curriculum_id: UUID = Field(
+        foreign_key="curriculum.curriculum_id", 
+        nullable=False, 
+        unique=True 
+    )
     instructor_id: UUID = Field(nullable=False)
     title: str = Field(nullable=False, max_length=255)
     course_type: CourseType = Field(nullable=False)
@@ -32,6 +36,12 @@ class Course(SQLModel, table=True):
         nullable=False,
         max_length=50
     )
+
+    # Quan hệ
+    # Một khóa học có một chương trình đào tạo
+    curriculum: Optional["Curriculum"] = Relationship(back_populates="course")
+    # Một khóa học có một hoặc nhiều tag
     tags: List["Tag"] = Relationship(back_populates="courses", link_model=CourseTagLink)
+    # Một khóa học có một hoặc nhiều môn học
     subjects: List["Subject"] = Relationship(back_populates="course")
     
