@@ -1,7 +1,7 @@
 from sqlmodel import Session, select
 from app.crud.base import CRUDBase
 from app.models.profile import Profile
-from app.schemas.profile import ProfileCreate, ProfileUpdate
+from app.schemas.profile import ProfileUpdate
 from uuid import UUID
 from typing import Any
 
