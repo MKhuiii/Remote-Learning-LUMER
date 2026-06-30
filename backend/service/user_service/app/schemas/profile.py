@@ -6,3 +6,10 @@ class ProfileUpdate(BaseModel):
     lastname: str | None = None
     bio: str | None = None
     avatar_url: str | None = None
+
+    
+class ProfileCreate(BaseModel):
+    firstname: str
+    lastname: str
+    bio: str | None = None
+    avatar_url: str | None = None

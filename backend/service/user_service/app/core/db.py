@@ -30,8 +30,15 @@ def init_db() -> None:
             # Khởi tạo dữ liệu cho bảng vai trò
             admin_role = Role(role_id=1, role_name="Admin", description="Quản trị viên hệ thống")
             user_role = Role(role_id=2, role_name="User", description="Người dùng")
+            tester_role = Role(role_id=3, role_name="Tester", description="Người kiểm thử")
+            instructor_role = Role(role_id=4, role_name="Instructor", description="Giảng viên")
+            
+
             session.add(admin_role)
             session.add(user_role)
+            session.add(tester_role)
+            session.add(instructor_role)
+
 
             # Khởi tạo dữ liệu cho bảng trạng thái
             active_status = StatusCatalog(
@@ -57,7 +64,6 @@ def init_db() -> None:
             session.add(banned_status)
             session.commit()
 
-            # Khởi tạo người dùng mẫu
             sample_user = User(
                 role_id=1,  # Vai trò quản trị viên
                 username="admin",

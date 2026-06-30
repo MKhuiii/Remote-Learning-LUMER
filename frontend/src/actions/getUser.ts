@@ -1,0 +1,192 @@
+"use server";
+import { cookies } from "next/headers";
+import { revalidatePath } from "next/cache";
+
+export interface ActionResponseList {
+  success: boolean;
+  message?: string;
+  list?: any[];
+}
+
+export interface ActionResponseSingle {
+  success: boolean;
+  message?: string;
+}
+
+export interface User {
+  user_id: string; 
+  username: string;
+  email: string;
+  role_id: number;
+  status_id: string; 
+  created_at?: string;
+}
+
+export type UserItem = User;
+
+const BACKEND_URL = "http://127.0.0.1:8000";
+
+async function getAuthHeaders() {
+  const cookieStore = cookies();
+  const resolvedCookies = typeof (cookieStore as any).then === "function" 
+    ? await cookieStore 
+    : cookieStore;
+    
+  const token = (resolvedCookies as any).get("token")?.value;
+  
+  if (!token) return null;
+  return {
+    "Content-Type": "application/json",
+    "Authorization": `Bearer ${token}`,
+  };
+}
+
+// 1. Lấy danh sách thành viên (Giữ nguyên vì logic đúng)
+export async function getrList(page: number, limit: number): Promise<ActionResponseList> {
+  try {
+    const skip = (page - 1) * limit;
+    const headers = await getAuthHeaders();
+
+    if (!headers) {
+      return { success: false, message: "Không tìm thấy Token đăng nhập trong Cookie!" };
+    }
+
+    const res = await fetch(`${BACKEND_URL}/get-user-list?skip=${skip}&limit=${limit}`, {
+      method: "GET",
+      headers: headers,
+      cache: "no-store"
+    });
+
+    if (res.status === 401) {
+      return { success: false, message: "Phiên đăng nhập hết hạn hoặc không có quyền Admin!" };
+    }
+
+    if (!res.ok) {
+      return { success: false, message: `Lỗi hệ thống Backend: ${res.status}` };
+    }
+
+    const data = await res.json();
+    return { success: true, list: data };
+  } catch (error: any) {
+    return { success: false, message: error.message || "Lỗi kết nối mạng" };
+  }
+}
+
+// 2. SỬA LỖI: Cập nhật trạng thái Tài khoản (PATCH /update-status/)
+export async function updateUserStatus(userId: string, nextStatus: any): Promise<ActionResponseSingle> {
+  try {
+    const headers = await getAuthHeaders();
+    if (!headers) return { success: false, message: "Hết hạn phiên đăng nhập" };
+
+    // LƯU Ý QUAN TRỌNG: 
+    // Nếu status_id ở Backend/DB của bạn lưu dạng số (ví dụ: 1 = Active, 2 = Locked) thì cần mở dòng dưới ra:
+    // const statusIdFormatted = !isNaN(Number(nextStatus)) ? Number(nextStatus) : nextStatus;
+    
+    // Nếu status_id ở Backend là dạng chuỗi chữ (ví dụ: "ACTIVE", "BLOCKED") thì giữ nguyên nextStatus
+    const statusIdFormatted = nextStatus;
+
+    const res = await fetch(`${BACKEND_URL}/update-status/${userId}`, {
+      method: "PATCH",
+      headers: headers,
+      body: JSON.stringify({ 
+        status_id: statusIdFormatted // Gửi object phẳng { status_id: ... } theo đúng Pydantic UserStatusUpdate
+      }),
+    });
+
+    if (!res.ok) {
+      const errorText = await res.text();
+      return { success: false, message: `Không thể cập nhật trạng thái: ${errorText}` };
+    }
+    
+    revalidatePath("/admin/user-management");
+    return { success: true };
+  } catch (error: any) {
+    return { success: false, message: error.message };
+  }
+}
+
+// 3. SỬA LỖI NẶNG NHẤT: Đưa cấu trúc dữ liệu phức tạp lồng về dạng PHẲNG (Flat Object)
+export async function updateUserInfo(userId: string, editUserData: any): Promise<ActionResponseSingle> {
+  try {
+    const headers = await getAuthHeaders();
+    if (!headers) return { success: false, message: "Hết hạn phiên đăng nhập" };
+
+    // Trích xuất dữ liệu từ payload của form
+    let rawData = editUserData;
+    if (Array.isArray(editUserData)) {
+      rawData = editUserData.find(item => typeof item === 'object' && item !== null && 'username' in item) || editUserData[editUserData.length - 1];
+    }
+
+    // KHÔNG BỌC LỒNG OBJECT NỮA. CHUYỂN THÀNH OBJECT PHẲNG THEO ĐÚNG SCHEMA UserInfoUpdate CỦA BACKEND
+    // Dựa theo Hình 2 & Hình 3 trong Swagger của bạn: Model cập nhật thông tin gồm các trường phẳng dưới đây
+    const formattedPayload = {
+      username: rawData?.username || "",
+      // Thêm các trường profile/user khác nếu form của bạn có truyền lên và Backend yêu cầu:
+      // firstname: rawData?.firstname || "",
+      // lastname: rawData?.lastname || "",
+      // bio: rawData?.bio || "",
+      // avatar_url: rawData?.avatar_url || ""
+    };
+
+    const res = await fetch(`${BACKEND_URL}/update-user/${userId}`, {
+      method: "PUT",
+      headers: headers,
+      body: JSON.stringify(formattedPayload), // Gửi object phẳng sạch sẽ
+    });
+
+    if (!res.ok) {
+      const errorText = await res.text();
+      return { success: false, message: `Lỗi sửa thông tin (${res.status}): ${errorText}` };
+    }
+
+    revalidatePath("/admin/user-management");
+    return { success: true };
+  } catch (error: any) {
+    return { success: false, message: error.message };
+  }
+}
+
+// 4. Tạo mới tài khoản (Giữ nguyên)
+export async function registerAccount(newUserData: any): Promise<ActionResponseSingle> {
+  try {
+    const headers = await getAuthHeaders();
+    if (!headers) return { success: false, message: "Hết hạn phiên đăng nhập" };
+
+    const res = await fetch(`${BACKEND_URL}/create-user`, { 
+      method: "POST",
+      headers: headers,
+      body: JSON.stringify(newUserData),
+    });
+
+    if (!res.ok) return { success: false, message: "Lỗi đăng ký tài khoản mới" };
+    
+    revalidatePath("/admin/user-management");
+    return { success: true };
+  } catch (error: any) {
+    return { success: false, message: error.message };
+  }
+}
+
+// Thêm hàm này vào file Server Actions của bạn (@/actions/getUser.ts)
+export async function updateUserRole(userId: string, roleId: number): Promise<ActionResponseSingle> {
+  try {
+    const headers = await getAuthHeaders();
+    if (!headers) return { success: false, message: "Hết hạn phiên đăng nhập" };
+
+    const res = await fetch(`${BACKEND_URL}/update-role/${userId}`, {
+      method: "PATCH",
+      headers: headers,
+      body: JSON.stringify({ role_id: roleId }), // Gửi đúng { role_id: số }
+    });
+
+    if (!res.ok) {
+      const errorText = await res.text();
+      return { success: false, message: `Không thể cập nhật role: ${errorText}` };
+    }
+    
+    revalidatePath("/admin/user-management");
+    return { success: true };
+  } catch (error: any) {
+    return { success: false, message: error.message };
+  }
+}

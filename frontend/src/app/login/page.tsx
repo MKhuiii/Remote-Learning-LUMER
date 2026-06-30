@@ -16,9 +16,23 @@ function LoginContent() {
   const [name, setName] = useState("");
   const [showPassword, setShowPassword] = useState(false);
 
+  // Theo dõi sự thay đổi của mode để clear dữ liệu theo logic 1 chiều
   useEffect(() => {
-    setIsLoginMode(mode === "login");
+    const nextIsLoginMode = mode === "login";
+
+    // Trường hợp: Từ ĐĂNG NHẬP chuyển sang ĐĂNG KÝ -> Xóa sạch tất cả bao gồm email
+    if (isLoginMode && !nextIsLoginMode) {
+      setEmail("");
+    }
+
+    // Luôn clear mật khẩu và họ tên khi chuyển đổi qua lại để đảm bảo bảo mật và UI sạch sẽ
+    setPassword("");
+    setRePassword("");
+    setName("");
     setShowPassword(false);
+    
+    // Cập nhật chế độ hiển thị mới
+    setIsLoginMode(nextIsLoginMode);
   }, [mode]);
 
   // ------------------ Xử lý Đăng Ký (UI) ----------------------
@@ -40,13 +54,12 @@ function LoginContent() {
   // ------------------ Xử lý Đăng Nhập (UI) ----------------------
   const handleLoginSubmit = async () => {
     try {
-      // Gọi trực tiếp Server Action đăng nhập
       const result = await loginUserAction(email, password);
 
       if (result.success) {
         alert(result.message);
 
-        // Lưu vào localStorage phục vụ logic UI cũ của bạn (Token đã được lưu an toàn trong cookie từ phía Server rồi)
+        // Lưu vào localStorage phục vụ logic UI cũ của bạn
         localStorage.setItem("isLoggedIn", "true");
         localStorage.setItem("userEmail", email);
 
@@ -98,6 +111,7 @@ function LoginContent() {
       handleRegisterSubmit();
     }
   };
+
   return (
     <div className="max-w-md w-full mx-auto mt-16 p-6 bg-white border border-gray-200 rounded-2xl shadow-xs">
       <h2 className="text-xl font-black text-gray-900 mb-6 text-center">
