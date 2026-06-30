@@ -14,7 +14,7 @@ router = APIRouter()
 def update_profile(
     profile_id: UUID,
     profile_update: ProfileUpdate,
-    session: Session = Depends(SessionDep),
+    session: SessionDep,
     current_user: dict = Depends(get_current_user_role)
 ):
     # Lấy profile theo profile_id
@@ -45,7 +45,7 @@ def update_profile(
 @router.get("/get-profile/{profile_id}")
 def get_profile(
     profile_id: UUID,
-    session: Session = Depends(SessionDep),
+    session: SessionDep,
     current_user: dict = Depends(get_current_user_role)
 ):
     # Lấy profile theo profile_id
