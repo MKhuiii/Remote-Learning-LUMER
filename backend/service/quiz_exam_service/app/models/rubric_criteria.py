@@ -2,7 +2,7 @@ import uuid
 from uuid import UUID
 from typing import Optional, List, TYPE_CHECKING
 from sqlmodel import Field, SQLModel, Relationship
-from datetime import date
+from datetime import date, datetime
 
 # Model khung chấm điểm mẫu (Ví dụ: Tiêu chí 1: Đúng đề bài - 5đ, Tiêu chí 2: Sáng tạo - 5đ)
 class RubricCriteria(SQLModel, table=True):
@@ -15,4 +15,4 @@ class RubricCriteria(SQLModel, table=True):
     description: Optional[str] = Field(default=None) # Hướng dẫn chấm cho học viên
     max_score: float = Field(nullable=False)          # Điểm tối đa của tiêu chí này
     
-    created_at: date = Field(default_factory=date.today)
+    created_at: datetime = Field(default_factory=datetime.utcnow)

@@ -1,28 +1,30 @@
 import uuid
 from uuid import UUID
+from datetime import datetime
 from typing import Optional, List, TYPE_CHECKING
 from sqlmodel import Field, SQLModel, Relationship
-from datetime import date
 from app.models.enum import ReviewStatus
 
 if TYPE_CHECKING:
-    from models.peer_review_evaluations import PeerReviewEvaluation
+    from app.models.peer_review_evaluations import PeerReviewEvaluation
+    from app.models.quiz_submission import QuizSubmission
 
 class PeerReviewAssignment(SQLModel, table=True):
     __tablename__ = "peer_review_assignments"
 
     assignment_id: UUID = Field(default_factory=uuid.uuid4, primary_key=True)
-    quiz_id: UUID = Field(nullable=False, index=True)
+    quiz_id: UUID = Field(nullable=False, index=True)         # Định danh đề thi tự luận được chấm chéo
     
-    reviewer_id: UUID = Field(nullable=False, index=True)      # ID người chấm (Học viên A)
-    submission_id: UUID = Field(foreign_key="quiz_submissions.submission_id", index=True) # Bài nộp của học viên B
+    reviewer_id: UUID = Field(nullable=False, index=True)     # Định danh học viên đóng vai trò là người đi chấm bài
+    submission_id: UUID = Field(foreign_key="quiz_submission.submission_id", index=True) # Định danh bài nộp được giao để chấm
     
-    status: ReviewStatus = Field(default=ReviewStatus.PENDING)
-    final_score_given: Optional[float] = Field(default=None)   # Tổng điểm sau khi chấm bài này
-    general_comment: Optional[str] = Field(default=None)      # Nhận xét chung cho cả bài
+    status: ReviewStatus = Field(default=ReviewStatus.PENDING) # Trạng thái của lượt phân công chấm chéo
+    final_score_given: Optional[float] = Field(default=None)   # Tổng điểm số người chấm đưa ra sau khi hoàn tất
+    general_comment: Optional[str] = Field(default=None)      # Nhận xét hoặc lời phê tổng quan cho bài làm
     
-    assigned_at: date = Field(default_factory=date.today)
-    completed_at: Optional[date] = Field(default=None)
+    assigned_at: datetime = Field(default_factory=datetime.utcnow) # Thời điểm hệ thống tự động phân phối bài
+    completed_at: Optional[datetime] = Field(default=None)    # Thời điểm người chấm bấm nút hoàn thành
 
-    # Quan hệ
+    # Quan hệ nội bộ phân hệ
+    submission: Optional["QuizSubmission"] = Relationship(back_populates="peer_assignments")
     evaluations: List["PeerReviewEvaluation"] = Relationship(back_populates="assignment")
