@@ -2,7 +2,7 @@ from pydantic import BaseModel, EmailStr, model_validator
 from pydantic_core import PydanticCustomError
 from typing import Self
 from uuid import UUID
-from datetime import date
+from datetime import date, datetime
 
 class UserCreate(BaseModel):
     username: str
@@ -33,7 +33,7 @@ class UserGeneralInfo(BaseModel):
     role_name: str
     username: str
     email: EmailStr
-    create_at: date 
+    created_at: datetime 
     status_id: str
 
 # Thông tin chi tiết người dùng, hiển thị trong phần hồ sơ chi tiết 
@@ -44,7 +44,7 @@ class UserDetailInfo(BaseModel):
     email: EmailStr 
     password: str 
     birthdate: date | None = None
-    create_at: date 
+    created_at: datetime 
     status_id: str 
 
 class UserListQuery(BaseModel):

@@ -3,7 +3,7 @@ from pydantic import EmailStr
 from typing import Optional
 from uuid import UUID
 import uuid
-from datetime import date
+from datetime import datetime, date
 from app.models.status_catalog import UserStatus
 
 class User(SQLModel, table=True):
@@ -14,7 +14,7 @@ class User(SQLModel, table=True):
     email: EmailStr = Field(unique=True, nullable=False)
     password: str = Field(nullable=False)
     birthdate: Optional[date] = Field(nullable=True, default=None)
-    created_at: date = Field(nullable=False, default_factory=date.today)
+    created_at: datetime = Field(nullable=False, default_factory=datetime.utcnow)
     status_id: str = Field(
         foreign_key="status_catalog.status_id", 
         nullable=False, 
