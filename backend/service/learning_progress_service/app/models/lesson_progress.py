@@ -1,6 +1,6 @@
 import uuid
 from uuid import UUID
-from datetime import date
+from datetime import datetime
 from typing import Optional
 from sqlmodel import Field, SQLModel
 from app.models.enum import LessonStatus
@@ -15,8 +15,8 @@ class LessonProgress(SQLModel, table=True):
     
     status: LessonStatus = Field(default=LessonStatus.LOCKED) # Trạng thái học tập hiện tại của bài học
     
-    quiz_passed: bool = Field(default=False)                # Trạng thái vượt qua bài kiểm tra của bài học
+    quiz_passed: bool = Field(default=True)# Trạng thái vượt qua bài kiểm tra của bài học, nếu không có bài kiểm tra mặc định là True
     highest_quiz_score: Optional[float] = Field(default=None) # Điểm số bài kiểm tra cao nhất từng đạt được
     successful_submission_id: Optional[UUID] = Field(default=None) # Lượt nộp bài kiểm tra đạt điều kiện vượt qua bài học
     
-    updated_at: date = Field(default_factory=date.today)   # Ngày cuối cùng cập nhật tiến độ bài học
+    updated_at: datetime = Field(default_factory=datetime.utcnow)   # Ngày cuối cùng cập nhật tiến độ bài học

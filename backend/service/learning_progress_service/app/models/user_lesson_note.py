@@ -1,6 +1,6 @@
 import uuid
 from uuid import UUID
-from datetime import date
+from datetime import datetime
 from sqlmodel import Field, SQLModel
 
 class UserLessonNote(SQLModel, table=True):
@@ -14,5 +14,5 @@ class UserLessonNote(SQLModel, table=True):
     timestamp_seconds: int = Field(nullable=False)          # Mốc thời gian của dòng video khi học viên bấm tạo ghi chú
     content: str = Field(nullable=False)                    # Nội dung văn bản ghi chú của học viên
     
-    created_at: date = Field(default_factory=date.today)    # Ngày tạo bản ghi chú
-    updated_at: date = Field(default_factory=date.today)    # Ngày chỉnh sửa ghi chú gần nhất
+    created_at: datetime = Field(default_factory=datetime.utcnow)    # Ngày tạo bản ghi chú
+    updated_at: datetime = Field(default_factory=datetime.utcnow)    # Ngày chỉnh sửa ghi chú gần nhất
