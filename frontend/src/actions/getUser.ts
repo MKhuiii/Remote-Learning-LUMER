@@ -23,8 +23,8 @@ export interface User {
 }
 
 export type UserItem = User;
-
-const BACKEND_URL = "http://127.0.0.1:8000";
+const userBackendUrl = process.env.NEXT_PUBLIC_USER_BACKEND_URL;
+// const BACKEND_URL = "http://127.0.0.1:8000";
 
 async function getAuthHeaders() {
   const cookieStore = cookies();
@@ -51,7 +51,7 @@ export async function getrList(page: number, limit: number): Promise<ActionRespo
       return { success: false, message: "Không tìm thấy Token đăng nhập trong Cookie!" };
     }
 
-    const res = await fetch(`${BACKEND_URL}/get-user-list?skip=${skip}&limit=${limit}`, {
+    const res = await fetch(`${userBackendUrl}/get-user-list?skip=${skip}&limit=${limit}`, {
       method: "GET",
       headers: headers,
       cache: "no-store"
@@ -85,7 +85,7 @@ export async function updateUserStatus(userId: string, nextStatus: any): Promise
     // Nếu status_id ở Backend là dạng chuỗi chữ (ví dụ: "ACTIVE", "BLOCKED") thì giữ nguyên nextStatus
     const statusIdFormatted = nextStatus;
 
-    const res = await fetch(`${BACKEND_URL}/update-status/${userId}`, {
+    const res = await fetch(`${userBackendUrl}/update-status/${userId}`, {
       method: "PATCH",
       headers: headers,
       body: JSON.stringify({ 
@@ -128,7 +128,7 @@ export async function updateUserInfo(userId: string, editUserData: any): Promise
       // avatar_url: rawData?.avatar_url || ""
     };
 
-    const res = await fetch(`${BACKEND_URL}/update-user/${userId}`, {
+    const res = await fetch(`${userBackendUrl}/update-user/${userId}`, {
       method: "PUT",
       headers: headers,
       body: JSON.stringify(formattedPayload), // Gửi object phẳng sạch sẽ
@@ -152,7 +152,7 @@ export async function registerAccount(newUserData: any): Promise<ActionResponseS
     const headers = await getAuthHeaders();
     if (!headers) return { success: false, message: "Hết hạn phiên đăng nhập" };
 
-    const res = await fetch(`${BACKEND_URL}/create-user`, { 
+    const res = await fetch(`${userBackendUrl}/create-user`, { 
       method: "POST",
       headers: headers,
       body: JSON.stringify(newUserData),
@@ -173,7 +173,7 @@ export async function updateUserRole(userId: string, roleId: number): Promise<Ac
     const headers = await getAuthHeaders();
     if (!headers) return { success: false, message: "Hết hạn phiên đăng nhập" };
 
-    const res = await fetch(`${BACKEND_URL}/update-role/${userId}`, {
+    const res = await fetch(`${userBackendUrl}/update-role/${userId}`, {
       method: "PATCH",
       headers: headers,
       body: JSON.stringify({ role_id: roleId }), // Gửi đúng { role_id: số }
@@ -190,3 +190,51 @@ export async function updateUserRole(userId: string, roleId: number): Promise<Ac
     return { success: false, message: error.message };
   }
 }
+
+
+
+
+
+// lấy toàn bộ thông tin 1 người 
+// Định nghĩa kiểu dữ liệu phản hồi chi tiết từ Swagger
+export interface ActionResponseDetail {
+  success: boolean;
+  message?: string;
+  data?: {
+    user_id: string;
+    role_name: string;
+    username: string;
+    email: string;
+    password?: string;
+    birthdate?: string;
+    created_at: string;
+    status_id: string;
+    [key: string]: any; // Cho phép chứa thêm các thông tin mở rộng khác nếu có
+  };
+}
+
+// Hàm lấy toàn bộ thông tin chi tiết 1 người dùng dựa theo Swagger (GET /get-user/{user_id})
+export async function getInforUser(userId: string): Promise<ActionResponseDetail> {
+  try {
+    const headers = await getAuthHeaders();
+    if (!headers) return { success: false, message: "Hết hạn phiên đăng nhập" };
+
+    // Đúng chuẩn Swagger: Phương thức GET, truyền userId trực tiếp lên URL thanh thoát
+    const res = await fetch(`${userBackendUrl}/get-user/${userId}`, {
+      method: "GET",
+      headers: headers,
+      cache: "no-store",
+    });
+
+    if (!res.ok) {
+      const errorText = await res.text();
+      return { success: false, message: `Không thể tải thông tin chi tiết: ${errorText}` };
+    }
+
+    const data = await res.json();
+    return { success: true, data: data }; // Trả về object chứa toàn bộ dữ liệu phản hồi
+  } catch (error: any) {
+    return { success: false, message: error.message || "Lỗi kết nối hệ thống" };
+  }
+}
+

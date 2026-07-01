@@ -1,8 +1,15 @@
 "use client";
 import Navbar from "@/components/Navbar";
 import { useState, useMemo, useEffect } from "react";
-// ĐÃ IMPORT ĐẦY ĐỦ CÁC HÀM CẦN THIẾT
-import { registerAccount, getrList, updateUserStatus, updateUserInfo, updateUserRole } from "@/actions/getUser";
+// ĐÃ IMPORT ĐẦY ĐỦ CÁC HÀM CẦN THIẾT TỪ SERVER ACTIONS
+import { 
+  registerAccount, 
+  getrList, 
+  updateUserStatus, 
+  updateUserInfo, 
+  updateUserRole,
+  getInforUser 
+} from "@/actions/getUser";
 import Link from "next/link";
 
 export interface User {
@@ -24,11 +31,17 @@ export default function UserManagementPage() {
 
   const [searchTerm, setSearchTerm] = useState("");
   const [roleFilter, setRoleFilter] = useState("Tất cả");
+  // Bộ lọc theo 3 trạng thái
+  const [statusFilter, setStatusFilter] = useState("Tất cả");
 
   const [isOpenAddModal, setIsOpenAddModal] = useState(false);
   const [isOpenViewModal, setIsOpenViewModal] = useState(false);
   const [isOpenEditModal, setIsOpenEditModal] = useState(false);
+  
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  // Lưu dữ liệu chi tiết trả về từ API đơn lẻ
+  const [userDetail, setUserDetail] = useState<any | null>(null);
+  const [loadingDetail, setLoadingDetail] = useState<boolean>(false);
 
   const [newUserData, setNewUserData] = useState({
     username: "",
@@ -38,7 +51,6 @@ export default function UserManagementPage() {
     password: "", 
   });
 
-  // THÊM THÀNH PHẦN STATUS_ID VÀO ĐÂY ĐỂ QUẢN LÝ KHI SỬA
   const [editUserData, setEditUserData] = useState({
     username: "",
     email: "",
@@ -81,6 +93,7 @@ export default function UserManagementPage() {
     loadUsersFromServer(currentPage);
   }, [currentPage]);
 
+  // Xử lý bộ lọc kết hợp tìm kiếm, vai trò, trạng thái
   const filteredUsers = useMemo(() => {
     return users.filter((user) => {
       const matchesSearch =
@@ -94,9 +107,12 @@ export default function UserManagementPage() {
         (roleFilter === "Học viên" && user.role_id === 2) ||
         (roleFilter === "Tester" && user.role_id === 3);
 
-      return matchesSearch && matchesRole;
+      const matchesStatus =
+        statusFilter === "Tất cả" || user.status_id === statusFilter;
+
+      return matchesSearch && matchesRole && matchesStatus;
     });
-  }, [users, searchTerm, roleFilter]);
+  }, [users, searchTerm, roleFilter, statusFilter]);
 
   const stats = useMemo(() => {
     return {
@@ -142,24 +158,39 @@ export default function UserManagementPage() {
     }
   };
 
+  // Hàm gọi API lấy chi tiết toàn bộ thông tin của user
+  const handleOpenViewModal = async (user: User) => {
+    setSelectedUser(user);
+    setUserDetail(null);
+    setIsOpenViewModal(true);
+    setLoadingDetail(true);
+
+    const response = await getInforUser(user.user_id);
+    if (response.success && response.data) {
+      setUserDetail(response.data);
+    } else {
+      console.error(response.message);
+    }
+    setLoadingDetail(false);
+  };
+
   const handleOpenEditModal = (user: User) => {
     setSelectedUser(user);
     setEditUserData({
       username: user.username,
       email: user.email,
       role_id: user.role_id,
-      status_id: user.status_id, // Đổ dữ liệu status hiện tại vào form
+      status_id: user.status_id,
     });
     setIsOpenEditModal(true);
   };
 
-  // CẬP NHẬT ĐỒNG THỜI TÊN, VAI TRÒ VÀ TRẠNG THÁI TRONG CÙNG MỘT MODAL
   const handleUpdateUser = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedUser) return;
 
     try {
-      // 1. Cập nhật thông tin cơ bản (Username)
+      // 1. Cập nhật thông tin cơ bản
       const resInfo = await updateUserInfo(selectedUser.user_id, {
         username: editUserData.username
       });
@@ -253,7 +284,7 @@ export default function UserManagementPage() {
 
         {/* Thanh tìm kiếm & bộ lọc */}
         <div className="bg-white rounded-xl shadow-sm p-6 mb-6 border border-slate-200">
-          <div className="flex gap-4">
+          <div className="flex flex-col md:flex-row gap-4">
             <input
               type="text"
               placeholder="Tìm kiếm nhanh tên hoặc email..."
@@ -261,16 +292,30 @@ export default function UserManagementPage() {
               onChange={(e) => setSearchTerm(e.target.value)}
               className="flex-1 border border-slate-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#0066FF]/20 focus:border-[#0066FF] transition"
             />
+            
+            {/* Bộ lọc vai trò */}
             <select 
               value={roleFilter}
               onChange={(e) => setRoleFilter(e.target.value)}
-              className="border border-slate-200 rounded-xl px-4 bg-white focus:outline-none focus:ring-2 focus:ring-[#0066FF]/20 focus:border-[#0066FF] transition cursor-pointer min-w-[200px]"
+              className="border border-slate-200 rounded-xl px-4 py-3 bg-white focus:outline-none focus:ring-2 focus:ring-[#0066FF]/20 focus:border-[#0066FF] transition cursor-pointer min-w-[180px]"
             >
               <option value="Tất cả">Tất cả vai trò</option>
               <option value="Admin">Admin</option>
               <option value="Giảng viên">Giảng viên</option>
               <option value="Học viên">Học viên</option>
               <option value="Tester">Tester</option>
+            </select>
+
+            {/* Bộ lọc 3 Trạng thái dựa trên DB */}
+            <select 
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="border border-slate-200 rounded-xl px-4 py-3 bg-white focus:outline-none focus:ring-2 focus:ring-[#0066FF]/20 focus:border-[#0066FF] transition cursor-pointer min-w-[180px]"
+            >
+              <option value="Tất cả">Tất cả trạng thái</option>
+              <option value="ACTIVE">Hoạt động</option>
+              <option value="UNACTIVE">Không hoạt động</option>
+              <option value="BANNED">Bị khóa</option>
             </select>
           </div>
         </div>
@@ -309,7 +354,7 @@ export default function UserManagementPage() {
                     <td className="p-4">
                       <div className="flex justify-center gap-2">
                         <button 
-                          onClick={() => { setSelectedUser(user); setIsOpenViewModal(true); }}
+                          onClick={() => handleOpenViewModal(user)}
                           className="bg-slate-100 text-slate-700 px-3 py-1.5 rounded-lg hover:bg-slate-200 text-xs font-semibold transition"
                         >
                           Xem chi tiết
@@ -359,37 +404,81 @@ export default function UserManagementPage() {
         </div>
       </section>
 
-      {/* MODAL 1: XEM CHI TIẾT */}
+      {/* MODAL 1: XEM CHI TIẾT TOÀN BỘ THÔNG TIN TỪ API */}
       {isOpenViewModal && selectedUser && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white p-7 rounded-2xl max-w-sm w-full shadow-2xl relative">
+          <div className="bg-white p-7 rounded-2xl max-w-md w-full shadow-2xl relative transition-all">
             <div className="flex justify-between items-center mb-5 border-b border-slate-100 pb-3">
-              <h3 className="text-xl font-bold text-slate-800">Chi tiết tài khoản</h3>
+              <h3 className="text-xl font-bold text-slate-800">Thông tin chi tiết tài khoản</h3>
               <button onClick={() => setIsOpenViewModal(false)} className="text-slate-400 hover:text-slate-700 transition">
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
               </button>
             </div>
             
-            <div className="space-y-4">
-              <div>
-                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Họ & Tên</p>
-                <p className="font-medium text-slate-900 text-lg">{selectedUser.username}</p>
+            {loadingDetail ? (
+              <div className="py-12 text-center text-slate-500 font-medium">
+                <span className="inline-block animate-spin mr-2">⏳</span> Đang tải toàn bộ dữ liệu từ hệ thống...
               </div>
-              <div>
-                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Email liên hệ</p>
-                <p className="font-medium text-slate-900">{selectedUser.email}</p>
+            ) : (
+              <div className="space-y-4 text-sm">
+                <div className="grid grid-cols-2 gap-4 bg-slate-50 p-3 rounded-xl mb-2">
+                  <div>
+                    <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-0.5">Mã định danh (ID)</p>
+                    <p className="font-mono text-xs text-slate-700 select-all truncate" title={userDetail?.user_id || selectedUser.user_id}>
+                      {userDetail?.user_id || selectedUser.user_id}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-0.5">Tên vai trò (DB)</p>
+                    <p className="font-semibold text-purple-700">
+                      {userDetail?.role_name || selectedUser.role_name || "Chưa thiết lập"}
+                    </p>
+                  </div>
+                </div>
+
+                <div>
+                  <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Họ & Tên người dùng</p>
+                  <p className="font-semibold text-slate-900 text-base">{userDetail?.username || selectedUser.username}</p>
+                </div>
+
+                <div>
+                  <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Địa chỉ Email</p>
+                  <p className="font-medium text-slate-800 bg-slate-50 px-2.5 py-1.5 rounded-lg border border-slate-100">{userDetail?.email || selectedUser.email}</p>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Ngày sinh (Birthdate)</p>
+                    <p className="font-medium text-slate-900">
+                      {userDetail?.birthdate ? new Date(userDetail.birthdate).toLocaleDateString("vi-VN") : "Chưa cập nhật"}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Ngày tạo tài khoản</p>
+                    <p className="font-medium text-slate-600">
+                      {userDetail?.created_at ? new Date(userDetail.created_at).toLocaleString("vi-VN") : (selectedUser.created_at ? new Date(selectedUser.created_at).toLocaleString("vi-VN") : "N/A")}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4 pt-2 border-t border-slate-100">
+                  <div>
+                    <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Phân quyền hiển thị</p>
+                    <div>{renderRoleBadge(userDetail?.role_id || selectedUser.role_id)}</div>
+                  </div>
+                  <div>
+                    <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Trạng thái hiện tại</p>
+                    <p className={`font-bold mt-0.5 ${
+                      (userDetail?.status_id || selectedUser.status_id) === "ACTIVE" ? "text-green-600" : 
+                      (userDetail?.status_id || selectedUser.status_id) === "UNACTIVE" ? "text-amber-500" : "text-red-500"
+                    }`}>
+                      {(userDetail?.status_id || selectedUser.status_id) === "ACTIVE" ? "🟢 Đang hoạt động" : 
+                       (userDetail?.status_id || selectedUser.status_id) === "UNACTIVE" ? "🟡 Không hoạt động" : "🔴 Đã bị khóa"}
+                    </p>
+                  </div>
+                </div>
               </div>
-              <div>
-                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Vai trò hệ thống</p>
-                <div>{renderRoleBadge(selectedUser.role_id)}</div>
-              </div>
-              <div>
-                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Trạng thái</p>
-                <p className={`font-semibold ${selectedUser.status_id === "ACTIVE" ? "text-green-600" : selectedUser.status_id === "UNACTIVE" ? "text-amber-500" : "text-red-500"}`}>
-                  {selectedUser.status_id === "ACTIVE" ? "Đang hoạt động" : selectedUser.status_id === "UNACTIVE" ? "Không hoạt động" : "Đã bị khóa"}
-                </p>
-              </div>
-            </div>
+            )}
 
             <button onClick={() => setIsOpenViewModal(false)} className="mt-7 w-full bg-slate-100 border border-slate-200 py-2.5 rounded-xl hover:bg-slate-200 text-slate-700 font-semibold transition">
               Đóng cửa sổ
@@ -447,7 +536,7 @@ export default function UserManagementPage() {
         </div>
       )}
 
-      {/* MODAL 3: SỬA THÔNG TIN (ĐÃ TÍCH HỢP TRẠNG THÁI 3 OPTIONS) */}
+      {/* MODAL 3: SỬA THÔNG TIN */}
       {isOpenEditModal && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <form onSubmit={handleUpdateUser} className="bg-white p-7 rounded-2xl max-w-md w-full shadow-2xl space-y-5 relative">
@@ -469,7 +558,6 @@ export default function UserManagementPage() {
               <p className="text-xs text-slate-400 mt-1.5">* Email đăng nhập không thể thay đổi</p>
             </div>
 
-            {/* PHẦN CHỌN TRẠNG THÁI ĐÃ ĐƯỢC THÊM VÀO ĐÂY */}
             <div>
               <label className="block text-sm font-semibold text-slate-700 mb-1.5">Trạng thái tài khoản <span className="text-red-500">*</span></label>
               <select 

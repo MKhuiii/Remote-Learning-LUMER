@@ -2,6 +2,8 @@
 
 import { cookies } from 'next/headers'
 
+const userBackendUrl = process.env.NEXT_PUBLIC_USER_BACKEND_URL;
+
 export interface ActionResponse {
   success: boolean
   message: string
@@ -15,13 +17,14 @@ export interface ActionResponse {
 // ------------------ Action Đăng Ký ----------------------
 export async function registerAccount(name: string, email: string, password: string): Promise<ActionResponse> {
   try {
-    const res = await fetch('http://127.0.0.1:8000/register', {
+    const res = await fetch(`${userBackendUrl}/register`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         username: name,
         email: email,
-        password: password
+        password: password,
+        role_id: 2,
       })
     })
 
@@ -43,7 +46,7 @@ export async function loginUserAction(email: string, password: string): Promise<
     formData.append("username", email) 
     formData.append("password", password)
 
-    const res = await fetch('http://127.0.0.1:8000/login', {
+    const res = await fetch(`${userBackendUrl}/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: formData.toString()
