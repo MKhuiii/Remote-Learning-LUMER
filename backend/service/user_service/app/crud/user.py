@@ -8,7 +8,9 @@ from uuid import UUID
 
 class CRUDUser(CRUDBase[User, UserCreate, UserUpdate, UUID]):
     def create(self, db: Session, obj_in: UserCreate) -> User:
-        db_user = self.model.model_validate(obj_in, update={"role_id": 2}) #Gán role cho người dùng mới tạo là user có id là 2
+        if obj_in.role_id is None:
+            db_user = self.model.model_validate(obj_in, update={"role_id": 2}) #Gán role cho người dùng mới tạo là user có id là 2
+        db_user = self.model.model_validate(obj_in)
         db.add(db_user)
         db.flush()
         
