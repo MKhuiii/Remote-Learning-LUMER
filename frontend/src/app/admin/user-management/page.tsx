@@ -2,13 +2,13 @@
 import Navbar from "@/components/Navbar";
 import { useState, useMemo, useEffect } from "react";
 // ĐÃ IMPORT ĐẦY ĐỦ CÁC HÀM CẦN THIẾT TỪ SERVER ACTIONS
-import { 
-  registerAccount, 
-  getrList, 
-  updateUserStatus, 
-  updateUserInfo, 
+import {
+  registerAccount,
+  getrList,
+  updateUserStatus,
+  updateUserInfo,
   updateUserRole,
-  getInforUser 
+  getInforUser
 } from "@/actions/getUser";
 import Link from "next/link";
 
@@ -37,7 +37,7 @@ export default function UserManagementPage() {
   const [isOpenAddModal, setIsOpenAddModal] = useState(false);
   const [isOpenViewModal, setIsOpenViewModal] = useState(false);
   const [isOpenEditModal, setIsOpenEditModal] = useState(false);
-  
+
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   // Lưu dữ liệu chi tiết trả về từ API đơn lẻ
   const [userDetail, setUserDetail] = useState<any | null>(null);
@@ -46,9 +46,9 @@ export default function UserManagementPage() {
   const [newUserData, setNewUserData] = useState({
     username: "",
     email: "",
-    role_id: 4, 
+    role_id: 4,
     status_id: "ACTIVE",
-    password: "", 
+    password: "",
   });
 
   const [editUserData, setEditUserData] = useState({
@@ -61,7 +61,7 @@ export default function UserManagementPage() {
   const loadUsersFromServer = async (page: number) => {
     setLoading(true);
     const response = await getrList(page, ITEMS_PER_PAGE);
-    
+
     if (response.success && response.list) {
       const formattedUsers = response.list.map((user: any) => {
         let finalRoleId = user.role_id ?? user.roleId;
@@ -79,12 +79,12 @@ export default function UserManagementPage() {
           role_id: Number(finalRoleId)
         };
       });
-      
+
       setUsers(formattedUsers as User[]);
     } else {
       console.error(response.message);
       alert(response.message || "Có lỗi xảy ra khi tải dữ liệu");
-      if(page > 1) setCurrentPage(prev => prev - 1);
+      if (page > 1) setCurrentPage(prev => prev - 1);
     }
     setLoading(false);
   };
@@ -99,9 +99,9 @@ export default function UserManagementPage() {
       const matchesSearch =
         (user.username?.toLowerCase() || "").includes(searchTerm.toLowerCase()) ||
         (user.email?.toLowerCase() || "").includes(searchTerm.toLowerCase());
-      
+
       const matchesRole =
-        roleFilter === "Tất cả" || 
+        roleFilter === "Tất cả" ||
         (roleFilter === "Admin" && user.role_id === 1) ||
         (roleFilter === "Giảng viên" && user.role_id === 4) ||
         (roleFilter === "Học viên" && user.role_id === 2) ||
@@ -119,7 +119,7 @@ export default function UserManagementPage() {
       totalAdmin: users.filter(u => u.role_id === 1).length,
       totalGiangVien: users.filter(u => u.role_id === 4).length,
       active: users.filter(u => u.status_id === "ACTIVE").length,
-      locked: users.filter(u => u.status_id === "BANNED").length, 
+      locked: users.filter(u => u.status_id === "BANNED").length,
     };
   }, [users]);
 
@@ -221,14 +221,14 @@ export default function UserManagementPage() {
       alert("Cập nhật thông tin tài khoản thành công!");
       setIsOpenEditModal(false);
       setSelectedUser(null);
-      await loadUsersFromServer(currentPage); 
+      await loadUsersFromServer(currentPage);
     } catch (err: any) {
       alert("Lỗi hệ thống: " + err.message);
     }
   };
 
   const renderRoleBadge = (roleId: any) => {
-    const id = Number(roleId); 
+    const id = Number(roleId);
     switch (id) {
       case 1: return <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-purple-100 text-purple-700">Admin</span>;
       case 2: return <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-700">Học viên</span>;
@@ -245,8 +245,8 @@ export default function UserManagementPage() {
       {/* Hero Banner */}
       <section className="bg-gradient-to-r from-[#66CCFF] to-[#0066FF] text-white">
         <div className="max-w-7xl mx-auto px-6 py-14 relative">
-          <Link 
-            href="/admin/" 
+          <Link
+            href="/admin/"
             className="absolute top-6 right-6 inline-flex items-center justify-center w-8 h-8 rounded-xl bg-white/20 text-xs font-bold transition-all hover:bg-white/30 no-underline text-white"
           >
             X
@@ -274,7 +274,7 @@ export default function UserManagementPage() {
             <h2 className="text-3xl font-bold text-[#0066FF]">Danh sách tài khoản nội bộ</h2>
             <p className="text-slate-500 mt-1">Phân quyền kiểm soát, cấu hình hệ thống đào tạo</p>
           </div>
-          <button 
+          <button
             onClick={() => setIsOpenAddModal(true)}
             className="bg-[#0066FF] text-white px-5 py-3 rounded-xl hover:bg-blue-700 transition font-medium shadow-md shadow-blue-500/20"
           >
@@ -292,9 +292,9 @@ export default function UserManagementPage() {
               onChange={(e) => setSearchTerm(e.target.value)}
               className="flex-1 border border-slate-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#0066FF]/20 focus:border-[#0066FF] transition"
             />
-            
+
             {/* Bộ lọc vai trò */}
-            <select 
+            <select
               value={roleFilter}
               onChange={(e) => setRoleFilter(e.target.value)}
               className="border border-slate-200 rounded-xl px-4 py-3 bg-white focus:outline-none focus:ring-2 focus:ring-[#0066FF]/20 focus:border-[#0066FF] transition cursor-pointer min-w-[180px]"
@@ -307,7 +307,7 @@ export default function UserManagementPage() {
             </select>
 
             {/* Bộ lọc 3 Trạng thái dựa trên DB */}
-            <select 
+            <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
               className="border border-slate-200 rounded-xl px-4 py-3 bg-white focus:outline-none focus:ring-2 focus:ring-[#0066FF]/20 focus:border-[#0066FF] transition cursor-pointer min-w-[180px]"
@@ -344,22 +344,21 @@ export default function UserManagementPage() {
                     <td className="p-4 text-slate-600">{user.email}</td>
                     <td className="p-4">{renderRoleBadge(user.role_id)}</td>
                     <td className="p-4">
-                      <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                        user.status_id === "ACTIVE" ? "bg-green-100 text-green-700 border border-green-200" : 
-                        user.status_id === "UNACTIVE" ? "bg-amber-100 text-amber-700 border border-amber-200" : "bg-red-100 text-red-700 border border-red-200"
-                      }`}>
+                      <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${user.status_id === "ACTIVE" ? "bg-green-100 text-green-700 border border-green-200" :
+                          user.status_id === "UNACTIVE" ? "bg-amber-100 text-amber-700 border border-amber-200" : "bg-red-100 text-red-700 border border-red-200"
+                        }`}>
                         {user.status_id === "ACTIVE" ? "Hoạt động" : user.status_id === "UNACTIVE" ? "Không hoạt động" : "Bị khóa"}
                       </span>
                     </td>
                     <td className="p-4">
                       <div className="flex justify-center gap-2">
-                        <button 
+                        <button
                           onClick={() => handleOpenViewModal(user)}
                           className="bg-slate-100 text-slate-700 px-3 py-1.5 rounded-lg hover:bg-slate-200 text-xs font-semibold transition"
                         >
                           Xem chi tiết
                         </button>
-                        <button 
+                        <button
                           onClick={() => handleOpenEditModal(user)}
                           className="bg-amber-500 text-white px-4 py-1.5 rounded-lg hover:bg-amber-600 text-xs font-semibold transition shadow-sm"
                         >
@@ -414,7 +413,7 @@ export default function UserManagementPage() {
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
               </button>
             </div>
-            
+
             {loadingDetail ? (
               <div className="py-12 text-center text-slate-500 font-medium">
                 <span className="inline-block animate-spin mr-2">⏳</span> Đang tải toàn bộ dữ liệu từ hệ thống...
@@ -468,12 +467,11 @@ export default function UserManagementPage() {
                   </div>
                   <div>
                     <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Trạng thái hiện tại</p>
-                    <p className={`font-bold mt-0.5 ${
-                      (userDetail?.status_id || selectedUser.status_id) === "ACTIVE" ? "text-green-600" : 
-                      (userDetail?.status_id || selectedUser.status_id) === "UNACTIVE" ? "text-amber-500" : "text-red-500"
-                    }`}>
-                      {(userDetail?.status_id || selectedUser.status_id) === "ACTIVE" ? "🟢 Đang hoạt động" : 
-                       (userDetail?.status_id || selectedUser.status_id) === "UNACTIVE" ? "🟡 Không hoạt động" : "🔴 Đã bị khóa"}
+                    <p className={`font-bold mt-0.5 ${(userDetail?.status_id || selectedUser.status_id) === "ACTIVE" ? "text-green-600" :
+                        (userDetail?.status_id || selectedUser.status_id) === "UNACTIVE" ? "text-amber-500" : "text-red-500"
+                      }`}>
+                      {(userDetail?.status_id || selectedUser.status_id) === "ACTIVE" ? "🟢 Đang hoạt động" :
+                        (userDetail?.status_id || selectedUser.status_id) === "UNACTIVE" ? "🟡 Không hoạt động" : "🔴 Đã bị khóa"}
                     </p>
                   </div>
                 </div>
@@ -500,18 +498,18 @@ export default function UserManagementPage() {
 
             <div>
               <label className="block text-sm font-semibold text-slate-700 mb-1.5">Tên người dùng <span className="text-red-500">*</span></label>
-              <input type="text" placeholder="VD: Đỗ Thị Thảo Loan" required className="w-full border border-slate-300 px-4 py-2.5 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#0066FF]/20 focus:border-[#0066FF] transition" value={newUserData.username} onChange={e => setNewUserData({...newUserData, username: e.target.value})} />
+              <input type="text" placeholder="Nhập tên người dùng" required className="w-full border border-slate-300 px-4 py-2.5 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#0066FF]/20 focus:border-[#0066FF] transition" value={newUserData.username} onChange={e => setNewUserData({ ...newUserData, username: e.target.value })} />
             </div>
 
             <div>
               <label className="block text-sm font-semibold text-slate-700 mb-1.5">Email liên hệ <span className="text-red-500">*</span></label>
-              <input type="email" placeholder="VD: loan@student.lumer.edu.vn" required className="w-full border border-slate-300 px-4 py-2.5 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#0066FF]/20 focus:border-[#0066FF] transition" value={newUserData.email} onChange={e => setNewUserData({...newUserData, email: e.target.value})} />
+              <input type="email" placeholder="Nhập email người dùng" required className="w-full border border-slate-300 px-4 py-2.5 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#0066FF]/20 focus:border-[#0066FF] transition" value={newUserData.email} onChange={e => setNewUserData({ ...newUserData, email: e.target.value })} />
             </div>
 
             <div>
               <label className="block text-sm font-semibold text-slate-700 mb-1.5">Mật khẩu khởi tạo <span className="text-red-500">*</span></label>
               <div className="flex gap-3">
-                <input type="text" placeholder="Nhập mật khẩu" required className="flex-1 border border-slate-300 px-4 py-2.5 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#0066FF]/20 focus:border-[#0066FF] transition" value={newUserData.password} onChange={e => setNewUserData({...newUserData, password: e.target.value})} />
+                <input type="text" placeholder="Nhập mật khẩu" required className="flex-1 border border-slate-300 px-4 py-2.5 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#0066FF]/20 focus:border-[#0066FF] transition" value={newUserData.password} onChange={e => setNewUserData({ ...newUserData, password: e.target.value })} />
                 <button type="button" onClick={generateRandomPassword} className="bg-amber-50 text-amber-700 hover:bg-amber-100 px-4 rounded-xl text-sm font-semibold transition border border-amber-200 whitespace-nowrap">
                   Tạo ngẫu nhiên
                 </button>
@@ -520,7 +518,7 @@ export default function UserManagementPage() {
 
             <div>
               <label className="block text-sm font-semibold text-slate-700 mb-1.5">Vai trò hệ thống <span className="text-red-500">*</span></label>
-              <select className="w-full border border-slate-300 px-4 py-2.5 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-[#0066FF]/20 focus:border-[#0066FF] transition cursor-pointer" value={newUserData.role_id} onChange={e => setNewUserData({...newUserData, role_id: Number(e.target.value)})}>
+              <select className="w-full border border-slate-300 px-4 py-2.5 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-[#0066FF]/20 focus:border-[#0066FF] transition cursor-pointer" value={newUserData.role_id} onChange={e => setNewUserData({ ...newUserData, role_id: Number(e.target.value) })}>
                 <option value={4}>Giảng viên</option>
                 <option value={1}>Admin</option>
                 <option value={2}>Học viên</option>
@@ -549,7 +547,7 @@ export default function UserManagementPage() {
 
             <div>
               <label className="block text-sm font-semibold text-slate-700 mb-1.5">Tên người dùng <span className="text-red-500">*</span></label>
-              <input type="text" required className="w-full border border-slate-300 px-4 py-2.5 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#0066FF]/20 focus:border-[#0066FF] transition" value={editUserData.username} onChange={e => setEditUserData({...editUserData, username: e.target.value})} />
+              <input type="text" required className="w-full border border-slate-300 px-4 py-2.5 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#0066FF]/20 focus:border-[#0066FF] transition" value={editUserData.username} onChange={e => setEditUserData({ ...editUserData, username: e.target.value })} />
             </div>
 
             <div>
@@ -560,10 +558,10 @@ export default function UserManagementPage() {
 
             <div>
               <label className="block text-sm font-semibold text-slate-700 mb-1.5">Trạng thái tài khoản <span className="text-red-500">*</span></label>
-              <select 
-                className="w-full border border-slate-300 px-4 py-2.5 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-[#0066FF]/20 focus:border-[#0066FF] transition cursor-pointer font-medium" 
-                value={editUserData.status_id} 
-                onChange={e => setEditUserData({...editUserData, status_id: e.target.value})}
+              <select
+                className="w-full border border-slate-300 px-4 py-2.5 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-[#0066FF]/20 focus:border-[#0066FF] transition cursor-pointer font-medium"
+                value={editUserData.status_id}
+                onChange={e => setEditUserData({ ...editUserData, status_id: e.target.value })}
               >
                 <option value="ACTIVE" className="text-green-600 font-medium">Hoạt động (ACTIVE)</option>
                 <option value="UNACTIVE" className="text-amber-600 font-medium">Không hoạt động (UNACTIVE)</option>
@@ -573,7 +571,7 @@ export default function UserManagementPage() {
 
             <div>
               <label className="block text-sm font-semibold text-slate-700 mb-1.5">Vai trò hệ thống <span className="text-red-500">*</span></label>
-              <select className="w-full border border-slate-300 px-4 py-2.5 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-[#0066FF]/20 focus:border-[#0066FF] transition cursor-pointer" value={editUserData.role_id} onChange={e => setEditUserData({...editUserData, role_id: Number(e.target.value)})}>
+              <select className="w-full border border-slate-300 px-4 py-2.5 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-[#0066FF]/20 focus:border-[#0066FF] transition cursor-pointer" value={editUserData.role_id} onChange={e => setEditUserData({ ...editUserData, role_id: Number(e.target.value) })}>
                 <option value={4}>Giảng viên</option>
                 <option value={1}>Admin</option>
                 <option value={2}>Học viên</option>
