@@ -13,7 +13,7 @@ class Syllabus(SQLModel, table=True):
     syllabus_id: UUID = Field(primary_key=True, default_factory=uuid.uuid4)
     subject_id: UUID = Field(foreign_key="subject.subject_id", nullable=False, unique=True)
     assigner_id: UUID = Field(nullable=False)
-    instructor_id: UUID = Field(nullable=False)
+    writer_id: UUID = Field(nullable=False)
     description: Optional[str] = Field(default=None, max_length=255)
     syllabus_file_path: str = Field(nullable=False)
     status_id: str = Field(

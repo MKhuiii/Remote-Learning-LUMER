@@ -18,7 +18,7 @@ class Curriculum(SQLModel, table=True):
         nullable=False
     )
     assigner_id: UUID = Field(nullable=False) #id của người phân công
-    instructor_id: UUID = Field(nullable=False) #id của giáo viên được phân công
+    writer_id: UUID = Field(nullable=False) #id của giáo viên được phân công viết
     curriculum_name: str = Field(nullable=False, max_length=255)
     description: Optional[str] = Field(default=None, max_length=255)
     course_type: CourseType = Field(nullable=False)
