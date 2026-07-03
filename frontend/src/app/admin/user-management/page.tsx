@@ -232,7 +232,7 @@ export default function UserManagementPage() {
     switch (id) {
       case 1: return <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-purple-100 text-purple-700">Admin</span>;
       case 2: return <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-700">Học viên</span>;
-      case 3: return <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-700">Tester</span>;
+      case 3: return <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-700">Kiểm thử</span>;
       case 4: return <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-100 text-blue-700">Giảng viên</span>;
       default: return <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-slate-200 text-slate-700">Khác</span>;
     }
@@ -303,7 +303,7 @@ export default function UserManagementPage() {
               <option value="Admin">Admin</option>
               <option value="Giảng viên">Giảng viên</option>
               <option value="Học viên">Học viên</option>
-              <option value="Tester">Tester</option>
+              <option value="Tester">Kiểm thử</option>
             </select>
 
             {/* Bộ lọc 3 Trạng thái dựa trên DB */}
@@ -522,7 +522,7 @@ export default function UserManagementPage() {
                 <option value={4}>Giảng viên</option>
                 <option value={1}>Admin</option>
                 <option value={2}>Học viên</option>
-                <option value={3}>Tester</option>
+                <option value={3}>Kiểm thử</option>
               </select>
             </div>
 
@@ -575,7 +575,7 @@ export default function UserManagementPage() {
                 <option value={4}>Giảng viên</option>
                 <option value={1}>Admin</option>
                 <option value={2}>Học viên</option>
-                <option value={3}>Tester</option>
+                <option value={3}>Kiểm thử</option>
               </select>
             </div>
 
