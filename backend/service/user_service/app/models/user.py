@@ -12,7 +12,7 @@ class User(SQLModel, table=True):
     role_id: int = Field(foreign_key="role.role_id", nullable=False, index=True)
     username: str = Field(nullable=False, max_length=50, index=True)
     email: EmailStr = Field(unique=True, nullable=False)
-    password: str = Field(nullable=False)
+    password: Optional[str] = Field(nullable=True)
     birthdate: Optional[date] = Field(nullable=True, default=None)
     created_at: datetime = Field(nullable=False, default_factory=datetime.utcnow)
     status_id: str = Field(

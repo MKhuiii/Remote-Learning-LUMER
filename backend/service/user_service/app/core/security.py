@@ -1,9 +1,13 @@
 from fastapi.security import OAuth2PasswordBearer
 from fastapi import HTTPException, Depends, status
+from typing import Optional, Any
 import jwt
 import bcrypt
 from datetime import datetime, timedelta, timezone
 from app.core.config import settings
+from jose import jwt, JWTError
+from google.oauth2 import id_token
+from google.auth.transport import requests
 
 # Khai báo đường dẫn lấy token, FastAPI sẽ tự động hiển thị nút Authorize trên giao diện Swagger UI Docs
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/login")
@@ -30,11 +34,18 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
     except Exception:
         return False
 
-def create_access_token(data: dict) -> str:
-    expire = datetime.now(timezone.utc) + timedelta(days=settings.ACCESS_TOKEN_EXPIRE_DAYS)
-    data.update({"exp": expire})
-    encode_data = jwt.encode(data, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
-    return encode_data
+def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
+    to_encode = data.copy()
+    
+    if expires_delta:
+        expire = datetime.now(timezone.utc) + expires_delta
+    else:
+        expire = datetime.now(timezone.utc) + timedelta(days=settings.ACCESS_TOKEN_EXPIRE_DAYS)
+        
+    to_encode.update({"exp": expire})
+    
+    encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
+    return encoded_jwt
 
 def get_current_user_role(
     token: str = Depends(oauth2_scheme)
@@ -65,6 +76,29 @@ def get_current_user_role(
             detail="Token không hợp lệ"
         )
     
+import requests
+from typing import Optional
+from app.core.config import settings
+
+def verify_google_token(token: str) -> Optional[dict]:
+    try:
+        # Gọi API của Google để đổi access_token lấy thông tin user công khai
+        response = requests.get(
+            f"https://www.googleapis.com/oauth2/v3/userinfo?access_token={token}"
+        )
+        
+        if response.status_code == 200:
+            payload = response.json()
+            
+            # Google trả về các trường thông tin dạng: 'sub', 'email', 'name', 'picture'
+            return payload
+            
+        print(f"Google API từ chối Token: {response.status_code} - {response.text}")
+        return None
+        
+    except Exception as e:
+        print(f"Xác thực Token thất bại do lỗi kết nối: {str(e)}")
+        return None
 class RoleChecker:
     def __init__(self, allowed_roles: list[str]):
         # Khởi tạo danh sách các Role được phép truy cập API này

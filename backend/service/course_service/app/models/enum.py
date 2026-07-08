@@ -5,4 +5,3 @@ class CourseType(str, Enum):
     SHORT_TERM = "SHORT_TERM" # Nếu là khóa học ngắn hạn thì khóa học chỉ có một môn học
 
 
-# class CourseStatus(str, Enum):

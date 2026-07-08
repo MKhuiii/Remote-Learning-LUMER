@@ -7,15 +7,15 @@ app = FastAPI()
 origins = [
     settings.FRONTEND_HOST
 ]
-
-app.add_middleware(
-    CORSMiddleware,
-    # allow_origins=["*"],
-    allow_origins=origins,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+if settings.all_cors_origins:
+    app.add_middleware(
+        CORSMiddleware,
+        # allow_origins=["*"],
+        allow_origins=settings.all_cors_origins(),
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
 
 app.include_router(router)
 
@@ -24,7 +24,3 @@ async def startup():
         init_db()
         print("Database started successfull!")
 
-
-
-
-# ------Tran Thanh Hieu----- 

@@ -1,8 +1,9 @@
 "use client";
 import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { useGoogleLogin } from '@react-oauth/google';
 import Navbar from "@/components/Navbar";
-import { loginUserAction, registerAccount } from "@/actions/authUser";
+import { loginUserAction, registerAccount, loginGoogleUserAction } from "@/actions/authUser";
 
 function LoginContent() {
   const router = useRouter();
@@ -15,6 +16,8 @@ function LoginContent() {
   const [rePassword, setRePassword] = useState("");
   const [name, setName] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   // Theo dõi sự thay đổi của mode để clear dữ liệu theo logic 1 chiều
   useEffect(() => {
@@ -30,7 +33,7 @@ function LoginContent() {
     setRePassword("");
     setName("");
     setShowPassword(false);
-    
+
     // Cập nhật chế độ hiển thị mới
     setIsLoginMode(nextIsLoginMode);
   }, [mode]);
@@ -86,14 +89,58 @@ function LoginContent() {
     }
   };
 
-  const handleGoogleLogin = () => {
-    alert("Đang chuyển hướng đăng nhập bằng Google...");
-    localStorage.setItem("isLoggedIn", "true");
-    localStorage.setItem("userEmail", "google-user@lumer.com");
-    localStorage.setItem("role", "student");
-    router.push("/dashboard-student");
-  };
+  const handleGoogleLogin = useGoogleLogin({
+    flow: 'implicit',
+    onSuccess: async (tokenResponse) => {
+      if (!tokenResponse.access_token) {
+        setError("Không lấy được mã xác thực từ Google.");
+        return;
+      }
 
+      setLoading(true);
+      setError(null);
+
+      try {
+        const result = await loginGoogleUserAction(tokenResponse.access_token);
+
+        if (result.success) {
+          console.log(result.message);
+
+          localStorage.setItem("isLoggedIn", "true");
+          localStorage.setItem("userEmail", result.user?.email || "");
+
+          const userRole = result.user?.role;
+
+          if (userRole === "Admin") {
+            localStorage.setItem("role", "admin");
+            alert("Đăng nhập Admin thành công bằng Google!");
+            router.push("/admin");
+          } else if (userRole === "Faculty") {
+            localStorage.setItem("role", "faculty");
+            alert("Đăng nhập Giảng viên / Phòng đào tạo thành công bằng Google!");
+            router.push("/training-management");
+          } else {
+            localStorage.setItem("role", "student");
+            alert("Đăng nhập thành công bằng Google!");
+            router.push("/dashboard-student");
+          }
+
+        } else {
+          setError(result.message);
+          alert(`Đăng nhập Google thất bại: ${result.message}`);
+        }
+      } catch (err) {
+        setError("Có lỗi xảy ra trong quá trình xử lý phiên đăng nhập.");
+        alert("Có lỗi xảy ra khi đăng nhập bằng Google!");
+      } finally {
+        setLoading(false);
+      }
+    },
+    onError: () => {
+      setError("Đăng nhập bằng Google bị hủy.");
+      alert("Đăng nhập bằng Google bị hủy.");
+    }
+  });
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!email || !password || (!isLoginMode && (!name || !rePassword))) {
@@ -220,15 +267,16 @@ function LoginContent() {
             <div className="w-full border-t border-gray-200"></div>
           </div>
           <span className="relative bg-white px-3 text-xs text-gray-400">
-            Or continue with
+            Hoặc
           </span>
         </div>
 
         <div className="mt-4 flex justify-center">
           <button
             type="button"
-            onClick={handleGoogleLogin}
-            className="flex items-center space-x-2 border border-gray-200 rounded-full px-5 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-50 transition cursor-pointer shadow-2xs"
+            onClick={() => handleGoogleLogin()}
+            className={`flex items-center space-x-2 border border-gray-200 rounded-full px-5 py-2 text-xs font-semibold text-gray-700 transition shadow-2xs ${loading ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-50 cursor-pointer'
+              }`}
           >
             <svg className="w-4 h-4" viewBox="0 0 24 24">
               <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v3.92h6.58c-.28 1.48-1.12 2.74-2.38 3.58v2.96h3.84c2.24-2.06 3.53-5.1 3.53-8.65z" />

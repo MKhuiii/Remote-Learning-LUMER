@@ -14,26 +14,25 @@ export interface ActionResponseSingle {
 }
 
 export interface User {
-  user_id: string; 
+  user_id: string;
   username: string;
   email: string;
   role_id: number;
-  status_id: string; 
+  status_id: string;
   created_at?: string;
 }
 
 export type UserItem = User;
 const userBackendUrl = process.env.NEXT_PUBLIC_USER_BACKEND_URL;
-// const BACKEND_URL = "http://127.0.0.1:8000";
 
 async function getAuthHeaders() {
   const cookieStore = cookies();
-  const resolvedCookies = typeof (cookieStore as any).then === "function" 
-    ? await cookieStore 
+  const resolvedCookies = typeof (cookieStore as any).then === "function"
+    ? await cookieStore
     : cookieStore;
-    
+
   const token = (resolvedCookies as any).get("token")?.value;
-  
+
   if (!token) return null;
   return {
     "Content-Type": "application/json",
@@ -81,14 +80,14 @@ export async function updateUserStatus(userId: string, nextStatus: any): Promise
     // LƯU Ý QUAN TRỌNG: 
     // Nếu status_id ở Backend/DB của bạn lưu dạng số (ví dụ: 1 = Active, 2 = Locked) thì cần mở dòng dưới ra:
     // const statusIdFormatted = !isNaN(Number(nextStatus)) ? Number(nextStatus) : nextStatus;
-    
+
     // Nếu status_id ở Backend là dạng chuỗi chữ (ví dụ: "ACTIVE", "BLOCKED") thì giữ nguyên nextStatus
     const statusIdFormatted = nextStatus;
 
     const res = await fetch(`${userBackendUrl}/update-status/${userId}`, {
       method: "PATCH",
       headers: headers,
-      body: JSON.stringify({ 
+      body: JSON.stringify({
         status_id: statusIdFormatted // Gửi object phẳng { status_id: ... } theo đúng Pydantic UserStatusUpdate
       }),
     });
@@ -97,7 +96,7 @@ export async function updateUserStatus(userId: string, nextStatus: any): Promise
       const errorText = await res.text();
       return { success: false, message: `Không thể cập nhật trạng thái: ${errorText}` };
     }
-    
+
     revalidatePath("/admin/user-management");
     return { success: true };
   } catch (error: any) {
@@ -152,14 +151,14 @@ export async function registerAccount(newUserData: any): Promise<ActionResponseS
     const headers = await getAuthHeaders();
     if (!headers) return { success: false, message: "Hết hạn phiên đăng nhập" };
 
-    const res = await fetch(`${userBackendUrl}/create-user`, { 
+    const res = await fetch(`${userBackendUrl}/create-user`, {
       method: "POST",
       headers: headers,
       body: JSON.stringify(newUserData),
     });
 
     if (!res.ok) return { success: false, message: "Lỗi đăng ký tài khoản mới" };
-    
+
     revalidatePath("/admin/user-management");
     return { success: true };
   } catch (error: any) {
@@ -183,7 +182,7 @@ export async function updateUserRole(userId: string, roleId: number): Promise<Ac
       const errorText = await res.text();
       return { success: false, message: `Không thể cập nhật role: ${errorText}` };
     }
-    
+
     revalidatePath("/admin/user-management");
     return { success: true };
   } catch (error: any) {

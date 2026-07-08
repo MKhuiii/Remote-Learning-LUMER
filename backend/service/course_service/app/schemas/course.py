@@ -15,10 +15,10 @@ class CourseCreate(CourseBase):
     status_id: str
 
 class CourseUpdate(BaseModel):
-    title: Optional[str] = None
-    description: Optional[str] = None
-    price: Optional[int] = None
-    status_id: Optional[str] = None
+    title: str | None = None
+    description: str | None = None
+    price: int | None = None
+    status_id: str | None = None
 
 class CourseRead(CourseBase):
     course_id: UUID

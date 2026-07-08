@@ -28,7 +28,7 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType, IDType]):
     
     def update(self, db: Session, db_obj: ModelType, obj_in: UpdateSchemaType) -> ModelType:
         # Trích xuất dữ liệu dạng dict, bỏ qua các trường không được truyền lên
-        update_data = obj_in.model_dump(exclude_unset=True)
+        update_data = obj_in.model_dump(exclude_unset=True, exclude_none=True)
         for field in update_data:
             if hasattr(db_obj, field):
                 setattr(db_obj, field, update_data[field])

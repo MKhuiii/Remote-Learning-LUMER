@@ -4,6 +4,9 @@ from typing import Self
 from uuid import UUID
 from datetime import date, datetime
 
+class TokenBody(BaseModel):
+    token: str
+
 class UserCreate(BaseModel):
     username: str
     email: EmailStr

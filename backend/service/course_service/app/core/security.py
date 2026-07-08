@@ -5,8 +5,9 @@ import bcrypt
 from datetime import datetime, timedelta, timezone
 from app.core.config import settings
 
+authServer = settings.BACKEND_USER_URL + "/login"
 # Khai báo đường dẫn lấy token, FastAPI sẽ tự động hiển thị nút Authorize trên giao diện Swagger UI Docs
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/login")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl=authServer)
 
 # Hàm băm mật khẩu thô thành chuỗi bảo mật khi Đăng ký
 def hash_password(password: str) -> str:
