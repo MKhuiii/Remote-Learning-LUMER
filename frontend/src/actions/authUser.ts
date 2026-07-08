@@ -4,15 +4,18 @@ import { cookies } from 'next/headers'
 
 const userBackendUrl = process.env.NEXT_PUBLIC_USER_BACKEND_URL;
 
+// Cập nhật Interface để chứa redirectTo
 export interface ActionResponse {
   success: boolean
   message: string
+  redirectTo?: string // Thêm trường này
   user?: {
     username: string
     email: string
     role: string
   }
 }
+
 interface GoogleAuthResponse {
   message: string;
   access_token: string;
@@ -27,6 +30,13 @@ interface GoogleAuthResponse {
       avatar_url: string | null;
     };
   };
+}
+
+// Hàm helper để phân loại URL theo Role
+function getRedirectUrlByRole(role: string): string {
+  if (role === "Admin") return "/admin";
+  if (role === "Faculty") return "/training-management";
+  return "/dashboard-student"; // Default cho User/Student
 }
 
 // ------------------ Action Đăng Ký ----------------------
@@ -56,23 +66,21 @@ export async function registerAccount(name: string, email: string, password: str
 
 async function setAuthCookies(data: any) {
   const cookieStore = await cookies()
+  const cookieConfig = {
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax' as const,
+    maxAge: 60 * 60 * 24,
+    path: '/',
+  };
+
   if (data.access_token) {
-    cookieStore.set('token', data.access_token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: 60 * 60 * 24,
-      path: '/',
-    })
+    cookieStore.set('token', data.access_token, { ...cookieConfig, httpOnly: true })
   }
+  
   if (data.user) {
-    cookieStore.set('user_info', JSON.stringify(data.user), {
-      httpOnly: false,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: 60 * 60 * 24,
-      path: '/',
-    })
+    cookieStore.set('user_info', JSON.stringify(data.user), { ...cookieConfig, httpOnly: false })
+    // FIX: Lưu thêm user_role riêng để middleware kiểm tra nhanh gọn
+    cookieStore.set('user_role', data.user.role, { ...cookieConfig, httpOnly: true })
   }
 }
 
@@ -95,19 +103,20 @@ export async function loginUserAction(email: string, password: string): Promise<
       return { success: false, message: data.detail || 'Mật khẩu sai hoặc tài khoản không tồn tại' }
     }
 
-    // --- TIẾN HÀNH GHI COOKIE TỪ SERVER ---
     await setAuthCookies(data);
 
     return {
       success: true,
       message: data.message || 'Đăng nhập thành công',
-      user: data.user
+      user: data.user,
+      redirectTo: getRedirectUrlByRole(data.user?.role) // Trả URL về cho Client
     }
   } catch (error) {
     console.error(error)
     return { success: false, message: 'Không thể kết nối đến Server Backend!' }
   }
 }
+
 export async function loginGoogleUserAction(googleAccessToken: string): Promise<ActionResponse> {
   try {
     const baseUrl = process.env.NEXT_PUBLIC_USER_BACKEND_URL;
@@ -121,7 +130,12 @@ export async function loginGoogleUserAction(googleAccessToken: string): Promise<
       return { success: false, message: data.detail || 'Đăng nhập Google thất bại' }
     }
     await setAuthCookies(data);
-    return { success: true, message: data.message, user: data.user }
+    return { 
+      success: true, 
+      message: data.message, 
+      user: data.user,
+      redirectTo: getRedirectUrlByRole(data.user?.role) // Trả URL về cho Client
+    }
   } catch (error) {
     return { success: false, message: 'Không thể kết nối đến hệ thống!' }
   }
@@ -144,4 +158,3 @@ export async function registerGoogleUserAction(googleAccessToken: string): Promi
     return { success: false, message: 'Không thể kết nối đến hệ thống!' }
   }
 }
-

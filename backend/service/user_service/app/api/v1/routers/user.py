@@ -2,7 +2,7 @@ from fastapi import APIRouter, HTTPException, status, Depends
 from sqlmodel import select
 from typing import List
 from app.api.v1.deps import SessionDep
-from app.core.security import RoleChecker, get_current_user_role
+from app.core.security import RoleChecker, get_current_user_role, hash_password
 from app.crud.user import crud_user
 from app.crud.role import crud_role
 from app.crud.status_catalog import crud_status
@@ -69,6 +69,8 @@ def create_user(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Email đã tồn tại"
         )
+    if hasattr(new_user, "password") and new_user.password:
+        new_user.password = hash_password(new_user.password)
     crud_user.create(session, new_user)
     return{
         "message": "Tạo người " + new_user.username + " thành công!"
