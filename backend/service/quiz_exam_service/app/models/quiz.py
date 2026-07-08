@@ -24,7 +24,6 @@ class Quiz(SQLModel, table=True):
     
     placement_type: QuizPlacementType = Field(default=QuizPlacementType.STANDALONE_LESSON) # Vị trí hiển thị đề thi
     target_lesson_id: Optional[UUID] = Field(default=None, index=True) # Định danh bài học chứa đề thi từ Course Service
-    video_trigger_seconds: Optional[int] = Field(default=None) # Mốc giây kích hoạt đề thi tự động trong video bài giảng
     
     is_active: bool = Field(default=True, nullable=False)    # Trạng thái kích hoạt cho phép hiển thị đề thi
     created_at: date = Field(default_factory=date.today)    # Ngày khởi tạo cấu hình đề thi
