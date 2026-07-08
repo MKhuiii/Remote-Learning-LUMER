@@ -15,3 +15,4 @@ class VideoProgress(SQLModel, table=True):
     
     completion_percentage: float = Field(default=0.0)            # Phần trăm thời lượng video đã hoàn thành (0% - 100%)
     is_finished: bool = Field(default=False)                     # Trạng thái đã xem hết cấu phần video bài giảng
+    current_points: float = Field(default=0.0)      #Tổng điểm đang có trong video hiện tại 
