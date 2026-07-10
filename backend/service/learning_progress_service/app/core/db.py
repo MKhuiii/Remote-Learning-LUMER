@@ -3,7 +3,7 @@ from app.core.config import settings
 from sqlmodel import SQLModel, Session, select, func
 
 
-engine = create_engine(settings.USERS_DB_URL)
+engine = create_engine(settings.LEARNING_PROGRESS_DB_URL)
 
 def init_db() -> None:
     import app.models.course_enrollment

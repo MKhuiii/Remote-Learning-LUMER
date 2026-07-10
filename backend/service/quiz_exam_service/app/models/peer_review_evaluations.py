@@ -18,5 +18,5 @@ class PeerReviewEvaluation(SQLModel, table=True):
     feedback: Optional[str] = Field(default=None)    # Nhận xét cho riêng tiêu chí này
 
     # Quan hệ
-    assignment: PeerReviewAssignment = Relationship(back_populates="evaluations")
-    criteria: RubricCriteria = Relationship(back_populates="evaluations")
+    assignment: "PeerReviewAssignment" = Relationship(back_populates="evaluations")
+    criteria: "RubricCriteria" = Relationship(back_populates="evaluations")
