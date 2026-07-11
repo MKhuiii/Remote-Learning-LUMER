@@ -10,17 +10,20 @@ import httpx
 
 router = APIRouter(prefix="/course_enrollment", tags=["course_enrollment"])
 
-# Lấy danh sách khóa học người học đang trong quá trình học
-@router.get("/{user_id}/in-progress", response_model=List[CourseInProgress])
-async def get_user_in_progress_course(
+# Lấy danh sách khóa học người học đang trong quá trình học hoặc đã hoàn thành
+@router.get("/{is_completed}", response_model=List[CourseInProgress])
+async def get_progress_list(
     request: Request,
     db: SessionDep,
+    is_completed: bool,
     current_user: dict = Depends(get_current_user_role)
 ):
     user_id = current_user["user_id"]
     
-    # 1. Lấy danh sách ID các khóa học chưa hoàn thành từ DB nội bộ (list[UUID])
-    enrolled_ids = crud_course_enrollment.get_by_user_in_progress(db, user_id=user_id)
+    if is_completed is True:
+        enrolled_ids = crud_course_enrollment.get_by_user_completed(db, user_id=user_id)
+    else:
+        enrolled_ids = crud_course_enrollment.get_by_user_in_progress(db, user_id=user_id)
     
     if not enrolled_ids:
         return []
@@ -36,18 +39,6 @@ async def get_user_in_progress_course(
             course_service_url = f"{settings.BACKEND_COURSE_URL}/courses/title/{course_id}"
             try:
                 response = await client.get(course_service_url, headers=headers, timeout=5.0)
-                print(f"👉 STATUS CODE NHẬN ĐƯỢC: {response.status_code}")
-                print(f"👉 NỘI DUNG BODY NHẬN ĐƯỢC: {response.text}")
-    
-                if response.status_code == 200:
-                    course_title = response.json() 
-                else:
-                    course_title = f"Lỗi mã {response.status_code}"
-            except httpx.RequestError as e:
-                print(f"❌ LỖI KẾT NỐI: {e}")
-                course_title = "Lỗi kết nối hệ thống"
-            try:
-                response = await client.get(course_service_url, headers=headers, timeout=5.0)
                 
                 if response.status_code == 200:
                     # Vì Course Service chỉ trả về một chuỗi thường (str)
@@ -61,11 +52,12 @@ async def get_user_in_progress_course(
             result.append(
                 CourseInProgress(
                     course_title=course_title,
-                    current_overrall_progress=0.0  # Tiến độ tính toán sau
+                    current_overall_progress=crud_course_enrollment.get_overrall_progress(db, user_id, course_id) # Tiến độ tính toán sau
                 )
             )
             
     return result
+
 # Đăng ký khóa học 
 @router.post("/")
 async def enroll_course(

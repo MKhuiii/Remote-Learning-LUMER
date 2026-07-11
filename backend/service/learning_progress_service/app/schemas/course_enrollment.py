@@ -6,9 +6,9 @@ class CourseEnrollmentCreate(BaseModel):
     course_id: UUID
 
 class CourseEnrollmentUpdate(BaseModel):
-    current_overrall_progress: float | None = None
+    current_overall_progress: float | None = None
     is_completed: bool | None = None
 
 class CourseInProgress(BaseModel):
     course_title: str
-    current_overrall_progress: float 
+    current_overall_progress: float 
