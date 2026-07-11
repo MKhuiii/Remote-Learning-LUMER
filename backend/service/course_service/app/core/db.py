@@ -140,6 +140,8 @@ def init_db() -> None:
     import app.models.lesson_resource
     import app.models.module
     import app.models.status_catalog
+    import app.models.course_instructor_link
+    import app.models.course_tag_link
     import app.models.subject
     import app.models.syllabus
     import app.models.tag
