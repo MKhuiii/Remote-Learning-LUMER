@@ -1,0 +1,72 @@
+"use server"; // 👈 Bắt buộc phải có dòng này ở đầu file
+
+import { cookies } from "next/headers";
+
+const BACKEND_URL = process.env.NEXT_PUBLIC_COURSE_BACKEND_URL;
+
+// Hàm trợ giúp lấy token an toàn trên Server
+async function getServerToken() {
+  const cookieStore = await cookies();
+  const token = cookieStore.get("token")?.value || "";
+  return token.trim().replace(/^"|"$/g, "");
+}
+
+// 🔵 Lấy danh sách môn học theo ID chương trình
+export async function getSubjectsByCurriculum(curriculumId: string) {
+  try {
+    const token = await getServerToken();
+    
+    const response = await fetch(`${BACKEND_URL}/subjects/curriculum/${curriculumId}`, {
+      method: "GET",
+      headers: {
+        "Authorization": `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      // cache: "no-store" // Đảm bảo luôn lấy dữ liệu mới nhất không bị cache bài học cũ
+    });
+
+    if (!response.ok) throw new Error(`Lỗi Server (${response.status})`);
+    return await response.json();
+  } catch (error: any) {
+    throw new Error(error.message || "Lỗi kết nối Server Action [getSubjects]");
+  }
+}
+
+// 🟢 Tạo mới một môn học
+export async function createSubject(payload: any) {
+  try {
+    const token = await getServerToken();
+    const response = await fetch(`${BACKEND_URL}/subjects/`, {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) throw new Error("Tạo môn học thất bại trên hệ thống");
+    return await response.json();
+  } catch (error: any) {
+    throw new Error(error.message);
+  }
+}
+
+// 🔴 Xóa môn học
+export async function deleteSubject(subjectId: string) {
+  try {
+    const token = await getServerToken();
+    const response = await fetch(`${BACKEND_URL}/subjects/${subjectId}`, {
+      method: "DELETE",
+      headers: {
+        "Authorization": `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+    });
+
+    if (!response.ok) throw new Error("Xóa môn học thất bại");
+    return await response.json();
+  } catch (error: any) {
+    throw new Error(error.message);
+  }
+}

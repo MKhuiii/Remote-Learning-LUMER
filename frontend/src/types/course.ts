@@ -10,12 +10,16 @@ export interface Module {
     lessons: Lesson[];
 }
 
+
 export interface Course {
-    id: string;
-    title: string;
-    description: string;
-    category: string; // Dùng để làm bộ lọc ở mục Khám phá
-    instructor: string;
-    progress?: number;
-    modules: Module[];
+  course_id: string;
+  curriculum_id: string;
+  instructor_id: string;
+  title: string;
+  course_type: string;
+  description: string | null;
+  price: number;
+  image_url: string | null;
+  created_at?: string;
+  status_id: string;
 }

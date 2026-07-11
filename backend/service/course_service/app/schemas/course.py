@@ -1,27 +1,49 @@
-from pydantic import BaseModel
-from uuid import UUID
-from typing import Optional
 from datetime import date
+from typing import Optional
+from uuid import UUID
+from pydantic import BaseModel
 
+
+# 📋 Schema cơ sở chứa các trường chung
 class CourseBase(BaseModel):
     title: str
     description: Optional[str] = None
     price: int = 0
 
+
+# 🟢 Schema dùng khi TẠO khóa học
 class CourseCreate(CourseBase):
     curriculum_id: UUID
-    instructor_id: UUID
+    # Cho phép Optional để Router tự lấy ID từ token gán vào sau như logic của bạn
+    instructor_id: Optional[UUID] = None  
     course_type: str
     status_id: str
+    image_url: Optional[str] = None
 
+
+# 🟠 Schema dùng khi CẬP NHẬT khóa học
 class CourseUpdate(BaseModel):
-    title: str | None = None
-    description: str | None = None
-    price: int | None = None
-    status_id: str | None = None
-    total_lessons: int | None = None
+    title: Optional[str] = None
+    description: Optional[str] = None
+    price: Optional[int] = None
+    status_id: Optional[str] = None
+    total_lessons: Optional[int] = None  # <-- Thêm từ bản của bạn
 
+
+# 🔵 Schema dùng khi TRẢ VỀ dữ liệu (Read API)
 class CourseRead(CourseBase):
     course_id: UUID
+    curriculum_id: UUID                  # <-- Giữ từ bản của bạn bạn
     created_at: date
     status_id: str
+    image_url: Optional[str] = None      # <-- Giữ từ bản của bạn bạn
+
+    # Cấu hình Pydantic v2 để đọc được dữ liệu từ SQLModel/SQLAlchemy object (.from_attributes)
+    model_config = {
+        "from_attributes": True
+    }
+
+
+# ⚫ Schema phản hồi khi UPLOAD ảnh thành công
+class CourseImageUploadResponse(BaseModel):
+    image_url: str
