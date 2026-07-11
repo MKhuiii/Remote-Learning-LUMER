@@ -17,9 +17,17 @@ class CRUDCourse(CRUDBase[Course, CourseCreate, CourseUpdate, UUID]):
         statement = select(Course.course_id).where(Course.course_id == course_id)
         result = db.exec(statement).first()
         return result is not None
+    
     def get_title_by_id(self, db: Session, course_id: UUID) -> str:
         statement = select(Course.title).where(
             Course.course_id == course_id
         )
         return db.exec(statement).first()
+    
+    def get_total_lessons(self, db: Session, course_id: UUID) -> int:
+        statement = select(Course.total_lessons).where(
+            Course.course_id == course_id
+        )
+        return db.exec(statement).first()
+    
 crud_course = CRUDCourse(Course)

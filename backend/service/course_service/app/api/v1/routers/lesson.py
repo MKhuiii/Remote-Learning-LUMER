@@ -1,13 +1,76 @@
-from fastapi import APIRouter
-from app.core.config import settings
+from fastapi import APIRouter, Depends, HTTPException, status
 from app.api.v1.deps import SessionDep
+from app.core.security import RoleChecker
+from app.schemas.lesson import LessonCreate, LessonUpdate
+from app.models.lesson import Lesson
+from app.crud.lesson import crud_lesson
+from app.crud.module import crud_module
 from uuid import UUID
 
-router = APIRouter(tags=["lessons"])
+router = APIRouter(prefix="/lessons", tags=["lessons"])
 
-@router.get("/{lesson_id}")
-def get_lesson( 
-    session: SessionDep,
-    lesson_id: UUID
-):  
-    pass
+@router.post("/", response_model=Lesson, status_code=status.HTTP_201_CREATED)
+def create_lesson(
+    db: SessionDep,
+    new_lesson: LessonCreate,
+    current_user: dict = Depends(RoleChecker(["Instructor", "Admin"]))
+):
+    """
+    API tạo bài học mới.
+    - Tự động tăng `total_lessons` của Course liên quan lên +1.
+    - Quyền truy cập: Admin hoặc Giảng viên sở hữu khóa học đó.
+    """
+    # 1. Nếu người dùng là Giảng viên (không phải Admin), cần kiểm tra quyền sở hữu khóa học
+    if "Admin" not in current_user.get("roles", []):
+        course_instructor = crud_module.get_course_owner(db, new_lesson.module_id)
+        
+        if course_instructor is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Module không tồn tại hoặc chương trình học chưa được gán giảng viên"
+            )
+        
+        if str(current_user["user_id"]) != str(course_instructor):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Bạn không phải là giảng viên sở hữu khóa học chứa module này"
+            )
+
+    # 2. Gọi tầng CRUD đã override để thêm Lesson và kích hoạt +1 total_lessons
+    return crud_lesson.create(db, obj_in=new_lesson)
+
+
+@router.delete("/{lesson_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_lesson(
+    db: SessionDep,
+    lesson_id: UUID,
+    current_user: dict = Depends(RoleChecker(["Instructor", "Admin"]))
+):
+    """
+    API xóa bài học theo ID.
+    - Tự động giảm `total_lessons` của Course liên quan đi -1.
+    - Quyền truy cập: Admin hoặc Giảng viên sở hữu khóa học đó.
+    """
+    # 1. Kiểm tra xem bài học có tồn tại hay không trước khi xét quyền
+    lesson = crud_lesson.get_by_id(db, id=lesson_id) # Dùng get_by_id từ CRUDBase của bạn
+    if not lesson:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Bài học không tồn tại"
+        )
+
+    # 2. Nếu là Giảng viên, kiểm tra xem họ có quyền quản lý bài học này không
+    if "Admin" not in current_user.get("roles", []):
+        course_instructor = crud_module.get_course_owner(db, lesson.module_id)
+        
+        if str(current_user["user_id"]) != str(course_instructor):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Bạn không có quyền xóa bài học thuộc khóa học này"
+            )
+
+    # 3. Gọi tầng CRUD đã override để xóa Lesson và kích hoạt -1 total_lessons
+    crud_lesson.delete(db, id=lesson_id)
+    
+    # 204 NO CONTENT không trả về dữ liệu ở Body
+    return None

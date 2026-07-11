@@ -37,6 +37,7 @@ class Course(SQLModel, table=True):
         nullable=False,
         max_length=50
     )
+    total_lessons: int = Field(default=0, nullable=False)
 
     # Quan hệ
     # Một khóa học có thể không có hoặc có nhiều giảng viên

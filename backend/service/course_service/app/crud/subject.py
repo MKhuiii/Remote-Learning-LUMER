@@ -8,5 +8,5 @@ class CRUDSubject(CRUDBase[Subject, SubjectCreate, SubjectUpdate, UUID]):
     def get_by_course(self, db: Session, course_id: UUID) -> list[Subject]:
         statement = select(Subject).where(Subject.course_id == course_id)
         return db.exec(statement).all()
-
+    
 crud_subject = CRUDSubject(Subject)

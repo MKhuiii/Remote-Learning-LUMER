@@ -19,6 +19,7 @@ class CourseUpdate(BaseModel):
     description: str | None = None
     price: int | None = None
     status_id: str | None = None
+    total_lessons: int | None = None
 
 class CourseRead(CourseBase):
     course_id: UUID
