@@ -25,6 +25,7 @@ class Settings(BaseSettings):
         return origins
     
     BACKEND_USER_URL: str 
+    BACKEND_COURSE_URL: str
     BACKEND_LEARNING_PROGRESS_URL: str
     LEARNING_PROGRESS_DB_URL: str
     SECRET_KEY: str

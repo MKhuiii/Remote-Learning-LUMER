@@ -1,8 +1,8 @@
-from fastapi import APIRouter, HTTPException, status, Depends
+from fastapi import APIRouter, HTTPException, status, Depends, Query
 from uuid import UUID
-
+from typing import List, Dict
 from app.api.v1.deps import SessionDep
-from app.core.security import RoleChecker
+from app.core.security import RoleChecker, get_current_user_role
 from app.schemas.course import CourseCreate, CourseUpdate, CourseRead
 from app.crud.course import crud_course
 
@@ -63,3 +63,24 @@ def delete_course(
     if not db_obj:
         raise HTTPException(status_code=404, detail="Course not found")
     return {"msg": "Course deleted successfully"}
+@router.get("/title/{course_id}", response_model=str)
+def get_course_title(
+    db: SessionDep,
+    course_id: UUID
+):
+    # Sử dụng hàm check exists bạn đã viết trong CRUD
+    if crud_course.exists(db, course_id): 
+        # Hàm get_title_by_id của bạn trả về chuỗi (str) tiêu đề
+        return crud_course.get_title_by_id(db, course_id)
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Khóa học không tồn tại"
+        )
+@router.get("/is-existed-course/{course_id}")
+def check_existed_course(
+    db: SessionDep,
+    course_id: UUID
+):
+    return crud_course.exists(db, course_id)
+
