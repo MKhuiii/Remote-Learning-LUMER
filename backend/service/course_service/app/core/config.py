@@ -25,7 +25,8 @@ class Settings(BaseSettings):
         return origins
     
     BACKEND_USER_URL: str 
-    USERS_DB_URL: str
+    BACKEND_COURSE_URL: str
+    COURSES_DB_URL: str
     SECRET_KEY: str
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_DAYS: int = 1
