@@ -10,7 +10,7 @@ class LessonCreate(BaseModel):
     content_body: str | None = None
     duration_minutes: int | None = None
     order_index: int
-    is_optinal: bool | None = None
+    is_optional: bool | None = None
 
 class LessonUpdate(BaseModel):
     title: str | None = None

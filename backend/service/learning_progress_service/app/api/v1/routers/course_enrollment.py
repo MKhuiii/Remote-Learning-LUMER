@@ -1,107 +1,201 @@
+import asyncio
 from fastapi import APIRouter, HTTPException, Depends, status, Request
 from typing import List
-from app.core.config import settings
-from app.core.security import get_current_user_role
-from app.crud.course_enrollment import crud_course_enrollment
-from app.api.v1.deps import SessionDep
-from app.schemas.course_enrollment import CourseInProgress
 from uuid import UUID
 import httpx
 
+from app.core.config import settings
+from app.core.security import get_current_user_role
+from app.crud.course_enrollment import crud_course_enrollment
+from app.crud.lesson_progress import crud_lesson_progress
+from app.api.v1.deps import SessionDep
+from app.schemas.course_enrollment import (
+    CourseInProgress, 
+    CourseEnrollmentUpdate, 
+    CourseEnrollmentResponse,
+    CourseEnrollmentCreate
+)
+
 router = APIRouter(prefix="/course_enrollment", tags=["course_enrollment"])
 
-# Lấy danh sách khóa học người học đang trong quá trình học hoặc đã hoàn thành
-@router.get("/{is_completed}", response_model=List[CourseInProgress])
+# 1. ĐĂNG KÝ KHÓA HỌC (Tạo Enrollment + Tự động khởi tạo Tiến độ tất cả bài học)
+@router.post("/", response_model=CourseEnrollmentResponse, status_code=status.HTTP_201_CREATED)
+async def enroll_course(
+    db: SessionDep,
+    payload: CourseEnrollmentCreate,
+    current_user: dict = Depends(get_current_user_role)
+):
+    user_id = UUID(current_user["user_id"])
+    course_id = payload.course_id
+
+    # Bước 1: Kiểm tra xem người dùng đã đăng ký khóa học này chưa
+    existing_enroll = crud_course_enrollment.get_by_user_and_course(db, user_id=user_id, course_id=course_id)
+    if existing_enroll:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Người dùng đã đăng ký khóa học này rồi."
+        )
+
+    # Bước 2: Gọi sang Course Service lấy cấu trúc bài học
+    course_lessons_url = f"{settings.BACKEND_COURSE_URL}/courses/{course_id}/lessons"
+    
+    async with httpx.AsyncClient() as client:
+        try:
+            response = await client.get(course_lessons_url, timeout=5.0)
+            if response.status_code == status.HTTP_404_NOT_FOUND:
+                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Khóa học không tồn tại.")
+            elif response.status_code != status.HTTP_200_OK:
+                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Lỗi cấu trúc khóa học.")
+                
+            course_data = response.json()
+            lessons_list = course_data.get("lessons", [])
+            
+        except httpx.RequestError:
+            raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Course Service sập.")
+
+        # TỐI ƯU HIỆU NĂNG: Kiểm tra Quiz cho TẤT CẢ các bài học cùng một lúc (Bất đồng bộ)
+        quiz_service_base_url = settings.BACKEND_QUIZ_EXAM_URL
+        
+        async def check_quiz_async(lesson_dict: dict):
+            lid = lesson_dict["lesson_id"]
+            try:
+                res = await client.get(f"{quiz_service_base_url}/{lid}/had-quiz", timeout=2.0)
+                lesson_dict["has_quiz"] = res.json() if res.status_code == 200 else False
+            except Exception:
+                lesson_dict["has_quiz"] = False
+            return lesson_dict
+
+        # Chạy kiểm tra tất cả bài học song song để tiết kiệm thời gian phản hồi API
+        if lessons_list:
+            lessons_list = await asyncio.gather(*(check_quiz_async(l) for l in lessons_list))
+
+    # Bước 3: Tạo bản ghi Đăng ký học chính thức
+    enroll = crud_course_enrollment.create(db, {"user_id": user_id, "course_id": course_id})
+    
+    # Bước 4: Khởi tạo tiến độ hàng loạt 
+    if lessons_list:
+        crud_lesson_progress.init_course_progress(
+            db=db, user_id=user_id, course_id=course_id, lessons=lessons_list
+        )
+        
+    return enroll
+
+# 2. LẤY DANH SÁCH TIẾN ĐỘ KHÓA HỌC (Đang học / Đã xong)
+@router.get("/history/{is_completed}", response_model=List[CourseInProgress])
 async def get_progress_list(
     request: Request,
     db: SessionDep,
     is_completed: bool,
     current_user: dict = Depends(get_current_user_role)
 ):
-    user_id = current_user["user_id"]
+    user_id = UUID(current_user["user_id"])
     
-    if is_completed is True:
-        enrolled_ids = crud_course_enrollment.get_by_user_completed(db, user_id=user_id)
-    else:
-        enrolled_ids = crud_course_enrollment.get_by_user_in_progress(db, user_id=user_id)
+    # Lấy toàn bộ danh sách bản ghi enrollment thay vì chỉ lấy list ID (Tránh lặp truy vấn DB)
+    enrollments = crud_course_enrollment.get_history_by_user(db, user_id=user_id, is_completed=is_completed)
     
-    if not enrolled_ids:
+    if not enrollments:
         return []
 
-    result: List[CourseInProgress] = []
     token = request.headers.get("Authorization")
     headers = {"Authorization": token} if token else {}
 
-    # 2. Duyệt qua từng ID và thực hiện gọi HTTP request đơn lẻ
-    async with httpx.AsyncClient() as client:
-        for course_id in enrolled_ids:
-            # Đường dẫn trỏ đích danh tới endpoint xử lý đơn lẻ vừa viết ở trên
-            course_service_url = f"{settings.BACKEND_COURSE_URL}/courses/title/{course_id}"
-            try:
-                response = await client.get(course_service_url, headers=headers, timeout=5.0)
-                
-                if response.status_code == 200:
-                    # Vì Course Service chỉ trả về một chuỗi thường (str)
-                    course_title = response.json() 
-                else:
-                    course_title = "Khóa học không xác định"
-            except httpx.RequestError:
-                course_title = "Lỗi kết nối hệ thống"
+    # Hàm bổ trợ call API lấy Title dạng không đồng bộ (Async)
+    async def fetch_course_title(client: httpx.AsyncClient, course_id: UUID) -> str:
+        url = f"{settings.BACKEND_COURSE_URL}/courses/title/{course_id}"
+        try:
+            res = await client.get(url, headers=headers, timeout=5.0)
+            return res.json() if res.status_code == 200 else "Khóa học không xác định"
+        except httpx.RequestError:
+            return "Lỗi kết nối hệ thống"
 
-            # Đóng gói dữ liệu đầu ra cho từng thực thể
-            result.append(
-                CourseInProgress(
-                    course_title=course_title,
-                    current_overall_progress=crud_course_enrollment.get_overrall_progress(db, user_id, course_id) # Tiến độ tính toán sau
-                )
+    # Sử dụng asyncio.gather để gọi đồng loạt các HTTP request (Tăng tốc độ đáng kể so với vòng lặp `for` tuần tự)
+    async with httpx.AsyncClient() as client:
+        tasks = [fetch_course_title(client, enroll.course_id) for enroll in enrollments]
+        titles = await asyncio.gather(*tasks)
+
+    # Đóng gói dữ liệu đầu ra
+    result = []
+    for enroll, title in zip(enrollments, titles):
+        result.append(
+            CourseInProgress(
+                course_id=enroll.course_id,
+                course_title=title,
+                current_overall_progress=enroll.current_overall_progress,
+                is_completed=enroll.is_completed
             )
+        )
             
     return result
 
-# Đăng ký khóa học 
-@router.post("/")
-async def enroll_course(
+
+# 3. LẤY CHI TIẾT TIẾN ĐỘ CỦA MỘT KHÓA HỌC CỤ THỂ
+@router.get("/course/{course_id}", response_model=CourseEnrollmentResponse)
+def get_single_course_progress(
     db: SessionDep,
     course_id: UUID,
     current_user: dict = Depends(get_current_user_role)
 ):
-    user_id = current_user["user_id"]
-
-    course_service_url = f"{settings.BACKEND_COURSE_URL}/courses/is-existed-course/{course_id}"
-    
-    async with httpx.AsyncClient() as client:
-        try:
-            response = await client.get(course_service_url, timeout=5.0)
-            
-            # Nếu Course Service trả về mã lỗi (404, 500, v.v.)
-            if response.status_code != status.HTTP_200_OK:
-                raise HTTPException(
-                    status_code=status.HTTP_404_NOT_FOUND,
-                    detail="Không thể xác thực thông tin khóa học từ hệ thống."
-                )
-                
-            # Đọc kết quả 
-            course_exists = response.json() 
-            if not course_exists:
-                raise HTTPException(
-                    status_code=status.HTTP_404_NOT_FOUND,
-                    detail="Khóa học không tồn tại trên hệ thống."
-                )
-        except httpx.RequestError:
-            # Xử lý trường hợp Course Service bị sập hoặc nghẽn mạng không phản hồi
-            raise HTTPException(
-                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail="Dịch vụ quản lý khóa học tạm thời không hoạt động."
-            )
-
-
-    is_user_enrolled = crud_course_enrollment.check_already_enrolled(db, user_id=user_id, course_id=course_id)
-    if is_user_enrolled:
+    user_id = UUID(current_user["user_id"])
+    enroll = crud_course_enrollment.get_by_user_and_course(db, user_id=user_id, course_id=course_id)
+    if not enroll:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, # Đã tồn tại thì nên dùng 400 thay vì 404
-            detail="Người dùng đã đăng ký khóa học này rồi."
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Bạn chưa đăng ký khóa học này."
+        )
+    return enroll
+
+
+# 4. CẬP NHẬT TIẾN ĐỘ KHÓA HỌC
+@router.put("/course/{course_id}", response_model=CourseEnrollmentResponse)
+def update_enrollment(
+    db: SessionDep,
+    course_id: UUID,
+    payload: CourseEnrollmentUpdate,
+    current_user: dict = Depends(get_current_user_role)
+):
+    user_id = UUID(current_user["user_id"])
+    
+    enroll = crud_course_enrollment.get_by_user_and_course(db, user_id=user_id, course_id=course_id)
+    if not enroll:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Bản ghi đăng ký khóa học không tồn tại."
         )
         
+    updated_enroll = crud_course_enrollment.update_progress(
+        db, db_obj=enroll, progress=payload.current_overall_progress
+    )
+    return updated_enroll
+
+
+# 5. HỦY ĐĂNG KÝ KHÓA HỌC 
+@router.delete("/course/{course_id}", status_code=status.HTTP_204_NO_CONTENT)
+def unenroll_course(
+    db: SessionDep,
+    course_id: UUID,
+    current_user: dict = Depends(get_current_user_role)
+):
+    user_id = UUID(current_user["user_id"])
     
-    enroll = crud_course_enrollment.create(db, {"user_id": user_id, "course_id": course_id})
-    return {"detail": "Đăng ký khóa học thành công", "enrollment": enroll}
+    # Bước 1: Tìm bản ghi đăng ký
+    enroll = crud_course_enrollment.get_by_user_and_course(db, user_id=user_id, course_id=course_id)
+    if not enroll:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Bạn chưa từng đăng ký khóa học này."
+        )
+        
+    # Bước 2: KIỂM TRA NGHIỆP VỤ - Hoàn thành rồi thì cấm hủy
+    if enroll.is_completed:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Khóa học đã hoàn thành, bạn không thể hủy đăng ký."
+        )
+        
+    # Bước 3: Xóa sạch tiến độ các bài học liên quan trước (đảm bảo Data Integrity)
+    crud_lesson_progress.remove_by_course(db, user_id=user_id, course_id=course_id)
+
+    # Bước 4: Tiến hành xóa bản ghi đăng ký chính
+    crud_course_enrollment.delete(db, enroll.enrollment_id)
+    
+    return None

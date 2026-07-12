@@ -8,6 +8,7 @@ from app.models.enum import SubmissionStatus
 if TYPE_CHECKING:
     from app.models.quiz import Quiz
     from app.models.submission_detail import SubmissionDetail
+    from app.models.peer_review_assignments import PeerReviewAssignment
 
 # Model lượt làm bài tổng quát
 class QuizSubmission(SQLModel, table=True):
@@ -37,3 +38,4 @@ class QuizSubmission(SQLModel, table=True):
     # Quan hệ
     quiz: Optional["Quiz"] = Relationship(back_populates="submissions")
     details: List["SubmissionDetail"] = Relationship(back_populates="submission")
+    peer_assignments: List["PeerReviewAssignment"] = Relationship(back_populates="submission")

@@ -1,14 +1,28 @@
 from pydantic import BaseModel
 from uuid import UUID
+from datetime import datetime
+from typing import Optional
 
 class CourseEnrollmentCreate(BaseModel):
-    user_id: UUID
     course_id: UUID
 
 class CourseEnrollmentUpdate(BaseModel):
-    current_overall_progress: float | None = None
-    is_completed: bool | None = None
+    current_overall_progress: float
+
+class CourseEnrollmentResponse(BaseModel):
+    enrollment_id: UUID
+    user_id: UUID
+    course_id: UUID
+    enrolled_at: datetime
+    current_overall_progress: float
+    is_completed: bool
+    completed_at: Optional[datetime] = None
+
+    class Config:
+        from_attributes = True
 
 class CourseInProgress(BaseModel):
+    course_id: UUID
     course_title: str
-    current_overall_progress: float 
+    current_overall_progress: float
+    is_completed: bool

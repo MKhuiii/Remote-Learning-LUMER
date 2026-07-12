@@ -1,5 +1,5 @@
 from datetime import date
-from typing import Optional
+from typing import Optional, List
 from uuid import UUID
 from pydantic import BaseModel
 
@@ -18,7 +18,6 @@ class CourseCreate(CourseBase):
     instructor_id: Optional[UUID] = None  
     course_type: str
     status_id: str
-    image_url: Optional[str] = None
 
 
 # 🟠 Schema dùng khi CẬP NHẬT khóa học
@@ -47,3 +46,11 @@ class CourseRead(CourseBase):
 # ⚫ Schema phản hồi khi UPLOAD ảnh thành công
 class CourseImageUploadResponse(BaseModel):
     image_url: str
+
+class LessonOrderInfo(BaseModel):
+    lesson_id: UUID
+    is_optional: bool
+
+class CourseLessonsResponse(BaseModel):
+    course_id: UUID
+    lessons: List[LessonOrderInfo]

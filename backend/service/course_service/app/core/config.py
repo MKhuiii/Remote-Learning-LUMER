@@ -27,7 +27,6 @@ class Settings(BaseSettings):
     BACKEND_COURSE_URL: str 
     
     COURSES_DB_URL: str
-    USERS_DB_URL: str 
 
     SECRET_KEY: str
     ALGORITHM: str = "HS256"

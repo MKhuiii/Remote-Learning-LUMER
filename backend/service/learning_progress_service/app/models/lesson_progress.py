@@ -4,6 +4,7 @@ from datetime import datetime
 from typing import Optional
 from sqlmodel import Field, SQLModel
 from app.models.enum import LessonStatus
+import httpx
 
 class LessonProgress(SQLModel, table=True):
     __tablename__ = "lesson_progress"

@@ -1,0 +1,124 @@
+from sqlmodel import Session, select
+from datetime import datetime, timezone
+from uuid import UUID
+from app.crud.base import CRUDBase
+from app.models.lesson_progress import LessonProgress
+from app.schemas.lesson_progress import LessonProgressCreate, LessonProgressUpdate
+from app.models.enum import LessonStatus
+from app.core.config import settings
+import httpx
+
+class CRUDLessonProgress(CRUDBase[LessonProgress, LessonProgressCreate, LessonProgressUpdate, UUID]):
+    
+    # Lấy tiến độ của 1 bài học cụ thể thuộc 1 học viên
+    def get_by_lesson(self, db: Session, user_id: UUID, lesson_id: UUID) -> LessonProgress | None:
+        statement = select(self.model).where(
+            self.model.user_id == user_id,
+            self.model.lesson_id == lesson_id
+        )
+        return db.exec(statement).first()
+
+    # Lấy toàn bộ tiến độ các bài học trong một khóa học của học viên
+    def get_by_course(self, db: Session, user_id: UUID, course_id: UUID) -> list[LessonProgress]:
+        statement = select(self.model).where(
+            self.model.user_id == user_id,
+            self.model.course_id == course_id
+        )
+        return db.exec(statement).all()
+
+    # Hàm chuyên biệt cập nhật trạng thái kèm tự động update thời gian thực `updated_at`
+    def update_status(self, db: Session, db_obj: LessonProgress, status: LessonStatus) -> LessonProgress:
+        db_obj.status = status
+        db_obj.updated_at = datetime.now(timezone.utc)
+        db.add(db_obj)
+        db.commit()
+        db.refresh(db_obj)
+        return db_obj
+    
+    def init_course_progress(self, db: Session, user_id: UUID, course_id: UUID, lessons: list[dict]):
+        for index, lesson in enumerate(lessons):
+            lesson_id = lesson["lesson_id"]
+            is_optional = lesson["is_optional"]
+            has_quiz = lesson.get("has_quiz", False)  
+            
+            if index == 0 or is_optional:
+                initial_status = LessonStatus.UNLOCKED
+            else:
+                initial_status = LessonStatus.LOCKED
+            
+            db_obj = LessonProgress(
+                user_id=user_id,
+                course_id=course_id,
+                lesson_id=lesson_id,
+                status=initial_status,
+                quiz_passed=False if has_quiz else True  # Logic xử lý gán quiz_passed
+            )
+            db.add(db_obj)
+        db.commit()
+
+    def remove_by_course(self, db: Session, user_id: UUID, course_id: UUID):
+        statement = select(LessonProgress).where(
+            LessonProgress.user_id == user_id,
+            LessonProgress.course_id == course_id
+        )
+        lessons = db.exec(statement).all()
+        for lesson in lessons:
+            db.delete(lesson)
+        db.commit()
+
+    def count_completed_lessons(self, db: Session, user_id: UUID, course_id: UUID) -> int:
+        """
+        Đếm tổng số bản ghi tiến độ có trạng thái COMPLETED của học viên trong khóa học.
+        """
+        statement = select(LessonProgress).where(
+            LessonProgress.user_id == user_id,
+            LessonProgress.course_id == course_id,
+            LessonProgress.status == LessonStatus.COMPLETED
+        )
+        results = db.exec(statement).all()
+        return len(results)
+
+    def complete_and_unlock_next(
+        self, db: Session, user_id: UUID, course_id: UUID, current_lesson_id: UUID, ordered_lessons: list[dict]
+    ) -> LessonProgress:
+        # 1. Đánh dấu bài hiện tại thành COMPLETED
+        current_progress = self.get_by_lesson(db, user_id=user_id, lesson_id=current_lesson_id)
+        if current_progress:
+            current_progress.status = LessonStatus.COMPLETED
+            current_progress.updated_at = datetime.now(timezone.utc)
+            db.add(current_progress)
+
+        # Ép kiểu toàn bộ ID trong dict về dạng UUID Object để so sánh chính xác
+        lesson_ids = [UUID(str(l["lesson_id"])) for l in ordered_lessons]
+        
+        try:
+            # So sánh UUID vs UUID sẽ tìm được index chính xác
+            current_index = lesson_ids.index(current_lesson_id)
+            
+            # Thuật toán tìm bài tiếp theo cần mở khóa
+            for next_index in range(current_index + 1, len(lesson_ids)):
+                next_lesson_id = lesson_ids[next_index]
+                next_progress = self.get_by_lesson(db, user_id=user_id, lesson_id=next_lesson_id)
+                
+                if next_progress:
+                    # Nếu bài tiếp theo đang bị LOCKED, tiến hành mở khóa và DỪNG VÒNG LẶP
+                    if next_progress.status == LessonStatus.LOCKED:
+                        next_progress.status = LessonStatus.UNLOCKED
+                        next_progress.updated_at = datetime.now(timezone.utc)
+                        db.add(next_progress)
+                        break
+                    # Nếu bài tiếp theo là bài optional (đã UNLOCKED sẵn) hoặc đã COMPLETED từ trước,
+                    # vòng lặp sẽ tự động bỏ qua để quét bài tiếp nữa.
+                    
+        except ValueError:
+            # In ra log để debug nếu sau này lộ trình lấy về bị lỗi cấu trúc dữ liệu
+            print(f"DEBUG: Không tìm thấy lesson_id {current_lesson_id} trong mảng lộ trình.")
+            pass
+
+        db.commit()
+        if current_progress:
+            db.refresh(current_progress)
+        return current_progress
+    
+    
+crud_lesson_progress = CRUDLessonProgress(LessonProgress)

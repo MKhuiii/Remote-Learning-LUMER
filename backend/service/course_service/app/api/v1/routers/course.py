@@ -93,7 +93,7 @@ from app.api.v1.deps import SessionDep
 from app.core.security import RoleChecker
 from app.crud.course import crud_course
 from app.crud.course_media import crud_course_media
-from app.schemas.course import CourseCreate, CourseImageUploadResponse, CourseRead, CourseUpdate
+from app.schemas.course import CourseCreate, CourseImageUploadResponse, CourseRead, CourseUpdate, CourseLessonsResponse
 
 router = APIRouter(prefix="/courses", tags=["courses"])
 
@@ -186,3 +186,31 @@ def upload_file_only(
 ):
     url = crud_course_media.upload_image(file)
     return {"image_url": url}
+
+# LẤY DANH SÁCH LESSON IDS THEO COURSE ID (Dùng khi học viên ấn Enroll khóa học)
+@router.get("/{course_id}/lessons", response_model=CourseLessonsResponse)
+def get_course_lessons(
+    db: SessionDep, 
+    course_id: UUID,
+):
+    """
+    Trả về danh sách toàn bộ lesson_id của một khóa học, sắp xếp theo order_index.
+    """
+    # Kiểm tra xem khóa học có tồn tại hay không bằng hàm exists trong CRUD
+    if not crud_course.exists(db, course_id=course_id):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Khóa học không tồn tại trên hệ thống."
+        )
+        
+    lessons_data = crud_course.get_lesson_ids_by_course(db, course_id=course_id)
+    return CourseLessonsResponse(course_id=course_id, lessons=lessons_data)
+
+@router.get("/{course_id}/total-lessons", response_model=int)
+def get_course_total_lessons(db: SessionDep, course_id: UUID):
+    """
+    Endpoint trả về tổng số bài học (int) của một khóa học.
+    """
+    if not crud_course.exists(db, course_id=course_id):
+        raise HTTPException(status_code=404, detail="Khóa học không tồn tại.")
+    return crud_course.get_total_lessons(db, course_id=course_id)
