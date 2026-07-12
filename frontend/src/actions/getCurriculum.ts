@@ -1,35 +1,39 @@
 'use server'
 import { cookies } from 'next/headers'
-import { CurriculumCreatePayload, CoursePayload } from '@/types/curriculum';
+import { CurriculumCreatePayload } from '@/types/course';
 
-const userBackendUrl = process.env.NEXT_PUBLIC_COURSE_BACKEND_URL;
+const userBackendUrl = process.env.NEXT_PUBLIC_COURSE_BACKEND_URL || process.env.BACKEND_URL || "http://localhost:8001";
 
+// Hàm helper nội bộ lấy token trực tiếp từ Cookie của hệ thống Server
+async function getServerToken(): Promise<string> {
+  const cookieStore = await cookies();
+  const tokenObj = cookieStore.get("token");
+  const token = tokenObj ? tokenObj.value : "";
+  
+  if (!token || token === 'undefined' || token === 'null') {
+    throw new Error("Không tìm thấy mã xác thực Access Token trên hệ thống. Vui lòng đăng nhập lại!");
+  }
+  return token.trim().replace(/^"|"$/g, "");
+}
 
 // 🟢 1. Upload file Curriculum
-export async function uploadCurriculums(file: File, token: string, curriculumId?: string) {
+// Sửa đối số từ 'file: File' thành 'formData: FormData'
+export async function uploadCurriculums(formData: FormData, curriculumId?: string) {
   try {
-    const cleanToken = token.trim().replace(/^"|"$/g, "");
-    const formData = new FormData();
-    formData.append("file", file);
+    const token = await getServerToken();
 
-    let url = `${userBackendUrl}/curriculums/upload`; 
-    
-    if (curriculumId) {
-      url += `?curriculum_id=${curriculumId}`;
-    }
+    let apiUrl = `${userBackendUrl}/curriculums/upload`;
+    if (curriculumId) apiUrl += `?curriculum_id=${curriculumId}`;
 
-    const response = await fetch(url, {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${cleanToken}`,
-        "Accept": "application/json",
-      },
+    const response = await fetch(apiUrl, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${token}` }, // KHÔNG set 'Content-Type' khi gửi FormData, để tự trình duyệt định nghĩa kèm boundary
       body: formData,
     });
 
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.detail || `Lỗi upload: ${response.status}`);
+      const errorData = await response.json();
+      throw new Error(errorData.detail || `Lỗi: ${response.status}`);
     }
     return await response.json();
   } catch (error: any) {
@@ -38,11 +42,11 @@ export async function uploadCurriculums(file: File, token: string, curriculumId?
 }
 
 // 🟢 2. Lấy danh sách Curriculum
-export async function getCurriculums(token: string) {
-  const cleanToken = token.trim().replace(/^"|"$/g, "");
+export async function getCurriculums() {
+  const token = await getServerToken();
   const response = await fetch(`${userBackendUrl}/curriculums/`, { 
     method: "GET",
-    headers: { "Authorization": `Bearer ${cleanToken}` },
+    headers: { "Authorization": `Bearer ${token}` },
   });
   if (!response.ok) {
     const err = await response.json().catch(() => ({}));
@@ -52,17 +56,16 @@ export async function getCurriculums(token: string) {
 }
 
 // 🟢 3. Tạo mới Curriculum
-export async function createCurriculum(data: CurriculumCreatePayload, token: string) {
-  const cleanToken = token.trim().replace(/^"|"$/g, "");
+export async function createCurriculum(data: CurriculumCreatePayload) {
+  const token = await getServerToken();
   const response = await fetch(`${userBackendUrl}/curriculums/`, { 
     method: "POST",
     headers: {
-      "Authorization": `Bearer ${cleanToken}`,
+      "Authorization": `Bearer ${token}`,
       "Content-Type": "application/json",
     },
     body: JSON.stringify(data),
   });
-  
   if (!response.ok) {
     const err = await response.json().catch(() => ({}));
     throw new Error(err.detail || "Không thể tạo chương trình đào tạo mới");
@@ -71,117 +74,38 @@ export async function createCurriculum(data: CurriculumCreatePayload, token: str
 }
 
 // 🟢 4. Cập nhật Curriculum
-export async function updateCurriculum(curriculumId: string, payload: any, token: string) {
-  const cleanToken = token.trim().replace(/^"|"$/g, "");
-  
+export async function updateCurriculum(curriculumId: string, payload: any) {
+  const token = await getServerToken();
   const response = await fetch(`${userBackendUrl}/curriculums/${curriculumId}`, {
     method: "PUT",
     headers: { 
-      "Authorization": `Bearer ${cleanToken}`,
+      "Authorization": `Bearer ${token}`,
       "Content-Type": "application/json"
     },
     body: JSON.stringify(payload)
   });
-
   if (!response.ok) {
     const err = await response.json().catch(() => ({}));
     throw new Error(err.detail || "Không thể cập nhật chương trình đào tạo");
   }
-
   return response.json();
 }
 
 // 🟢 5. Xóa Curriculum
-export async function deleteCurriculum(curriculumId: string, token: string) {
-  const cleanToken = token.trim().replace(/^"|"$/g, "");
-
+export async function deleteCurriculum(curriculumId: string) {
+  const token = await getServerToken();
   const response = await fetch(`${userBackendUrl}/curriculums/${curriculumId}`, {
     method: "DELETE",
     headers: { 
-      "Authorization": `Bearer ${cleanToken}`,
+      "Authorization": `Bearer ${token}`,
       "Content-Type": "application/json"
     }
   });
-
   if (!response.ok) {
     const err = await response.json().catch(() => ({}));
     throw new Error(err.detail || "Không thể tiến hành xóa dữ liệu.");
   }
-
   return true;
 }
 
-// ==========================================
-// 🚀 COURSES SERVER ACTIONS (FIX FULL CRUD)
-// ==========================================
-
-// 🔵 1. Lấy danh sách Course 
-export async function getCourses(token: string) {
-  const cleanToken = token.trim().replace(/^"|"$/g, "");
-  const response = await fetch(`${userBackendUrl}/courses/`, {
-    method: "GET",
-    headers: { "Authorization": `Bearer ${cleanToken}` },
-  });
-  
-  if (!response.ok) {
-    const err = await response.json().catch(() => ({}));
-    throw new Error(err.detail || "Không thể tải danh sách khóa học hiện hành");
-  }
-  return await response.json();
-}
-
-// 🔵 2. Tạo mới một Course
-export async function createCourse(data: CoursePayload, token: string) {
-  const cleanToken = token.trim().replace(/^"|"$/g, "");
-  const response = await fetch(`${userBackendUrl}/courses/`, {
-    method: "POST",
-    headers: {
-      "Authorization": `Bearer ${cleanToken}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(data),
-  });
-
-  if (!response.ok) {
-    const err = await response.json().catch(() => ({}));
-    throw new Error(err.detail || "Không thể khởi tạo khóa học mới");
-  }
-  return await response.json();
-}
-
-// 🔵 3. Cập nhật thông tin Course
-export async function updateCourse(courseId: string, data: CoursePayload, token: string) {
-  const cleanToken = token.trim().replace(/^"|"$/g, "");
-  const response = await fetch(`${userBackendUrl}/courses/${courseId}`, {
-    method: "PUT",
-    headers: {
-      "Authorization": `Bearer ${cleanToken}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(data),
-  });
-
-  if (!response.ok) {
-    const err = await response.json().catch(() => ({}));
-    throw new Error(err.detail || "Không thể cập nhật cấu hình khóa học");
-  }
-  return await response.json();
-}
-
-// 🔵 4. Xóa bỏ một Course
-export async function deleteCourse(courseId: string, token: string) {
-  const cleanToken = token.trim().replace(/^"|"$/g, "");
-  const response = await fetch(`${userBackendUrl}/courses/${courseId}`, {
-    method: "DELETE",
-    headers: {
-      "Authorization": `Bearer ${cleanToken}`,
-      "Content-Type": "application/json",
-    },
-  });
-
-  if (!response.ok) {
-    const err = await response.json().catch(() => ({}));
-    throw new Error(err.detail || "Không thể gỡ bỏ khóa học này khỏi hệ thống");
-  }
-  return true;
-}
+// === CÁC HÀM CRUD CỦA COURSES BÊN DƯỚI BẠN CŨNG ÁP DỤNG TƯƠNG TỰ (Bỏ tham số token đi và gọi: const token = await getServerToken()) ===

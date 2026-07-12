@@ -40,17 +40,63 @@ async function getAuthHeaders() {
   };
 }
 
-// 1. Lấy danh sách thành viên (Giữ nguyên vì logic đúng)
-export async function getrList(page: number, limit: number): Promise<ActionResponseList> {
+
+
+
+
+// // 1. Lấy danh sách thành viên (Giữ nguyên vì logic đúng)
+// export async function getrList(page: number, limit: number): Promise<ActionResponseList> {
+//   try {
+//     const skip = (page - 1) * limit;
+//     const headers = await getAuthHeaders();
+
+//     if (!headers) {
+//       return { success: false, message: "Không tìm thấy Token đăng nhập trong Cookie!" };
+//     }
+
+//     const res = await fetch(`${userBackendUrl}/get-user-list?skip=${skip}&limit=${limit}`, {
+//       method: "GET",
+//       headers: headers,
+//       cache: "no-store"
+//     });
+
+//     if (res.status === 401) {
+//       return { success: false, message: "Phiên đăng nhập hết hạn hoặc không có quyền Admin!" };
+//     }
+
+//     if (!res.ok) {
+//       return { success: false, message: `Lỗi hệ thống Backend: ${res.status}` };
+//     }
+
+//     const data = await res.json();
+//     return { success: true, list: data };
+//   } catch (error: any) {
+//     return { success: false, message: error.message || "Lỗi kết nối mạng" };
+//   }
+// }
+
+
+// Sửa lại hàm getrList để nhận thêm bộ lọc theo đúng Swagger
+export async function getrList(
+  page: number, 
+  limit: number, 
+  roleId?: number, 
+  statusId?: string
+): Promise<ActionResponseList> {
   try {
-    const skip = (page - 1) * limit;
+    const validPage = Math.max(1, page);
+    const validLimit = Math.max(1, limit);
+    const skip = (validPage - 1) * validLimit;
     const headers = await getAuthHeaders();
 
     if (!headers) {
       return { success: false, message: "Không tìm thấy Token đăng nhập trong Cookie!" };
     }
+    let url = `${userBackendUrl}/get-user-list?skip=${skip}&limit=${limit}`;
+    if (statusId) url += `&status_id=${statusId}`;
+    if (roleId !== undefined) url += `&role_id=${roleId}`;
 
-    const res = await fetch(`${userBackendUrl}/get-user-list?skip=${skip}&limit=${limit}`, {
+    const res = await fetch(url, {
       method: "GET",
       headers: headers,
       cache: "no-store"
@@ -70,6 +116,9 @@ export async function getrList(page: number, limit: number): Promise<ActionRespo
     return { success: false, message: error.message || "Lỗi kết nối mạng" };
   }
 }
+
+
+
 
 // 2. SỬA LỖI: Cập nhật trạng thái Tài khoản (PATCH /update-status/)
 export async function updateUserStatus(userId: string, nextStatus: any): Promise<ActionResponseSingle> {
@@ -237,3 +286,54 @@ export async function getInforUser(userId: string): Promise<ActionResponseDetail
   }
 }
 
+
+
+
+export async function getrInstructorList(
+  page: number, 
+  limit: number, 
+  roleId: number,     // Đổi thành bắt buộc
+  statusId: string    // Đổi thành bắt buộc
+): Promise<ActionResponseList> {
+  try {
+    // Chặn nhanh từ Frontend nếu truyền nhầm dữ liệu trống rỗng
+    if (roleId === undefined || !statusId) {
+      return { success: false, message: "Thiếu bộ lọc Role hoặc Status để tìm kiếm!" };
+    }
+
+    const validPage = Math.max(1, page);
+    const validLimit = Math.max(1, limit);
+    const skip = (validPage - 1) * validLimit;
+    const headers = await getAuthHeaders();
+
+    if (!headers) {
+      return { success: false, message: "Không tìm thấy Token đăng nhập trong Cookie!" };
+    }
+
+    // Vì chắc chắn có dữ liệu nên bạn có thể nối chuỗi thẳng thắn luôn cho sạch code
+    const url = `${userBackendUrl}/get-instructor-list?skip=${skip}&limit=${limit}&status_id=${statusId}&role_id=${roleId}`;
+
+    const res = await fetch(url, {
+      method: "GET",
+      headers: headers,
+      cache: "no-store"
+    });
+
+    if (res.status === 401) {
+      return { success: false, message: "Phiên đăng nhập hết hạn hoặc không có quyền hợp lệ!" };
+    }
+    
+    if (res.status === 400) {
+      return { success: false, message: "Yêu cầu không hợp lệ, thiếu dữ liệu bộ lọc!" };
+    }
+
+    if (!res.ok) {
+      return { success: false, message: `Lỗi hệ thống Backend: ${res.status}` };
+    }
+
+    const data = await res.json();
+    return { success: true, list: data };
+  } catch (error: any) {
+    return { success: false, message: error.message || "Lỗi kết nối mạng" };
+  }
+}

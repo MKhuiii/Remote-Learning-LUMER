@@ -66,9 +66,11 @@ function LoginContent() {
         localStorage.setItem("role", "admin");
         window.location.href = "/admin";
       } else if (userRole === "Instructor" || userRole === "Faculty") { 
-        // Chấp nhận cả Instructor hoặc Faculty để dẫn về đúng trang giảng viên
         localStorage.setItem("role", "faculty");
-        window.location.href = "/training-management"; 
+        window.location.href = "/instructor-management";
+      } else if (userRole === "Manager") { 
+        localStorage.setItem("role", "manager");
+        window.location.href = "/training-management";
       } else {
         localStorage.setItem("role", "student");
         window.location.href = "/dashboard-student";

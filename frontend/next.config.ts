@@ -4,7 +4,7 @@ const nextConfig: NextConfig = {
   /* config options here */
   experimental: {
     serverActions: {
-      bodySizeLimit: "10mb", // Nâng hạn mức tối đa nhận payload lên 10 Megabytes
+      bodySizeLimit: "100mb", 
     },
   },
 };

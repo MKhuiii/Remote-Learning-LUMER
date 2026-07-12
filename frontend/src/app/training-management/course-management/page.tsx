@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo, useRef } from "react";
+import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import Navbar from "@/components/Navbar";
 import { 
@@ -8,35 +8,48 @@ import {
   Pencil, 
   Trash2, 
   Search, 
-  Upload, 
-  ImageIcon, 
   Clock, 
   Award, 
   ArrowLeft,
   ChevronRight,
   RefreshCw,
   Calendar,
+  FileText,
+  Type,
+  X,
+  Layers,
+  Sparkles
 } from "lucide-react";
+
+import { Course } from '@/types/course';
+
+import {
+  getCurriculums,
+} from "@/actions/getCurriculum";
 
 import {
   getCoursesAction,
   createCourseAction,
   updateCourseAction,
   deleteCourseAction,
-  uploadCourseImageAction, 
-  Course,
 } from "@/actions/getCourse";
-  
-import { getCurriculums } from "@/actions/getCurriculum";
 
 // --- UTILS HELPER FUNCTIONS ---
-
 const getCookie = (name: string): string | null => {
   if (typeof window === "undefined") return null;
-  const value = `; ${document.cookie}`;
-  const parts = value.split(`; ${name}=`);
-  if (parts.length === 2) return parts.pop()?.split(";").shift() || null;
+  const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
+  if (match) return decodeURIComponent(match[2]);
   return null;
+};
+
+const generateFallbackUUID = (): string => {
+  return "00000000-0000-4000-8000-000000000000";
+};
+
+const isValidUUID = (uuid: string | null | undefined): boolean => {
+  if (!uuid) return false;
+  const regex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  return regex.test(uuid);
 };
 
 export default function CourseManagementPage() {
@@ -44,283 +57,223 @@ export default function CourseManagementPage() {
   const [courses, setCourses] = useState<Course[]>([]);
   const [curriculums, setCurriculums] = useState<any[]>([]); 
   const [keyword, setKeyword] = useState("");
+  
+  // --- BỘ LỌC DUY NHẤT: LOẠI HÌNH ĐÀO TẠO ---
+  const [filterType, setFilterType] = useState<"ALL" | "SHORT_TERM" | "LONG_TERM">("ALL"); 
+
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState<Course | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [isSyncing, setIsSyncing] = useState(false);
-
   const [selectedCourseRow, setSelectedCourseRow] = useState<Course | null>(null);
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [imagePreview, setImagePreview] = useState<string>("");
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
-  const NGINX_URL = process.env.NEXT_PUBLIC_NGINX_URL || "http://localhost"; 
 
   const [form, setForm] = useState({
+    course_id: "",
     title: "",
     description: "",
-    image_url: "",
     price: 0,
     curriculum_id: "", 
   });
 
+  // --- INTERCEPTOR ---
+  const verifyToken = (): string | null => {
+    let token = getCookie("token");
+    if (!token) return "bypass_token_dev"; 
+    return token;
+  };
 
-// --- MEMOS & OPTIMIZATIONS (ĐÃ FIX THEO CONSOLE LOG THỰC TẾ) ---
-
-// 🚀 Tối ưu hóa lưu trữ Curriculum Map: Tra cứu thông tin gốc O(1) từ bảng Curriculum
-const curriculumMap = useMemo(() => {
-  const map = new Map<string, { type: string; finishedMonths: string | number; name: string }>();
-  
-  curriculums.forEach(c => {
-    // Đảm bảo lấy đúng ID bằng mọi giá
-    const targetId = c.curriculum_id || c.curriculumId || c._id;
-    if (!targetId) return;
-
-    const targetIdStr = typeof targetId === "object" && targetId?.$oid 
-      ? String(targetId.$oid).toLowerCase() 
-      : String(targetId).toLowerCase();
-    
-    const type = c.course_type || c.courseType || "SHORT_TERM";
-    // 💡 Lấy số tháng hoàn thành (ví dụ: số 3 trong ảnh)
-    const finishedMonths = c.course_finished_months !== undefined ? c.course_finished_months : "Chưa rõ";
-    const name = c.curriculum_name || "N/A";
-
-    map.set(targetIdStr, { 
-      type: String(type).toUpperCase(), 
-      finishedMonths: finishedMonths,
-      name: name
+  // --- MAP THỐNG KÊ SỐ LẦN ĐÃ SỬ DỤNG CỦA MỖI CURRICULUM ---
+  const curriculumUsageMap = useMemo(() => {
+    const usageCount = new Map<string, { count: number; courseTitles: string[] }>();
+    courses.forEach(course => {
+      const cId = course.curriculum_id || (course as any).curriculumId;
+      if (!cId) return;
+      const key = String(cId).toLowerCase();
+      
+      const current = usageCount.get(key) || { count: 0, courseTitles: [] };
+      current.count += 1;
+      if (course.title) current.courseTitles.push(course.title);
+      usageCount.set(key, current);
     });
-  });
-  return map;
-}, [curriculums]);
+    return usageCount;
+  }, [courses]);
 
-// 1. Helper lấy loại hình đào tạo gốc
-const getCourseTypeFromCurriculum = (curriculumId: any) => {
-  if (!curriculumId) return "SHORT_TERM";
-  const searchId = typeof curriculumId === "object" && curriculumId?.$oid 
-    ? String(curriculumId.$oid).toLowerCase() 
-    : String(curriculumId).toLowerCase();
-  
-  return curriculumMap.get(searchId)?.type || "SHORT_TERM";
-};
+  // --- MEMOS ---
+  const curriculumMap = useMemo(() => {
+    const map = new Map<string, { type: string; finishedMonths: string | number; name: string }>();
+    curriculums.forEach(c => {
+      const targetId = c.curriculum_id || c.curriculumId || c._id;
+      if (!targetId) return;
+      const targetIdStr = typeof targetId === "object" && targetId?.$oid ? String(targetId.$oid).toLowerCase() : String(targetId).toLowerCase();
+      const type = c.course_type || c.courseType || "SHORT_TERM";
+      const finishedMonths = c.course_finished_months !== undefined ? c.course_finished_months : "Chưa rõ";
+      const name = c.curriculum_name || "N/A";
+      map.set(targetIdStr, { type: String(type).toUpperCase(), finishedMonths, name });
+    });
+    return map;
+  }, [curriculums]);
 
-// 2. 🛠️ Helper lấy Số tháng hoàn thành từ Curriculum (Giải quyết dứt điểm lỗi hiển thị)
-const getMonthFromCurriculum = (curriculumId: any): string => {
-  if (!curriculumId) return "Chưa cập nhật";
-  const searchId = typeof curriculumId === "object" && curriculumId?.$oid 
-    ? String(curriculumId.$oid).toLowerCase() 
-    : String(curriculumId).toLowerCase();
-  
-  const months = curriculumMap.get(searchId)?.finishedMonths;
-  if (months === undefined || months === "Chưa rõ") return "Chưa cập nhật";
-  
-  return `${months} Tháng`; // Kết quả hiển thị trực quan: "3 Tháng"
-};
+  const getCourseTypeFromCurriculum = (curriculumId: any) => {
+    if (!curriculumId) return "SHORT_TERM";
+    const searchId = typeof curriculumId === "object" && curriculumId?.$oid ? String(curriculumId.$oid).toLowerCase() : String(curriculumId).toLowerCase();
+    return curriculumMap.get(searchId)?.type || "SHORT_TERM";
+  };
 
+  const getMonthFromCurriculum = (curriculumId: any): string => {
+    if (!curriculumId) return "Chưa cập nhật";
+    const searchId = typeof curriculumId === "object" && curriculumId?.$oid ? String(curriculumId.$oid).toLowerCase() : String(curriculumId).toLowerCase();
+    const months = curriculumMap.get(searchId)?.finishedMonths;
+    if (months === undefined || months === "Chưa rõ") return "Chưa cập nhật";
+    return `${months} Tháng`; 
+  };
+
+  // --- THỐNG KÊ SỐ LƯỢNG KHOÁ NGẮN HẠN VÀ DÀI HẠN ---
+  const typeCounts = useMemo(() => {
+    let shortTerm = 0;
+    let longTerm = 0;
+    
+    courses.forEach(c => {
+      const cId = c.curriculum_id || (c as any).curriculumId;
+      const currentType = getCourseTypeFromCurriculum(cId);
+      if (currentType === "LONG_TERM") {
+        longTerm++;
+      } else {
+        shortTerm++;
+      }
+    });
+
+    return { shortTerm, longTerm };
+  }, [courses, curriculumMap]);
+
+  // --- HÀM LỌC TỪ KHÓA TÊN KHOÁ HỌC + LOẠI HÌNH ---
   const filteredCourses = useMemo(() => {
     if (!courses) return [];
     const lowerKeyword = keyword.toLowerCase();
-    return courses.filter((c) =>
-      c.title?.toLowerCase().includes(lowerKeyword)
-    );
-  }, [courses, keyword]);
+    
+    return courses.filter((c) => {
+      const cId = c.curriculum_id || (c as any).curriculumId;
+      
+      // 1. Lọc từ khóa
+      if (c.title && !c.title.toLowerCase().includes(lowerKeyword)) return false;
 
-  // --- API OPERATIONS ---
+      // 2. Lọc hình thức đào tạo
+      const currentType = getCourseTypeFromCurriculum(cId);
+      if (filterType !== "ALL" && currentType !== filterType) return false;
+
+      return true;
+    });
+  }, [courses, keyword, filterType]);
 
   const fetchInitialData = async () => {
     setIsLoading(true);
     try {
-      const token = getCookie("token") || "";
-      const [courseData, curriculumData] = await Promise.all([
-        getCoursesAction(token),
-        getCurriculums(token)
-      ]);
-      console.log("=== THÔNG TIN COURSE THÔ ===", courseData?.[0]);
-      console.log("=== THÔNG TIN CURRICULUM THÔ ===", curriculumData?.[0]);
-      const safeCourses = courseData || [];
-      const safeCurriculums = curriculumData || [];
+      const [coursesData, curriculumsData] = await Promise.all([getCoursesAction(), getCurriculums()]);
+      const validCourses = coursesData || [];
+      const validCurriculums = curriculumsData || [];
 
-      setCourses(safeCourses);
-      setCurriculums(safeCurriculums);
-      
-      setSelectedCourseRow(safeCourses.length > 0 ? safeCourses[0] : null);
-
-      if (safeCurriculums.length > 0 && !form.curriculum_id) {
-        setForm(prev => ({ ...prev, curriculum_id: safeCurriculums[0].curriculum_id }));
-      }
-    } catch (error) {
-      console.error("Lỗi đồng bộ dữ liệu hệ thống:", error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchInitialData();
-    return () => {
-      if (imagePreview && imagePreview.startsWith("blob:")) {
-        URL.revokeObjectURL(imagePreview);
-      }
-    };
-  }, []);
-
-  const handleForceSyncDatabase = async () => {
-    if (!courses.length || !curriculums.length) {
-      alert("Không có dữ liệu để thực hiện đồng bộ!");
-      return;
-    }
-
-    const mismatchedCourses = courses.filter(course => {
-      const dbType = String(course.course_type).toUpperCase();
-      const actualType = getCourseTypeFromCurriculum(course.curriculum_id || (course as any).curriculumId);
-      return dbType !== actualType;
-    });
-
-    if (mismatchedCourses.length === 0) {
-      alert("Tuyệt vời! Dữ liệu bảng Course trong CSDL đã khớp hoàn toàn với Curriculum, không cần đồng bộ.");
-      return;
-    }
-
-    if (!confirm(`Phát hiện ${mismatchedCourses.length} khóa học có 'course_type' bị lệch trong CSDL. Thực hiện cập nhật cưỡng bức xuống Postgres ngay?`)) {
-      return;
-    }
-
-    setIsSyncing(true);
-    const token = getCookie("token") || "";
-
-    try {
-      const syncPromises = mismatchedCourses.map(course => {
-        const correctType = getCourseTypeFromCurriculum(course.curriculum_id || (course as any).curriculumId);
-        const payload = {
-          curriculum_id: course.curriculum_id || (course as any).curriculumId,
-          title: course.title,
-          course_type: correctType,
-          description: course.description || "",
-          price: Number(course.price),
-          image_url: course.image_url || "https://images.unsplash.com/photo-1515879218367-8466d910aaa4",
-          status_id: "COURSE_REGISTRATION",
-        };
-        return updateCourseAction(course.course_id, payload, token);
+      const synchronizedData = validCourses.map((course: Course) => {
+        const targetCurriculum = validCurriculums.find((c: any) => {
+          const cId = c.curriculum_id || c.id;
+          const courseCId = course.curriculum_id || (course as any).id;
+          return String(cId).toLowerCase() === String(courseCId).toLowerCase();
+        });
+        return { ...course, modules: targetCurriculum?.modules || (course as any).modules || [] };
       });
 
-      const results = await Promise.all(syncPromises);
-      const successCount = results.filter(res => res.success).length;
-
-      alert(`Hoàn tất! Đã đồng bộ thành công ${successCount}/${mismatchedCourses.length} bản ghi lỗi xuống CSDL.`);
-      await fetchInitialData(); 
-    } catch (error: any) {
-      alert(`Đồng bộ gián đoạn: ${error.message}`);
-    } finally {
-      setIsSyncing(false);
-    }
-  };
-
-  // --- FORM HANDLERS ---
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      if (imagePreview && imagePreview.startsWith("blob:")) {
-        URL.revokeObjectURL(imagePreview);
+      setCourses(synchronizedData);
+      setCurriculums(validCurriculums);
+      if (synchronizedData.length > 0) setSelectedCourseRow(synchronizedData[0]);
+      if (validCurriculums.length > 0 && !form.curriculum_id) {
+        setForm(prev => ({ ...prev, curriculum_id: validCurriculums[0].curriculum_id || validCurriculums[0].id }));
       }
-      setSelectedFile(file);
-      setImagePreview(URL.createObjectURL(file));
-    }
-  };
-
-  const handleSubmit = async () => {
-    if (!form.curriculum_id) {
-      alert("Vui lòng chọn một Chương trình đào tạo!");
-      return;
-    }
-
-    setIsLoading(true);
-    const token = getCookie("token") || "";
-    let finalImageUrl = form.image_url;
-
-    try {
-      if (selectedFile) {
-        const uploadRes = await uploadCourseImageAction(selectedFile, token);
-        if (!uploadRes.success) throw new Error(uploadRes.error);
-        finalImageUrl = uploadRes.imageUrl || "";
-      }
-
-      const autoCourseType = getCourseTypeFromCurriculum(form.curriculum_id);
-      const payload = {
-        curriculum_id: form.curriculum_id,
-        title: form.title,
-        course_type: autoCourseType, 
-        description: form.description,
-        price: Number(form.price),
-        image_url: finalImageUrl || "https://images.unsplash.com/photo-1515879218367-8466d910aaa4",
-        status_id: "COURSE_REGISTRATION", 
-      };
-
-      const res = editing 
-        ? await updateCourseAction(editing.course_id, payload, token)
-        : await createCourseAction(payload, token);
-
-      if (res.success) {
-        alert(editing ? "Cập nhật thông tin thành công!" : "Khởi tạo khóa học mới thành công!");
-        resetForm();
-        fetchInitialData();
-      } else {
-        throw new Error(res.error);
-      }
-    } catch (error: any) {
-      alert(`Thao tác thất bại: ${error.message}`);
+    } catch (error) {
+      console.error(error);
     } finally {
       setIsLoading(false);
     }
   };
 
+  useEffect(() => { fetchInitialData(); }, []);
+
   const resetForm = () => {
-    if (imagePreview && imagePreview.startsWith("blob:")) {
-      URL.revokeObjectURL(imagePreview);
-    }
     setShowModal(false); 
     setEditing(null);
-    setSelectedFile(null);
-    setImagePreview("");
     setForm({
+      course_id: "",
       title: "",
       description: "",
-      image_url: "",
       price: 0,
-      curriculum_id: curriculums.length > 0 ? curriculums[0].curriculum_id : "",
+      curriculum_id: curriculums.length > 0 ? (curriculums[0].curriculum_id || curriculums[0].id) : "",
     });
   };
 
   const handleEdit = (course: Course) => {
     setEditing(course);
-    const currentCurriculumId = course.curriculum_id || (course as any).curriculumId || "";
-
     setForm({
+      course_id: course.course_id,
       title: course.title,
       description: course.description || "",
-      image_url: course.image_url || "",
       price: course.price,
-      curriculum_id: currentCurriculumId, 
+      curriculum_id: course.curriculum_id || (course as any).curriculumId || "", 
     });
-
-    setImagePreview(
-      course.image_url?.startsWith("/") 
-        ? `${NGINX_URL}${course.image_url}` 
-        : course.image_url || ""
-    );
     setShowModal(true);
   };
 
   const handleDelete = async (id: string) => {
+    const token = verifyToken();
+    if (!token) return;
     if (confirm("Bạn có chắc chắn muốn xóa khóa học này khỏi hệ thống?")) {
-      const token = getCookie("token") || "";
-      const res = await deleteCourseAction(id, token);
+      const res = await deleteCourseAction(id);
       if (res.success) {
         alert("Xóa khóa học thành công!");
-        fetchInitialData();
+        await fetchInitialData();
       } else {
         alert(`Không thể xóa bản ghi: ${res.error}`);
       }
+    }
+  };
+
+  const handleSubmit = async () => {
+    if (!form.title || !form.curriculum_id) {
+      alert("Vui lòng điền đầy đủ Tên khóa học và Chương trình đào tạo!");
+      return;
+    }
+    setIsLoading(true);
+    try {
+      const correctType = getCourseTypeFromCurriculum(form.curriculum_id);
+      let rawUserId = getCookie("user_id") || "";
+      let validInstructorId = isValidUUID(rawUserId) ? rawUserId : generateFallbackUUID();
+
+      const payload: any = {
+        curriculum_id: form.curriculum_id,
+        title: form.title,
+        course_type: correctType,
+        description: form.description,
+        price: Number(form.price),
+        image_url: editing?.image_url || "", 
+        status_id: "COURSE_REGISTRATION",
+        instructor_id: validInstructorId, 
+      };
+
+      let res;
+      if (editing && form.course_id) {
+        payload.total_lessons = (editing as any).total_lessons ?? 0;
+        res = await updateCourseAction(form.course_id, payload);
+      } else {
+        payload.total_lessons = 0;
+        res = await createCourseAction(payload);
+      }
+
+      if (res?.success) {
+        alert(editing ? "Cập nhật khóa học thành công!" : "Tạo khóa học mới thành công!");
+        resetForm();
+        await fetchInitialData();
+      } else {
+        alert(`Thao tác thất bại: ${res?.error || "Lỗi không xác định"}`);
+      }
+    } catch (error: any) {
+      alert(`Đã xảy ra lỗi hệ thống: ${error.message}`);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -341,12 +294,9 @@ const getMonthFromCurriculum = (curriculumId: any): string => {
           </div>
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
             <div className="space-y-1">
-              <span className="text-blue-100 text-[10px] font-bold tracking-widest uppercase block bg-white/10 px-2 py-0.5 rounded w-max">
-                LUMER ENGINE DB-SYNC
-              </span>
               <h1 className="text-3xl font-black tracking-tight uppercase pt-1">QUẢN LÝ KHÓA HỌC HỆ THỐNG</h1>
               <p className="text-blue-100/80 text-xs font-medium">
-                Sử dụng nút "Đồng bộ CSDL" để ép ghi đè lại toàn bộ các dữ liệu cũ bị kẹt trong Postgres.
+                Quản lý thông tin, học phí hiển thị và phân bổ đề cương chi tiết cho các lớp đào tạo.
               </p>
             </div>
           </div>
@@ -355,11 +305,19 @@ const getMonthFromCurriculum = (curriculumId: any): string => {
 
       <main className="max-w-7xl mx-auto px-6 space-y-6 -mt-12 pb-16 relative z-10">
         
-        {/* Widget thống kê */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+        {/* Widget thống kê cân đối - Grid 4 Cột */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
           <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-lg text-center">
             <p className="text-2xl font-black text-[#0066FF]">{courses?.length || 0}</p>
             <p className="text-[10px] font-bold text-slate-400 uppercase mt-1 tracking-wider">Tổng khóa học</p>
+          </div>
+          <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-lg text-center">
+            <p className="text-2xl font-black text-amber-500">{typeCounts.shortTerm}</p>
+            <p className="text-[10px] font-bold text-slate-400 uppercase mt-1 tracking-wider">⚡ Khóa Ngắn Hạn</p>
+          </div>
+          <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-lg text-center">
+            <p className="text-2xl font-black text-purple-600">{typeCounts.longTerm}</p>
+            <p className="text-[10px] font-bold text-slate-400 uppercase mt-1 tracking-wider">🔮 Khóa Dài Hạn</p>
           </div>
           <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-lg text-center">
             <p className="text-2xl font-black text-emerald-600">
@@ -369,86 +327,91 @@ const getMonthFromCurriculum = (curriculumId: any): string => {
           </div>
         </div>
 
-        {/* Tìm kiếm & Nút bấm */}
-        <div className="bg-white border border-slate-200 rounded-xl p-4 flex flex-col md:flex-row gap-4 justify-between items-center shadow-xs">
-          <div className="relative w-full md:w-80">
-            <Search size={16} className="absolute left-3 top-2.5 text-slate-400" />
-            <input
-              value={keyword}
-              onChange={(e) => setKeyword(e.target.value)}
-              placeholder="Tìm theo tiêu đề khóa học..."
-              className="w-full bg-slate-50 border border-slate-200 rounded-lg pl-9 pr-4 py-2 text-xs font-medium focus:outline-none focus:ring-1 focus:ring-[#0066FF]"
-            />
+        {/* Thanh Tìm kiếm & 1 Bộ lọc duy nhất (Loại hình) */}
+        <div className="bg-white border border-slate-200 rounded-xl p-4 flex flex-col md:flex-row gap-4 justify-between items-center shadow-sm">
+          <div className="flex flex-col sm:flex-row items-center gap-3 w-full md:flex-1">
+            
+            {/* Tìm kiếm */}
+            <div className="relative w-full sm:w-80">
+              <Search size={16} className="absolute left-3 top-2.5 text-slate-400" />
+              <input
+                value={keyword}
+                onChange={(e) => setKeyword(e.target.value)}
+                placeholder="Tìm tiêu đề khóa học..."
+                className="w-full bg-slate-50 border border-slate-200 rounded-lg pl-9 pr-4 py-2 text-xs font-medium focus:outline-none focus:ring-1 focus:ring-[#0066FF]"
+              />
+            </div>
+
+            {/* Lọc Ngắn / Dài hạn */}
+            <div className="relative w-full sm:w-56 flex items-center gap-1.5">
+              <Clock size={14} className="text-slate-400 shrink-0" />
+              <select
+                value={filterType}
+                onChange={(e) => setFilterType(e.target.value as any)}
+                className="w-full bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-2 text-xs font-bold text-slate-700 focus:outline-none focus:ring-1 focus:ring-[#0066FF] cursor-pointer"
+              >
+                <option value="ALL">⏱️ Loại hình: Tất cả</option>
+                <option value="SHORT_TERM">⚡ Khóa NGẮN HẠN</option>
+                <option value="LONG_TERM">🔮 Khóa DÀI HẠN</option>
+              </select>
+            </div>
+            
           </div>
           
-          <div className="flex w-full md:w-auto items-center gap-3">
+          <div className="flex w-full md:w-auto items-center justify-end shrink-0">
             <button
-              onClick={handleForceSyncDatabase}
-              disabled={isSyncing}
-              className="w-full md:w-auto bg-amber-500 hover:bg-amber-600 text-white px-4 py-2 rounded-lg text-xs font-bold flex items-center justify-center gap-2 border-none cursor-pointer transition shadow-sm disabled:opacity-50"
-            >
-              <RefreshCw size={14} className={isSyncing ? "animate-spin" : ""} />
-              {isSyncing ? "Đang đẩy data lên CSDL..." : "Đồng bộ CSDL"}
-            </button>
-
-            <button
-              onClick={() => {
-                resetForm();
-                setShowModal(true);
-              }}
-              className="w-full md:w-auto bg-[#0066FF] hover:bg-blue-600 text-white px-4 py-2 rounded-lg text-xs font-bold flex items-center justify-center gap-2 border-none cursor-pointer transition shadow-sm whitespace-nowrap"
+              onClick={() => { resetForm(); setShowModal(true); }}
+              className="w-full md:w-auto bg-[#0066FF] hover:bg-blue-600 text-white px-5 py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-2 border-none cursor-pointer transition-all active:scale-[0.98] shadow-md shadow-blue-500/10 whitespace-nowrap"
             >
               <Plus size={16} /> Thêm khóa học mới
             </button>
           </div>
         </div>
 
-        {/* Main Content Layout */}
-        {isLoading ? (
-          <div className="bg-white rounded-xl border p-12 text-center text-slate-400 text-xs font-bold shadow-xs">
-            Đang đồng bộ hóa dữ liệu Postgres...
+        {/* Table Layout */}
+        {isLoading && courses.length === 0 ? (
+          <div className="bg-white rounded-xl border p-12 text-center text-slate-400 text-xs font-bold shadow-sm">
+            Đang tải dữ liệu khóa học...
           </div>
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
-            
-            {/* DANH SÁCH BÊN TRÁI */}
             <div className="lg:col-span-2 space-y-4">
               {filteredCourses.length === 0 ? (
-                <div className="bg-white p-8 border rounded-xl text-center text-slate-400 text-xs italic">
-                  Không tìm thấy khóa học phù hợp.
+                <div className="bg-white p-8 border rounded-xl text-center text-slate-400 text-xs italic shadow-xs">
+                  Không tìm thấy khóa học nào khớp với điều kiện lọc hiện tại.
                 </div>
               ) : (
                 filteredCourses.map((course) => {
                   const isSelected = selectedCourseRow?.course_id === course.course_id;
                   const currentCurriculumId = course.curriculum_id || (course as any).curriculumId;
                   const currentType = getCourseTypeFromCurriculum(currentCurriculumId);
-                  const isMismatched = String(course.course_type).toUpperCase() !== currentType;
+                  
+                  const cKey = currentCurriculumId ? String(currentCurriculumId).toLowerCase() : "";
+                  const usage = curriculumUsageMap.get(cKey);
+                  const isDuplicated = usage && usage.count > 1;
 
                   return (
                     <div
                       key={course.course_id}
                       onClick={() => setSelectedCourseRow(course)}
                       className={`bg-white p-4 rounded-xl border transition-all cursor-pointer relative hover:shadow-md ${
-                        isSelected ? "border-[#0066FF] ring-2 ring-[#0066FF]/10 shadow-md bg-blue-50/10" : "border-slate-200"
-                      } ${isMismatched ? "border-l-4 border-l-amber-500" : ""}`}
+                        isSelected 
+                          ? "border-[#0066FF] ring-2 ring-[#0066FF]/10 shadow-md bg-blue-50/10" 
+                          : isDuplicated 
+                            ? "border-amber-300 bg-amber-50/5" 
+                            : "border-slate-200"
+                      }`}
                     >
+                      {isDuplicated && (
+                        <span className="absolute top-2 right-2 text-[9px] bg-amber-100 text-amber-800 font-extrabold px-1.5 py-0.5 rounded-sm uppercase tracking-wide">
+                          Dùng chung Curriculum
+                        </span>
+                      )}
+
                       <div className="flex flex-col sm:flex-row gap-4 justify-between items-start">
-                        <div className="flex gap-4 items-start flex-1 min-w-0">
-                          <img 
-                            src={course.image_url?.startsWith("http") ? course.image_url : `${NGINX_URL}${course.image_url}`} 
-                            alt={course.title} 
-                            className="w-16 h-16 object-cover rounded-xl border bg-slate-50 shrink-0 shadow-2xs"
-                            onError={(e) => {(e.target as HTMLImageElement).src = "https://images.unsplash.com/photo-1515879218367-8466d910aaa4";}}
-                          />
+                        <div className="flex gap-2 items-start flex-1 min-w-0">
                           <div className="space-y-1 min-w-0 flex-1">
-                            <div className="flex items-center gap-2">
-                              <h4 className="text-sm font-bold text-slate-900 truncate">{course.title}</h4>
-                              {isMismatched && (
-                                <span className="text-[9px] bg-amber-100 text-amber-700 px-1.5 py-0.2 rounded font-black uppercase tracking-wider">
-                                  Sai lệch CSDL
-                                </span>
-                              )}
-                            </div>
+                            <h4 className="text-sm font-bold text-slate-900 truncate pr-24">{course.title}</h4>
                             <p className="text-xs text-slate-400 line-clamp-1">{course.description || "Chưa cập nhật mô tả."}</p>
                             <div className="flex flex-wrap items-center gap-y-2 gap-x-4 pt-1 text-[11px] text-slate-500 font-medium">
                               <span className="font-semibold text-slate-700">💰 {(course.price || 0).toLocaleString()}đ</span>
@@ -457,7 +420,6 @@ const getMonthFromCurriculum = (curriculumId: any): string => {
                               }`}>
                                 ⏱️ {currentType === "LONG_TERM" ? "DÀI HẠN" : "NGẮN HẠN"}
                               </span>
-                              {/* 🔄 FIX: Lấy tháng bằng cách map ngược vào bảng Curriculum qua ID */}
                               <span className="text-slate-400 flex items-center gap-1 font-bold">
                                 <Calendar size={12} /> {getMonthFromCurriculum(currentCurriculumId)}
                               </span>
@@ -465,11 +427,11 @@ const getMonthFromCurriculum = (curriculumId: any): string => {
                           </div>
                         </div>
 
-                        <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
-                          <button onClick={() => handleEdit(course)} className="bg-white text-slate-700 font-bold text-[10px] px-2.5 py-1.5 border border-slate-200 rounded-lg cursor-pointer transition flex items-center gap-1">
+                        <div className="flex items-center gap-1 shrink-0 pt-4 sm:pt-0" onClick={(e) => e.stopPropagation()}>
+                          <button onClick={() => handleEdit(course)} className="bg-white text-slate-700 font-bold text-[10px] px-2.5 py-1.5 border border-slate-200 rounded-lg cursor-pointer transition flex items-center gap-1 hover:bg-slate-50">
                             <Pencil size={12} /> Sửa
                           </button>
-                          <button onClick={() => handleDelete(course.course_id)} className="bg-white text-rose-600 font-bold text-[10px] px-2.5 py-1.5 border border-slate-200 rounded-lg cursor-pointer transition flex items-center gap-1">
+                          <button onClick={() => handleDelete(course.course_id)} className="bg-white text-rose-600 font-bold text-[10px] px-2.5 py-1.5 border border-slate-200 rounded-lg cursor-pointer transition flex items-center gap-1 hover:bg-slate-50">
                             <Trash2 size={12} /> Xóa
                           </button>
                         </div>
@@ -480,7 +442,7 @@ const getMonthFromCurriculum = (curriculumId: any): string => {
               )}
             </div>
 
-            {/* THÔNG TIN CHI TIẾT BÊN PHẢI */}
+            {/* Chi tiết bên phải */}
             <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xl sticky top-6 overflow-hidden">
               <div className="absolute top-0 left-0 w-1.5 h-full bg-[#0066FF]"></div>
               <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-3.5 pl-1">Thông tin chi tiết đính kèm</p>
@@ -494,39 +456,38 @@ const getMonthFromCurriculum = (curriculumId: any): string => {
                   <div className="space-y-2.5 pt-3 border-t text-xs font-medium text-slate-600">
                     <div className="flex items-center gap-2">
                       <Clock size={14} className="text-slate-400" />
-                      <span>
-                        Loại hình gốc:{" "}
-                        <strong className="text-slate-800">
-                          {getCourseTypeFromCurriculum(selectedCourseRow.curriculum_id || (selectedCourseRow as any).curriculumId)}
-                        </strong>
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Clock size={14} className="text-red-400" />
-                      <span>
-                        Lưu trong CSDL:{" "}
-                        <strong className="text-red-600 font-black">
-                          {String(selectedCourseRow.course_type).toUpperCase()}
-                        </strong>
-                      </span>
+                      <span>Loại hình khóa học: <strong className="text-slate-800">{getCourseTypeFromCurriculum(selectedCourseRow.curriculum_id || (selectedCourseRow as any).curriculumId) === "LONG_TERM" ? "DÀI HẠN" : "NGẮN HẠN"}</strong></span>
                     </div>
                     <div className="flex items-center gap-2">
                       <Award size={14} className="text-slate-400" />
                       <span>Chi phí khóa: <strong className="text-emerald-600">{(selectedCourseRow.price || 0).toLocaleString()}đ</strong></span>
                     </div>
-                    {/* 🔄 FIX: Lấy tháng từ Curriculum hiển thị ở chi tiết bên phải */}
                     <div className="flex items-center gap-2">
                       <Calendar size={14} className="text-blue-500" />
-                      <span>Thời gian Curriculum: <strong className="text-slate-800">{getMonthFromCurriculum(selectedCourseRow.curriculum_id || (selectedCourseRow as any).curriculumId)}</strong></span>
+                      <span>Thời gian đào tạo: <strong className="text-slate-800">{getMonthFromCurriculum(selectedCourseRow.curriculum_id || (selectedCourseRow as any).curriculumId)}</strong></span>
                     </div>
                   </div>
-                  <div className="pt-2">
-                    <div className="w-full h-36 rounded-xl border overflow-hidden relative shadow-inner">
-                      <img 
-                        src={selectedCourseRow.image_url?.startsWith("http") ? selectedCourseRow.image_url : `${NGINX_URL}${selectedCourseRow.image_url}`} 
-                        alt="Đại diện" className="w-full h-full object-cover"
-                        onError={(e) => {(e.target as HTMLImageElement).src = "https://images.unsplash.com/photo-1515879218367-8466d910aaa4";}}
-                      />
+                  
+                  <div className="pt-3 border-t">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase block mb-2">Đề cương bài học đa tầng:</span>
+                    <div className="max-h-80 overflow-y-auto space-y-2 pr-1 custom-scrollbar">
+                      {((selectedCourseRow as any).modules && (selectedCourseRow as any).modules.length > 0) ? (
+                        (selectedCourseRow as any).modules.map((mod: any, mIdx: number) => (
+                          <div key={mod.module_id || mIdx} className="bg-slate-50 p-2 rounded-lg border border-slate-100">
+                            <p className="text-xs font-bold text-slate-800 flex items-center gap-1">📦 {mod.title}</p>
+                            <ul className="mt-1 pl-4 space-y-1 border-l-2 border-slate-200 ml-1.5">
+                              {mod.lessons?.map((les: any, lIdx: number) => (
+                                <li key={les.lesson_id || lIdx} className="text-[11px] text-slate-600 flex justify-between items-center">
+                                  <span>📝 {les.title}</span>
+                                  <span className="text-[10px] text-slate-400 font-mono">⏱️ {les.duration}</span>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        ))
+                      ) : (
+                        <p className="text-[11px] text-slate-400 italic">Chương trình đào tạo này hiện chưa cấu hình bài học.</p>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -534,113 +495,156 @@ const getMonthFromCurriculum = (curriculumId: any): string => {
                 <p className="text-xs text-slate-400 italic py-8 text-center">Vui lòng chọn một khóa học bên danh sách để xem.</p>
               )}
             </div>
-
           </div>
         )}
 
         {/* MODAL POPUP FORM */}
         {showModal && (
-          <div className="fixed inset-0 bg-black/40 backdrop-blur-xs flex items-center justify-center z-50 text-black p-4">
-            <div className="bg-white w-full max-w-2xl rounded-2xl p-6 shadow-2xl max-h-[90vh] overflow-y-auto">
-              <h2 className="font-black text-lg mb-5 border-b pb-3 text-slate-900">
-                {editing ? "Cập nhật thông tin khóa học" : "Thiết lập cấu trúc khóa học mới"}
-              </h2>
+          <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-[6px] flex items-center justify-center z-50 text-slate-800 p-4 transition-all duration-300">
+            <div className="bg-white w-full max-w-xl rounded-2xl shadow-[0_25px_50px_-12px_rgba(0,0,0,0.15)] max-h-[90vh] flex flex-col overflow-hidden border border-slate-100/80 animate-in fade-in zoom-in-95 duration-200">
+              
+              <div className="px-6 py-5 border-b border-slate-100 flex justify-between items-center bg-gradient-to-r from-slate-50 to-blue-50/30">
+                <div className="flex items-center gap-3">
+                  <div className={`p-2.5 rounded-xl text-white shadow-xs ${editing ? 'bg-amber-500 shadow-amber-500/20' : 'bg-[#0066FF] shadow-blue-500/20'}`}>
+                    {editing ? <Sparkles size={18} /> : <Plus size={18} />}
+                  </div>
+                  <div>
+                    <h2 className="font-extrabold text-base text-slate-900 tracking-tight">
+                      {editing ? "Cập nhật khóa học" : "Tạo khóa học mới"}
+                    </h2>
+                    <p className="text-[11px] text-slate-400 font-medium mt-0.5">
+                      {editing ? `Đang chỉnh sửa mã: ${form.course_id}` : "Nhập thông tin khóa học chuẩn hóa liên kết hệ thống"}
+                    </p>
+                  </div>
+                </div>
+                <button 
+                  onClick={resetForm}
+                  className="p-2 rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-100/80 border-none bg-transparent cursor-pointer transition-all active:scale-95"
+                >
+                  <X size={18} />
+                </button>
+              </div>
 
-              <div className="space-y-4 text-xs font-bold text-gray-700">
-                <div>
-                  <label className="block mb-1.5 uppercase text-gray-400 text-[10px]">Thuộc Chương trình đào tạo (Curriculum)</label>
+              <div className="p-6 overflow-y-auto space-y-5 custom-scrollbar flex-1 bg-white">
+                
+                {/* Trường 1: Chọn Chương trình đào tạo */}
+                <div className="space-y-2">
+                  <label className="flex items-center justify-between text-[11px] font-bold uppercase tracking-wider text-slate-500">
+                    <span className="flex items-center gap-1.5">
+                      <Layers size={13} className="text-slate-400" /> Chương trình gốc (Curriculum) <span className="text-rose-500">*</span>
+                    </span>
+                    <span className="text-[10px] text-amber-600 font-semibold normal-case bg-amber-50 px-2 py-0.5 rounded-md">
+                      ⚠️ Khuyên dùng: 1 Curriculum nên đi với 1 Khóa
+                    </span>
+                  </label>
+                  
                   <select
                     value={form.curriculum_id}
                     onChange={(e) => setForm({ ...form, curriculum_id: e.target.value })}
-                    className="w-full border border-gray-300 rounded-xl p-3 bg-white font-medium text-gray-800 text-xs cursor-pointer focus:outline-blue-500"
+                    className="w-full border border-slate-200 hover:border-slate-300 rounded-xl px-3.5 py-3 bg-slate-50/50 font-semibold text-slate-800 text-xs cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#0066FF]/10 focus:border-[#0066FF] focus:bg-white transition-all duration-200"
                     required
                   >
-                    <option value="" disabled>-- Nhấp để chọn một Chương trình đào tạo... --</option>
+                    <option value="" disabled>-- Chọn một chương trình đào tạo có sẵn --</option>
                     {curriculums.map((curr) => {
+                      const cId = curr.curriculum_id || curr.id;
+                      const cIdKey = String(cId).toLowerCase();
                       const typeBadge = String(curr.course_type || curr.courseType || "SHORT_TERM").toUpperCase();
+                      
+                      const usage = curriculumUsageMap.get(cIdKey);
+                      const isUsed = usage && usage.count > 0;
+                      
+                      let usageText = isUsed 
+                        ? ` ── ⚠️ [ĐÃ DÙNG bởi: ${usage.courseTitles.join(', ')}]`
+                        : ` ── ✨ [CHƯA DÙNG]`;
+
                       return (
-                        <option key={curr.curriculum_id} value={curr.curriculum_id}>
-                          {curr.curriculum_name} (Loại: {typeBadge === "LONG_TERM" ? "DÀI HẠN" : "NGẮN HẠN"})
+                        <option 
+                          key={cId} 
+                          value={cId}
+                          className={isUsed ? "text-slate-400 bg-amber-50/30" : "text-slate-800 font-bold"}
+                        >
+                          {curr.curriculum_name} ({typeBadge === "LONG_TERM" ? "DÀI HẠN" : "NGẮN HẠN"}) {usageText}
                         </option>
                       );
                     })}
                   </select>
                 </div>
 
-                <div>
-                  <label className="block mb-1.5 uppercase text-gray-400 text-[10px]">Tên khóa học</label>
+                {/* Trường 2: Tên hiển thị khóa học */}
+                <div className="space-y-2">
+                  <label className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-slate-500">
+                    <Type size={13} className="text-slate-400" /> Tên thương mại khóa học <span className="text-rose-500">*</span>
+                  </label>
                   <input
                     value={form.title}
                     onChange={(e) => setForm({ ...form, title: e.target.value })}
-                    className="w-full border border-gray-300 rounded-xl p-3 font-medium text-gray-800 focus:outline-blue-500 text-xs bg-white"
-                    placeholder="Nhập tiêu đề hiển thị" required
+                    className="w-full border border-slate-200 hover:border-slate-300 rounded-xl px-3.5 py-3 font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#0066FF]/10 focus:border-[#0066FF] text-xs bg-slate-50/50 focus:bg-white transition-all duration-200"
+                    placeholder="Nhập tên khóa học (Ví dụ: Lập trình Next.js ứng dụng thực tế)" 
+                    required
                   />
                 </div>
 
-                <div>
-                  <label className="block mb-1.5 uppercase text-gray-400 text-[10px]">Mô tả tóm tắt</label>
-                  <textarea
-                    rows={3} value={form.description}
-                    onChange={(e) => setForm({ ...form, description: e.target.value })}
-                    className="w-full border border-gray-300 rounded-xl p-3 font-medium text-gray-800 focus:outline-blue-500 text-xs bg-white"
-                    placeholder="Nội dung chi tiết..."
-                  />
-                </div>
-
-                <div>
-                  <label className="block mb-1.5 uppercase text-gray-400 text-[10px]">Học phí khóa học (VNĐ)</label>
-                  <input
-                    type="number" value={form.price}
-                    onChange={(e) => setForm({ ...form, price: Number(e.target.value) })}
-                    className="w-full border border-gray-300 rounded-xl p-3 font-medium text-gray-800 text-xs bg-white"
-                  />
-                </div>
-
-                <div>
-                  <label className="block mb-1.5 uppercase text-gray-400 text-[10px]">Hình ảnh đại diện khóa học</label>
-                  <input type="file" accept="image/*" ref={fileInputRef} onChange={handleFileChange} className="hidden" />
-                  <div className="flex flex-col md:flex-row gap-4 items-center border border-dashed border-gray-300 rounded-xl p-4 bg-slate-50/50">
-                    <div className="w-32 h-20 bg-slate-100 rounded-lg flex items-center justify-center overflow-hidden border shadow-inner">
-                      {imagePreview ? (
-                        <img 
-                          src={imagePreview.startsWith("blob:") || imagePreview.startsWith("http") ? imagePreview : `${NGINX_URL}${imagePreview}`} 
-                          alt="Xem trước" className="w-full h-full object-cover"
-                          onError={(e) => {(e.target as HTMLImageElement).src = "https://images.unsplash.com/photo-1515879218367-8466d910aaa4";}}
-                        />
-                      ) : (
-                        <ImageIcon size={24} className="text-gray-300" />
-                      )}
-                    </div>
-                    <div className="flex-1 space-y-2">
-                      <button
-                        type="button" onClick={() => fileInputRef.current?.click()}
-                        className="flex items-center gap-2 bg-white border border-gray-300 hover:bg-slate-50 text-gray-700 px-4 py-2 rounded-xl text-xs font-bold cursor-pointer transition shadow-xs"
-                      >
-                        <Upload size={14} /> Chọn ảnh từ thiết bị
-                      </button>
-                    </div>
+                {/* Trường 3: Học phí */}
+                <div className="space-y-2">
+                  <label className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-slate-500">
+                    <Award size={13} className="text-slate-400" /> Giá bán / Học phí công bố
+                  </label>
+                  <div className="relative rounded-xl">
+                    <input
+                      type="number" 
+                      value={form.price}
+                      onChange={(e) => setForm({ ...form, price: Number(e.target.value) })}
+                      className="w-full border border-slate-200 hover:border-slate-300 rounded-xl pl-3.5 pr-8 py-3 font-bold text-emerald-600 focus:outline-none focus:ring-2 focus:ring-[#0066FF]/10 focus:border-[#0066FF] text-xs bg-slate-50/50 focus:bg-white transition-all duration-200"
+                    />
+                    <span className="absolute right-3.5 top-3.5 text-xs text-slate-400 font-extrabold select-none">đ</span>
                   </div>
                 </div>
+
+                {/* Trường 4: Mô tả */}
+                <div className="space-y-2">
+                  <label className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-slate-500">
+                    <FileText size={13} className="text-slate-400" /> Mô tả vắn tắt khóa học
+                  </label>
+                  <textarea
+                    rows={4} 
+                    value={form.description}
+                    onChange={(e) => setForm({ ...form, description: e.target.value })}
+                    className="w-full border border-slate-200 hover:border-slate-300 rounded-xl p-3.5 font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#0066FF]/10 focus:border-[#0066FF] text-xs bg-slate-50/50 focus:bg-white transition-all duration-200 resize-none leading-relaxed"
+                    placeholder="Ghi chú ngắn về mục tiêu, lộ trình học tập để học viên dễ nắm bắt thông tin..."
+                  />
+                </div>
+
               </div>
 
-              <div className="flex justify-end gap-3 mt-6 border-t pt-4">
+              <div className="px-6 py-4 border-t border-slate-100 flex justify-end gap-3 bg-slate-50/50">
                 <button
-                  type="button" onClick={resetForm}
-                  className="px-5 py-2.5 bg-slate-100 text-gray-700 font-bold rounded-xl text-xs cursor-pointer hover:bg-slate-200 transition"
+                  type="button" 
+                  onClick={resetForm}
+                  className="px-4.5 py-2.5 bg-white hover:bg-slate-100 border border-slate-200 rounded-xl text-xs text-slate-600 font-bold cursor-pointer transition-all active:scale-95 shadow-2xs"
                 >
-                  Hủy bỏ
+                  Đóng lại
                 </button>
                 <button
-                  type="button" onClick={handleSubmit}
-                  className="bg-[#0066FF] hover:bg-blue-700 text-white px-6 py-2.5 rounded-xl font-extrabold text-xs shadow-md cursor-pointer transition"
+                  type="button"
+                  onClick={handleSubmit}
                   disabled={isLoading}
+                  className="px-5 py-2.5 text-white font-extrabold rounded-xl text-xs border-none cursor-pointer transition-all active:scale-95 shadow-md flex items-center gap-2 bg-[#0066FF] hover:bg-blue-600 shadow-blue-500/10 disabled:opacity-50"
                 >
-                  {isLoading ? "⌛ Đang xử lý dữ liệu..." : editing ? "Cập nhật thay đổi" : "Lưu vào Database"}
+                  {isLoading ? (
+                    <>
+                      <RefreshCw size={14} className="animate-spin" />
+                      Đang thực hiện...
+                    </>
+                  ) : (
+                    <>{editing ? "Cập nhật dữ liệu" : "Lưu khóa học"}</>
+                  )}
                 </button>
               </div>
+
             </div>
           </div>
         )}
+
       </main>
     </div>
   );

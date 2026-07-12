@@ -1,17 +1,27 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { cookies } from "next/headers"; // 🟢 THÊM DÒNG NÀY: Để tự động đọc Cookie từ Server
 import { Course } from '@/types/course';
-
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_COURSE_BACKEND_URL;
 
-
+// 🟢 THÊM HÀM HELPER: Tự lấy token tự động ở tầng Server giống hệt file Curriculum
+async function getServerToken(): Promise<string> {
+  const cookieStore = await cookies();
+  const tokenObj = cookieStore.get("token");
+  const token = tokenObj ? tokenObj.value : "";
+  
+  if (!token || token === 'undefined' || token === 'null') {
+    throw new Error("Không tìm thấy mã xác thực Access Token trên hệ thống. Vui lòng đăng nhập lại!");
+  }
+  return token.trim().replace(/^"|"$/g, "");
+}
 
 // 🔵 Lấy danh sách khóa học từ Backend
-export async function getCoursesAction(token: string): Promise<Course[]> {
+export async function getCoursesAction(): Promise<Course[]> { // 🟢 ĐÃ BỎ: tham số token
   try {
-    const cleanToken = token.trim().replace(/^"|"$/g, "");
+    const cleanToken = await getServerToken(); // 🟢 TỰ ĐỘNG LẤY TOKEN
     const res = await fetch(`${BACKEND_URL}/courses/`, {
       method: "GET",
       headers: {
@@ -28,9 +38,9 @@ export async function getCoursesAction(token: string): Promise<Course[]> {
 }   
 
 // 🟢 Tạo mới khóa học
-export async function createCourseAction(payload: any, token: string) {
+export async function createCourseAction(payload: any) { // 🟢 ĐÃ BỎ: tham số token
   try {
-    const cleanToken = token.trim().replace(/^"|"$/g, "");
+    const cleanToken = await getServerToken(); // 🟢 TỰ ĐỘNG LẤY TOKEN
     const res = await fetch(`${BACKEND_URL}/courses/`, {
       method: "POST",
       headers: {
@@ -53,9 +63,10 @@ export async function createCourseAction(payload: any, token: string) {
   }
 }
 
-export async function updateCourseAction(courseId: string, payload: any, token: string) {
+export async function updateCourseAction(courseId: string, payload: any) { 
   try {
-    const cleanToken = token.trim().replace(/^"|"$/g, "");
+    console.log("PAYLOAD TRƯỚC KHI BẮN SANG BACKEND API:", payload);
+    const cleanToken = await getServerToken(); // 🟢 TỰ ĐỘNG LẤY TOKEN
     const url = `${BACKEND_URL}/courses/${courseId}/`; 
     
     console.log("🚀 Đang gửi dữ liệu cập nhật tới:", url);
@@ -84,10 +95,11 @@ export async function updateCourseAction(courseId: string, payload: any, token: 
     return { success: false, error: error.message };
   }
 }
+
 // 🔴 Xóa khóa học
-export async function deleteCourseAction(courseId: string, token: string) {
+export async function deleteCourseAction(courseId: string) { // 🟢 ĐÃ BỎ: tham số token
   try {
-    const cleanToken = token.trim().replace(/^"|"$/g, "");
+    const cleanToken = await getServerToken(); // 🟢 TỰ ĐỘNG LẤY TOKEN
     const res = await fetch(`${BACKEND_URL}/courses/${courseId}`, {
       method: "DELETE",
       headers: {
@@ -101,10 +113,11 @@ export async function deleteCourseAction(courseId: string, token: string) {
   }
 }
 
-// 📷 Upload ảnh đại diện khóa học lên hệ thống lưu trữ Backend/Nginx
-export async function uploadCourseImageAction(file: File, token: string) {
+// 📷 Upload ảnh đại diện khóa học
+export async function uploadCourseImageAction(file: File) { // 🟢 ĐÃ BỎ: tham số token
   try {
-    const cleanToken = token.trim().replace(/^"|"$/g, "");
+    
+    const cleanToken = await getServerToken(); // 🟢 TỰ ĐỘNG LẤY TOKEN
     const formData = new FormData();
     formData.append("file", file); 
 

@@ -71,6 +71,7 @@ export default function UserManagementPage() {
           else if (user.role_name === 'User') finalRoleId = 2;
           else if (user.role_name === 'Tester') finalRoleId = 3;
           else if (user.role_name === 'Instructor') finalRoleId = 4;
+          else if (user.role_name === 'Manager') finalRoleId = 5;
           else finalRoleId = 2;
         }
 
@@ -104,6 +105,7 @@ export default function UserManagementPage() {
         roleFilter === "Tất cả" ||
         (roleFilter === "Admin" && user.role_id === 1) ||
         (roleFilter === "Giảng viên" && user.role_id === 4) ||
+        (roleFilter === "Quản lý" && user.role_id === 5) ||
         (roleFilter === "Học viên" && user.role_id === 2) ||
         (roleFilter === "Tester" && user.role_id === 3);
 
@@ -234,6 +236,7 @@ export default function UserManagementPage() {
       case 2: return <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-700">Học viên</span>;
       case 3: return <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-700">Kiểm thử</span>;
       case 4: return <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-100 text-blue-700">Giảng viên</span>;
+      case 5: return <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-100 text-blue-700">Quản lý</span>;
       default: return <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-slate-200 text-slate-700">Khác</span>;
     }
   };
@@ -304,6 +307,7 @@ export default function UserManagementPage() {
               <option value="Giảng viên">Giảng viên</option>
               <option value="Học viên">Học viên</option>
               <option value="Tester">Kiểm thử</option>
+              <option value="Manager">Quản lý</option>
             </select>
 
             {/* Bộ lọc 3 Trạng thái dựa trên DB */}
@@ -523,6 +527,7 @@ export default function UserManagementPage() {
                 <option value={1}>Admin</option>
                 <option value={2}>Học viên</option>
                 <option value={3}>Kiểm thử</option>
+                <option value={5}>Quản lý</option>
               </select>
             </div>
 
@@ -576,6 +581,7 @@ export default function UserManagementPage() {
                 <option value={1}>Admin</option>
                 <option value={2}>Học viên</option>
                 <option value={3}>Kiểm thử</option>
+                <option value={5}>Quản lý</option>
               </select>
             </div>
 

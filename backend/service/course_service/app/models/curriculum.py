@@ -22,7 +22,7 @@ class Curriculum(SQLModel, table=True):
     description: Optional[str] = Field(default=None, max_length=255)
     course_type: CourseType = Field(nullable=False)
     course_finished_months: int = Field(nullable=False) #Số tháng để hoàn thành khóa học
-    curriculum_file_path: str = Field(nullable=False)
+    curriculum_file_path: Optional[str] = Field(default=None, nullable=True)
     certificate_name: str = Field(nullable=False, max_length=255)
     status_id: str = Field(
         foreign_key="status_catalog.status_id", 

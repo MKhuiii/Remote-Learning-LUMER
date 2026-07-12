@@ -180,3 +180,31 @@ def update_user(
 
     
 
+
+@router.get("/get-instructor-list", response_model=List[UserGeneralInfo])
+def get_instructor_list(
+    session: SessionDep,
+    query: UserListQuery = Depends(),
+    current_user: dict = Depends(RoleChecker(["Admin", "Instructor", "Manager"]))
+):
+    if query.status_id is None or query.role_id is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Thiếu dữ liệu để xữ lý."
+        )
+    else:
+        users = crud_user.get_instructor_list(session, skip=query.skip, limit=query.limit, status_id=query.status_id, role_id=query.role_id)
+
+    user_info_list = []
+    
+    if not users:
+            return []
+    role_name = crud_role.get_name_by_id(session, query.role_id) or "Unknown"
+        
+    user_info_list = []
+    for user in users:
+        user_data = user.model_dump()
+        user_data["role_name"] = role_name  # Gán thẳng role_name tìm được
+        user_info_list.append(user_data)
+
+    return user_info_list
