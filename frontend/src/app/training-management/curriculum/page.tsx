@@ -152,7 +152,10 @@ export default function LumerCurriculumManagement() {
         course_type: formData.courseType,
         course_finished_months: Number(formData.courseFinishedMonths),
         certificate_name: formData.certificateName?.trim() || null,
-        status_id: STATUS_MAP_TO_BACKEND[formData.status],
+        status_id: isEditMode && selectedCurriculum 
+          ? selectedCurriculum.status_id 
+          : "CURRICULUM_DRAFT", 
+          
         curriculum_file_path: selectedCurriculum?.curriculum_file_path || null 
       } as any;
 
@@ -515,7 +518,7 @@ export default function LumerCurriculumManagement() {
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
-                  {isEditMode && (
+                  {/* {isEditMode && (
                     <div className="space-y-1.5">
                       <label className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-slate-500">
                         📌 Trạng thái phát hành
@@ -531,7 +534,7 @@ export default function LumerCurriculumManagement() {
                         <option value="Tạm ngưng">Tạm ngưng (CURRICULUM_SUSPENDED)</option>
                       </select>
                     </div>
-                  )}
+                  )} */}
                   <div className={isEditMode ? "space-y-1.5" : "col-span-2 space-y-1.5"}>
                     <label className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-slate-500">
                       <Award size={13} className="text-slate-400" /> Tên chứng chỉ cấp phát
