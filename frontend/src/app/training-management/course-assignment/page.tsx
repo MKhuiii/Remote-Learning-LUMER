@@ -25,12 +25,6 @@ export default function CourseAssignment() {
         curriculum_id: "", 
     });
 
-
-
-
-
-
-
 const fetchInitialData = async () => {
     setIsLoading(true);
     try {
@@ -81,7 +75,6 @@ const fetchInitialData = async () => {
         fetchInitialData();
     }, []);
 
-    // ---- Tối ưu hóa Bản đồ tra cứu Khung chương trình ----
     const curriculumMap = useMemo(() => {
         const map = new Map<string, { type: string; finishedMonths: string | number; name: string }>();
         curriculums.forEach(c => {
@@ -112,7 +105,6 @@ const fetchInitialData = async () => {
     const assignedCoursesCount = courses.filter(c => (c as any).assignedLecturerId && (c as any).assignedLecturerId !== "").length;
     const unassignedCoursesCount = totalCourses - assignedCoursesCount;
 
-    // ---- Thay đổi Giảng viên phụ trách tạm thời trên State UI ----
     const handleAssignLecturer = (lecturerId: string) => {
         if (!activeCourse) return;
         setCourses((prevCourses) =>
@@ -134,6 +126,9 @@ const fetchInitialData = async () => {
         }
     };
 
+
+
+    
     return (
         <>
             <Navbar />
