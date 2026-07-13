@@ -26,7 +26,7 @@ class Course(SQLModel, table=True):
         nullable=False, 
         unique=True 
     )
-    instructor_id: UUID = Field(nullable=False)
+    instructor_id: Optional[UUID] = Field(default=None, nullable=True)
     title: str = Field(nullable=False, max_length=255)
     course_type: CourseType = Field(nullable=False)
     description: Optional[str] = Field(default=None)

@@ -18,7 +18,7 @@ router = APIRouter(prefix="/curriculums", tags=["curriculums"])
 @router.post("/upload", response_model=CurriculumFileUploadResponse)
 def upload_file_only(
     file: UploadFile = File(...), 
-    current_user: dict = Depends(RoleChecker(["Admin", "Instructor"]))
+    current_user: dict = Depends(RoleChecker(["Admin", "Instructor", "Manager"]))
 ):
     path = crud_curriculum_media.upload_file(file)
     return {"file_path": path}
@@ -29,7 +29,7 @@ def upload_file_only(
 def create_curriculum(
     payload: CurriculumCreate,          
     db: SessionDep,
-    current_user: dict = Depends(RoleChecker(["Admin", "Instructor"]))
+    current_user: dict = Depends(RoleChecker(["Admin", "Instructor", "Manager"]))
 ):
     if not payload.assigner_id:
         user_id = current_user.id if hasattr(current_user, 'id') else current_user.get("user_id")
@@ -44,7 +44,7 @@ def get_curriculums(
     db: SessionDep,
     skip: int = 0,
     limit: int = 100,
-    current_user: dict = Depends(RoleChecker(["Admin", "Instructor", "Student"]))
+    current_user: dict = Depends(RoleChecker(["Admin", "Instructor", "Student", "Manager"]))
 ):
     return crud_curriculum.get_multi(db=db, skip=skip, limit=limit)
 
@@ -54,7 +54,7 @@ def get_curriculums(
 def get_curriculum(
     db: SessionDep,
     curriculum_id: UUID,
-    current_user: dict = Depends(RoleChecker(["Admin", "Instructor", "Student"]))
+    current_user: dict = Depends(RoleChecker(["Admin", "Instructor", "Student", "Manager"]))
 ):
     curriculum = crud_curriculum.get_by_id(db=db, id=curriculum_id)
     if not curriculum:
@@ -68,7 +68,7 @@ def update_curriculum(
     curriculum_id: UUID,
     payload: CurriculumUpdate,
     db: SessionDep,
-    current_user: dict = Depends(RoleChecker(["Admin", "Instructor"]))
+    current_user: dict = Depends(RoleChecker(["Admin", "Instructor", "Manager"]))
 ):
     db_obj = crud_curriculum.get_by_id(db=db, id=curriculum_id)
     if not db_obj:
@@ -81,8 +81,8 @@ def update_curriculum(
 @router.delete("/{curriculum_id}")
 def delete_curriculum(
     curriculum_id: UUID,
-    db: SessionDep,
-    current_user: dict = Depends(RoleChecker(["Admin", "Instructor"]))
+    db: SessionDep,   
+    current_user: dict = Depends(RoleChecker(["Admin", "Instructor", "Manager"]))
 ):
     db_obj = crud_curriculum.delete(db=db, id=curriculum_id)
     if not db_obj:

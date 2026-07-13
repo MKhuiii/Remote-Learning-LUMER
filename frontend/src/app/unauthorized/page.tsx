@@ -10,14 +10,15 @@ export default function UnauthorizedPage() {
     setRole(storedRole);
   }, []);
 
-  // Hàm xử lý quay lại đúng trang chủ dựa theo Role
   const handleGoHome = () => {
     if (role === "admin") {
       window.location.href = "/admin";
     } else if (role === "faculty") {
-      window.location.href = "/training-management";
+      window.location.href = "/instructor-management";
     } else if (role === "student") {
       window.location.href = "/dashboard-student";
+    } else if (role === "manager") {
+      window.location.href = "/training-management";
     } else {
       window.location.href = "/login?mode=login";
     }

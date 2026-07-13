@@ -32,13 +32,13 @@ def init_db() -> None:
             user_role = Role(role_id=2, role_name="User", description="Người dùng")
             tester_role = Role(role_id=3, role_name="Tester", description="Người kiểm thử")
             instructor_role = Role(role_id=4, role_name="Instructor", description="Giảng viên")
-            
+            manager_role = Role(role_id=5, role_name="Manager", description="Quản lý đào tạo")
 
             session.add(admin_role)
             session.add(user_role)
             session.add(tester_role)
             session.add(instructor_role)
-
+            session.add(manager_role)
 
             # Khởi tạo dữ liệu cho bảng trạng thái
             active_status = StatusCatalog(

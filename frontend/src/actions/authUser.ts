@@ -34,9 +34,33 @@ interface GoogleAuthResponse {
 
 // Hàm helper để phân loại URL theo Role
 function getRedirectUrlByRole(role: string): string {
-  if (role === "Admin") return "/admin";
-  if (role === "Faculty") return "/training-management";
-  return "/dashboard-student"; // Default cho User/Student
+  const roleClean = role?.trim().toLowerCase();
+  
+  if (roleClean === "admin") return "/admin";
+  if (roleClean === "faculty" || roleClean === "instructor") return "/training-management";
+  if (roleClean === "manager") return "/instructor-management"; 
+  return "/dashboard-student"; 
+}
+
+async function setAuthCookies(data: any) {
+  const cookieStore = await cookies()
+  const cookieConfig = {
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax' as const,
+    maxAge: 60 * 60 * 24, 
+    path: '/',
+  };
+
+  if (data.access_token) {
+    cookieStore.set('token', data.access_token, { ...cookieConfig, httpOnly: true })
+  }
+  
+  if (data.user) {
+    cookieStore.set('user_info', JSON.stringify(data.user), { ...cookieConfig, httpOnly: false })
+    
+    const roleToStore = data.user.role ? data.user.role.toLowerCase().trim() : '';
+    cookieStore.set('user_role', roleToStore, { ...cookieConfig, httpOnly: false })
+  }
 }
 
 // ------------------ Action Đăng Ký ----------------------
@@ -64,25 +88,24 @@ export async function registerAccount(name: string, email: string, password: str
   }
 }
 
-async function setAuthCookies(data: any) {
-  const cookieStore = await cookies()
-  const cookieConfig = {
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax' as const,
-    maxAge: 60 * 60 * 24,
-    path: '/',
-  };
+// async function setAuthCookies(data: any) {
+//   const cookieStore = await cookies()
+//   const cookieConfig = {
+//     secure: process.env.NODE_ENV === 'production',
+//     sameSite: 'lax' as const,
+//     maxAge: 60 * 60 * 24,
+//     path: '/',
+//   };
 
-  if (data.access_token) {
-    cookieStore.set('token', data.access_token, { ...cookieConfig, httpOnly: true })
-  }
+//   if (data.access_token) {
+//     cookieStore.set('token', data.access_token, { ...cookieConfig, httpOnly: true })
+//   }
   
-  if (data.user) {
-    cookieStore.set('user_info', JSON.stringify(data.user), { ...cookieConfig, httpOnly: false })
-    // FIX: Lưu thêm user_role riêng để middleware kiểm tra nhanh gọn
-    cookieStore.set('user_role', data.user.role, { ...cookieConfig, httpOnly: true })
-  }
-}
+//   if (data.user) {
+//     cookieStore.set('user_info', JSON.stringify(data.user), { ...cookieConfig, httpOnly: false })
+//     cookieStore.set('user_role', data.role.toLowerCase(), { expires: 7 })
+//   }
+// }
 
 // ------------------ Action Đăng Nhập ----------------------
 export async function loginUserAction(email: string, password: string): Promise<ActionResponse> {

@@ -4,6 +4,22 @@ import React, { useState, useMemo, useEffect } from "react";
 import Link from "next/link";
 import Navbar from "@/components/Navbar";
 import { 
+  Plus, 
+  Pencil, 
+  Trash2, 
+  FileText, 
+  Layers, 
+  Type, 
+  Award, 
+  Clock, 
+  X, 
+  UploadCloud, 
+  ArrowLeft,
+  Sparkles,
+  Loader2
+} from "lucide-react";
+
+import { 
   getCurriculums, 
   uploadCurriculums, 
   createCurriculum,
@@ -39,14 +55,6 @@ const STATUS_MAP_TO_BACKEND: Record<DisplayStatus, string> = {
   "Tạm ngưng": "CURRICULUM_SUSPENDED"
 };
 
-const getCookie = (name: string): string | null => {
-  if (typeof window === "undefined") return null;
-  const value = `; ${document.cookie}`;
-  const parts = value.split(`; ${name}=`);
-  if (parts.length === 2) return parts.pop()?.split(";").shift() || null;
-  return null;
-};
-
 const getFileNameFromUrl = (url: string | null): string => {
   if (!url) return "Chưa có file đính kèm";
   const parts = url.split("/");
@@ -61,7 +69,7 @@ const getFullAssetUrl = (url: string | null): string => {
   if (!url) return "";
   if (url.startsWith("http://") || url.startsWith("https://")) return url;
   const cleanUrl = url.startsWith("/") ? url : `/${url}`;
-  return `http://localhost${cleanUrl}`; 
+  return `http://localhost:8001${cleanUrl}`; 
 };
 
 interface FormDataState {
@@ -77,7 +85,12 @@ interface FormDataState {
 export default function LumerCurriculumManagement() {
   const [curriculums, setCurriculums] = useState<Curriculum[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  
+  // --- STATES PHỤC VỤ BỘ LỌC ---
   const [searchTerm, setSearchTerm] = useState("");
+  const [filterType, setFilterType] = useState<string>("ALL");
+  const [filterStatus, setFilterStatus] = useState<string>("ALL");
+
   const [selectedCurriculum, setSelectedCurriculum] = useState<Curriculum | null>(null); 
   const [isOpenModal, setIsOpenModal] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
@@ -99,8 +112,7 @@ export default function LumerCurriculumManagement() {
   const fetchInitialData = async () => {
     setIsLoading(true);
     try {
-      const token = getCookie("token") || "";
-      const data = await getCurriculums(token);
+      const data = await getCurriculums();
       setCurriculums(data || []);
       if (data && data.length > 0) {
         setSelectedCurriculum(data[0]);
@@ -114,104 +126,13 @@ export default function LumerCurriculumManagement() {
     }
   };
 
-  const filteredCurriculums = useMemo(() => {
-    const lowerSearch = searchTerm.toLowerCase().trim();
-    if (!lowerSearch) return curriculums;
-    return curriculums.filter(c => c.curriculum_name.toLowerCase().includes(lowerSearch));
-  }, [curriculums, searchTerm]);
-
-  const stats = useMemo(() => {
-    const total = curriculums.length;
-    const active = curriculums.filter(c => STATUS_MAP_TO_FRONTEND[c.status_id] === "Đang hoạt động").length;
-    const draft = curriculums.filter(c => STATUS_MAP_TO_FRONTEND[c.status_id] === "Bản nháp").length;
-    const avgMonths = total > 0 ? Math.round(curriculums.reduce((acc, c) => acc + c.course_finished_months, 0) / total) : 0;
-    return { total, active, draft, avgMonths };
-  }, [curriculums]);
-
-  const openAddModal = () => {
-    setIsEditMode(false);
-    setFormData({
-      curriculumName: "", 
-      description: "", 
-      courseFinishedMonths: 3, 
-      status: "Bản nháp", 
-      certificateName: "", 
-      courseType: "SHORT_TERM",
-      syllabusFile: null, 
-    });
-    setIsOpenModal(true);
-  };
-
-  const openEditModal = (curriculum: Curriculum, e?: React.MouseEvent) => {
-    if (e) e.stopPropagation(); 
-    setIsEditMode(true);
-    setSelectedCurriculum(curriculum);
-    setFormData({
-      curriculumName: curriculum.curriculum_name,
-      description: curriculum.description || "",
-      courseFinishedMonths: curriculum.course_finished_months,
-      status: STATUS_MAP_TO_FRONTEND[curriculum.status_id] || "Bản nháp",
-      certificateName: curriculum.certificate_name || "",
-      courseType: curriculum.course_type || "SHORT_TERM",
-      syllabusFile: null, 
-    });
-    setIsOpenModal(true);
-  };
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files.length > 0) {
-      const selectedFile = e.target.files[0];
-      setFormData(prev => ({ ...prev, syllabusFile: selectedFile }));
-    }
-  };
-
   const handleDelete = async (curriculumId: string, e: React.MouseEvent) => {
     if (e) e.stopPropagation(); 
-    if (!confirm("Hệ thống Lumer cảnh báo: Bạn có chắc chắn muốn xóa Chương trình đào tạo này không?")) return;
+    if (!confirm("Bạn có chắc chắn muốn xóa không?")) return;
     setIsLoading(true);
     try {
-      const token = getCookie("token") || "";
-      await deleteCurriculum(curriculumId, token);
-      alert("Xóa chương trình đào tạo thành công!");
-      fetchInitialData(); 
-    } catch (error: any) {
-      alert(`Lỗi khi xóa bản ghi: ${error.message}`);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
-    const token = getCookie("token") || "";
-
-    try {
-      let uploadedFilePath = selectedCurriculum?.curriculum_file_path || null;
-      if (formData.syllabusFile) {
-        const uploadRes = await uploadCurriculums(formData.syllabusFile, token, selectedCurriculum?.curriculum_id);
-        uploadedFilePath = uploadRes?.curriculum_file_path || uploadRes?.filePath || uploadRes?.url || null;
-      }
-
-      const curriculumPayload = {
-        curriculum_name: formData.curriculumName,
-        description: formData.description,
-        course_type: formData.courseType, 
-        course_finished_months: Number(formData.courseFinishedMonths),
-        certificate_name: formData.certificateName,
-        status_id: STATUS_MAP_TO_BACKEND[formData.status], 
-        curriculum_file_path: uploadedFilePath
-      };
-
-      if (isEditMode && selectedCurriculum) {
-        await updateCurriculum(selectedCurriculum.curriculum_id, curriculumPayload, token);
-        alert("Cập nhật Chương trình đào tạo thành công!");
-      } else {
-        await createCurriculum(curriculumPayload, token);
-        alert("Khởi tạo Chương trình đào tạo mới thành công!");
-      }
-
-      setIsOpenModal(false);
+      await deleteCurriculum(curriculumId);
+      alert("Xóa thành công!");
       fetchInitialData(); 
     } catch (error: any) {
       alert(`Thao tác thất bại: ${error.message}`);
@@ -220,14 +141,125 @@ export default function LumerCurriculumManagement() {
     }
   };
 
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+
+    try {
+      const curriculumPayload = {
+        curriculum_name: formData.curriculumName.trim(),
+        description: formData.description?.trim() || null,
+        course_type: formData.courseType,
+        course_finished_months: Number(formData.courseFinishedMonths),
+        certificate_name: formData.certificateName?.trim() || null,
+        status_id: isEditMode && selectedCurriculum 
+          ? selectedCurriculum.status_id 
+          : "CURRICULUM_DRAFT", 
+          
+        curriculum_file_path: selectedCurriculum?.curriculum_file_path || null 
+      } as any;
+
+      let targetCurriculumId = "";
+
+      if (isEditMode && selectedCurriculum) {
+        targetCurriculumId = selectedCurriculum.curriculum_id;
+        await updateCurriculum(targetCurriculumId, curriculumPayload);
+      } else {
+        const newCurriculum = await createCurriculum(curriculumPayload);
+        targetCurriculumId = newCurriculum?.curriculum_id; 
+        
+        if (!targetCurriculumId) {
+          throw new Error("Không lấy được ID của chương trình đào tạo mới khởi tạo.");
+        }
+      }
+
+      if (formData.syllabusFile && targetCurriculumId) {
+        const dataForm = new FormData();
+        dataForm.append("file", formData.syllabusFile);
+
+        const uploadRes = await uploadCurriculums(dataForm, targetCurriculumId);
+        const uploadedFilePath = uploadRes?.file_path || null; 
+
+        if (uploadedFilePath) {
+          curriculumPayload.curriculum_file_path = uploadedFilePath;
+          await updateCurriculum(targetCurriculumId, curriculumPayload);
+        }
+      }
+      alert(isEditMode ? "Cập nhật thành công!" : "Khởi tạo thành công!");
+      setIsOpenModal(false);
+      await fetchInitialData(); 
+    } catch (error: any) {
+      alert(`Thao tác thất bại: ${error.message}`);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      setFormData(prev => ({ ...prev, syllabusFile: e.target.files![0] }));
+    }
+  };
+
+  const openAddModal = () => {
+    setIsEditMode(false);
+    setFormData({
+      curriculumName: "",
+      description: "",
+      courseFinishedMonths: 3,
+      status: "Bản nháp",
+      certificateName: "",
+      courseType: "SHORT_TERM",
+      syllabusFile: null,
+    });
+    setIsOpenModal(true);
+  };
+
+  const openEditModal = (curriculum: Curriculum, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    setIsEditMode(true);
+    setSelectedCurriculum(curriculum);
+    setFormData({
+      curriculumName: curriculum.curriculum_name,
+      description: curriculum.description || "",
+      courseFinishedMonths: curriculum.course_finished_months,
+      status: STATUS_MAP_TO_FRONTEND[curriculum.status_id] || "Bản nháp",
+      certificateName: curriculum.certificate_name || "",
+      courseType: curriculum.course_type,
+      syllabusFile: null,
+    });
+    setIsOpenModal(true);
+  };
+
+  const filteredCurriculums = useMemo(() => {
+    return curriculums.filter(c => {
+      const matchesSearch = c.curriculum_name.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesType = filterType === "ALL" || c.course_type === filterType;
+      const matchesStatus = filterStatus === "ALL" || c.status_id === filterStatus;
+      return matchesSearch && matchesType && matchesStatus;
+    });
+  }, [curriculums, searchTerm, filterType, filterStatus]);
+
+  const stats = useMemo(() => {
+    const total = curriculums.length;
+    const active = curriculums.filter(c => c.status_id === "CURRICULUM_ACTIVE").length;
+    const draft = curriculums.filter(c => c.status_id === "CURRICULUM_DRAFT").length;
+    const totalMonths = curriculums.reduce((sum, c) => sum + c.course_finished_months, 0);
+    const avgMonths = total > 0 ? parseFloat((totalMonths / total).toFixed(1)) : 0;
+
+    return { total, active, draft, avgMonths };
+  }, [curriculums]);
+
   return (
     <div className="min-h-screen bg-[#F8FAFC] text-gray-900 flex flex-col font-sans antialiased">
       <Navbar />
 
-      <div className="w-full bg-[#0066FF] text-white pt-10 pb-20 px-6 shadow-sm relative">
-        <div className="max-w-7xl w-full mx-auto">
-          <Link href="/training-management" className="text-xs text-blue-100 font-bold hover:text-white transition-all mb-4 inline-flex items-center gap-1 no-underline">
-            ⬅ Quay về Dashboard Phòng Đào Tạo
+      <div className="w-full bg-[#0066FF] text-white pt-10 pb-20 px-6 shadow-sm relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-96 h-96 bg-blue-500/20 rounded-full blur-3xl -mr-20 -mt-20 pointer-events-none"></div>
+        <div className="max-w-7xl w-full mx-auto relative z-10">
+          <Link href="/training-management" className="text-xs text-blue-100 font-bold hover:text-white transition-all mb-4 inline-flex items-center gap-1.5 no-underline group">
+            <ArrowLeft size={14} className="group-hover:-translate-x-0.5 transition-transform" /> 
+            Quay về Dashboard Phòng Đào Tạo
           </Link>
           
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6 mt-2">
@@ -235,8 +267,8 @@ export default function LumerCurriculumManagement() {
               <h1 className="text-3xl font-black tracking-tight uppercase">Quản lý Chương trình đào tạo</h1>
               <p className="text-sm text-blue-100/90 mt-1.5 font-medium">Thiết kế cấu trúc lộ trình học và quản lý file nội dung chương trình đào tạo của hệ thống</p>
             </div>
-            <button onClick={openAddModal} className="bg-white hover:bg-blue-50 text-[#0066FF] text-xs font-black px-5 py-3 rounded-xl transition cursor-pointer flex items-center gap-2 self-start md:self-auto shadow-md border-none">
-              ➕ Tạo chương trình đào tạo mới
+            <button onClick={openAddModal} className="bg-white hover:bg-blue-50 text-[#0066FF] text-xs font-black px-5 py-3 rounded-xl transition-all cursor-pointer flex items-center gap-2 self-start md:self-auto shadow-md border-none active:scale-[0.98]">
+              <Plus size={16} /> Tạo chương trình đào tạo mới
             </button>
           </div>
         </div>
@@ -264,8 +296,42 @@ export default function LumerCurriculumManagement() {
       </div>
 
       <div className="max-w-7xl w-full mx-auto px-6 pt-8">
-        <div className="max-w-sm">
-          <input type="text" placeholder="Tìm theo tên chương trình đào tạo..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full bg-white border border-gray-200 rounded-xl px-4 py-2.5 text-xs focus:outline-blue-500 shadow-sm text-gray-800 font-medium" />
+        <div className="bg-white border border-gray-200/80 rounded-2xl p-4 flex flex-col sm:flex-row flex-wrap items-center gap-3 shadow-xs">
+          <div className="w-full sm:flex-1 min-w-[240px]">
+            <input 
+              type="text" 
+              placeholder="Tìm theo tên chương trình đào tạo..." 
+              value={searchTerm} 
+              onChange={(e) => setSearchTerm(e.target.value)} 
+              className="w-full bg-[#F8FAFC] border border-gray-200 rounded-xl px-4 py-2.5 text-xs focus:outline-blue-500 shadow-2xs text-gray-800 font-medium" 
+            />
+          </div>
+
+          <div className="w-full sm:w-48">
+            <select
+              value={filterType}
+              onChange={(e) => setFilterType(e.target.value)}
+              className="w-full bg-[#F8FAFC] border border-gray-200 rounded-xl px-3 py-2.5 text-xs font-bold text-gray-700 focus:outline-blue-500 shadow-2xs cursor-pointer"
+            >
+              <option value="ALL">⏱️ Loại hình: Tất cả</option>
+              <option value="SHORT_TERM">⚡ Ngắn hạn (SHORT_TERM)</option>
+              <option value="LONG_TERM">🔮 Dài hạn (LONG_TERM)</option>
+            </select>
+          </div>
+
+          <div className="w-full sm:w-48">
+            <select
+              value={filterStatus}
+              onChange={(e) => setFilterStatus(e.target.value)}
+              className="w-full bg-[#F8FAFC] border border-gray-200 rounded-xl px-3 py-2.5 text-xs font-bold text-gray-700 focus:outline-blue-500 shadow-2xs cursor-pointer"
+            >
+              <option value="ALL">📌 Trạng thái: Tất cả</option>
+              <option value="CURRICULUM_DRAFT">📝 Bản nháp</option>
+              <option value="CURRICULUM_REVIEWING">🔍 Thẩm định</option>
+              <option value="CURRICULUM_ACTIVE">🟢 Đang hoạt động</option>
+              <option value="CURRICULUM_SUSPENDED">🔴 Tạm ngưng</option>
+            </select>
+          </div>
         </div>
       </div>
 
@@ -290,12 +356,12 @@ export default function LumerCurriculumManagement() {
                     <h3 className="text-sm font-bold text-gray-900 mt-2 mb-1">{c.curriculum_name}</h3>
                   </div>
 
-                  <div className="flex items-center gap-1.5 shrink-0">
+                  <div className="flex items-center gap-1.5 shrink-0" onClick={(e) => e.stopPropagation()}>
                     <button onClick={(e) => openEditModal(c, e)} className="px-2.5 py-1 bg-blue-50 hover:bg-blue-600 text-[#0066FF] hover:text-white border-none rounded-lg cursor-pointer text-[11px] font-bold transition-all flex items-center gap-0.5">
-                      ✏️ Sửa
+                      <Pencil size={11} /> Sửa
                     </button>
                     <button onClick={(e) => handleDelete(c.curriculum_id, e)} className="px-2.5 py-1 bg-red-50 hover:bg-red-600 text-red-500 hover:text-white border-none rounded-lg cursor-pointer text-[11px] font-bold transition-all flex items-center gap-0.5">
-                      🗑️ Xóa
+                      <Trash2 size={11} /> Xóa
                     </button>
                   </div>
                 </div>
@@ -321,7 +387,8 @@ export default function LumerCurriculumManagement() {
           <div className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-2">Thông tin chi tiết đính kèm</div>
           
           {selectedCurriculum ? (
-            <div className="bg-white border border-gray-100 rounded-2xl p-5 shadow-sm sticky top-4 space-y-4">
+            <div className="bg-white border border-gray-100 rounded-2xl p-5 shadow-sm sticky top-4 space-y-4 overflow-hidden">
+              <div className="absolute top-0 left-0 w-1 h-full bg-[#0066FF]"></div>
               <div>
                 <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Đang xem cấu trúc:</h4>
                 <h2 className="text-sm font-black text-gray-900 leading-snug">{selectedCurriculum.curriculum_name}</h2>
@@ -358,80 +425,169 @@ export default function LumerCurriculumManagement() {
         </div>
       </div>
 
+      {/* --- FORM MODAL ĐÃ ĐƯỢC TỐI ƯU NÚT THOÁT ĐẸP HƠN --- */}
       {isOpenModal && (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-3xl w-full max-w-xl p-8 shadow-2xl max-h-[90vh] overflow-y-auto">
-            <h3 className="text-xl font-extrabold text-gray-900 mb-6 tracking-tight">
-              {isEditMode ? "Cập nhật chương trình đào tạo" : "Thiết kế chương trình đào tạo mới"}
-            </h3>
+        <div className="fixed inset-0 bg-slate-950/40 backdrop-blur-[6px] flex items-center justify-center p-4 z-50 transition-all duration-300">
+          <div className="bg-white rounded-2xl w-full max-w-xl shadow-[0_25px_50px_-12px_rgba(0,0,0,0.15)] max-h-[90vh] flex flex-col overflow-hidden border border-slate-100 animate-in fade-in zoom-in-95 duration-200">
             
-            <form onSubmit={handleSubmit} className="space-y-5 text-xs text-gray-500 font-bold">
-              <div>
-                <label className="block text-[#64748B] uppercase tracking-wider text-[10px] mb-1.5">Tên chương trình đào tạo (curriculum_name)</label>
-                <input type="text" placeholder="Ví dụ: Kỹ nghệ phần mềm chuyên sâu" value={formData.curriculumName} onChange={(e) => setFormData(prev => ({...prev, curriculumName: e.target.value}))} className="w-full border border-gray-200 rounded-xl px-4 py-3 font-medium text-gray-800 placeholder-gray-300 focus:outline-blue-500 text-xs bg-white" required />
-              </div>
-
-              <div>
-                <label className="block text-[#64748B] uppercase tracking-wider text-[10px] mb-1.5">Mô tả tóm tắt chương trình đào tạo</label>
-                <textarea rows={3} placeholder="Tóm lược mục tiêu cấu trúc lộ trình..." value={formData.description} onChange={(e) => setFormData(prev => ({...prev, description: e.target.value}))} className="w-full border border-gray-200 rounded-xl px-4 py-3 font-medium text-gray-800 placeholder-gray-300 focus:outline-blue-500 text-xs bg-white" />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-[#64748B] uppercase tracking-wider text-[10px] mb-1.5">Số tháng hoàn thành (integer)</label>
-                  <input type="number" min={1} max={48} value={formData.courseFinishedMonths} onChange={(e) => setFormData(prev => ({...prev, courseFinishedMonths: parseInt(e.target.value) || 0}))} className="w-full border border-gray-200 rounded-xl px-4 py-3 font-medium text-gray-800 focus:outline-blue-500 text-xs bg-white" required />
+            {/* Modal Header */}
+            <div className="px-6 py-5 border-b border-slate-100 flex justify-between items-center bg-gradient-to-r from-slate-50 to-blue-50/20">
+              <div className="flex items-center gap-3">
+                <div className={`p-2.5 rounded-xl text-white shadow-xs ${isEditMode ? 'bg-amber-500 shadow-amber-500/20' : 'bg-[#0066FF] shadow-blue-500/20'}`}>
+                  {isEditMode ? <Sparkles size={18} /> : <Plus size={18} />}
                 </div>
                 <div>
-                  <label className="block text-[#64748B] uppercase tracking-wider text-[10px] mb-1.5">Loại chương trình (course_type)</label>
-                  <select value={formData.courseType} onChange={(e) => setFormData(prev => ({...prev, courseType: e.target.value}))} className="w-full border border-gray-200 rounded-xl px-4 py-3 font-medium text-gray-800 focus:outline-blue-500 text-xs bg-white cursor-pointer">
-                    <option value="SHORT_TERM">Ngắn hạn (SHORT_TERM)</option>
-                    <option value="LONG_TERM">Dài hạn (LONG_TERM)</option>
-                  </select>
+                  <h3 className="text-base font-extrabold text-slate-900 tracking-tight">
+                    {isEditMode ? "Cập nhật chương trình" : "Thiết kế chương trình mới"}
+                  </h3>
+                  <p className="text-[11px] text-slate-400 font-medium mt-0.5">
+                    {isEditMode ? `Mã số cấu trúc: ${selectedCurriculum?.curriculum_id}` : "Nhập thông tin chuẩn hóa liên kết hệ thống"}
+                  </p>
                 </div>
               </div>
+              
+              {/* Nút X thoát góc phải trên tinh tế */}
+              <button 
+                type="button"
+                onClick={() => setIsOpenModal(false)}
+                className="p-2 rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-100 border-none bg-transparent cursor-pointer transition-all active:scale-95"
+              >
+                <X size={18} />
+              </button>
+            </div>
+            
+            {/* Modal Body */}
+            <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
+              <div className="p-6 overflow-y-auto space-y-5 text-xs text-slate-500 font-bold bg-white custom-scrollbar flex-1">
+                
+                <div className="space-y-1.5">
+                  <label className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-slate-500">
+                    <Type size={13} className="text-slate-400" /> Tên chương trình đào tạo <span className="text-rose-500">*</span>
+                  </label>
+                  <input 
+                    type="text" 
+                    placeholder="Ví dụ: Kỹ nghệ phần mềm chuyên sâu" 
+                    value={formData.curriculumName} 
+                    onChange={(e) => setFormData(prev => ({...prev, curriculumName: e.target.value}))} 
+                    className="w-full border border-slate-200 hover:border-slate-300 rounded-xl px-3.5 py-3 font-medium text-slate-800 placeholder-slate-300 focus:outline-none focus:ring-2 focus:ring-[#0066FF]/10 focus:border-[#0066FF] text-xs bg-slate-50/50 focus:bg-white transition-all duration-200" 
+                    required 
+                  />
+                </div>
 
-              {isEditMode ? (
+                <div className="space-y-1.5">
+                  <label className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-slate-500">
+                    <FileText size={13} className="text-slate-400" /> Mô tả tóm tắt chương trình
+                  </label>
+                  <textarea 
+                    rows={3} 
+                    placeholder="Tóm lược mục tiêu và cấu trúc lộ trình để hiển thị nội bộ..." 
+                    value={formData.description} 
+                    onChange={(e) => setFormData(prev => ({...prev, description: e.target.value}))} 
+                    className="w-full border border-slate-200 hover:border-slate-300 rounded-xl px-3.5 py-3 font-medium text-slate-700 placeholder-slate-300 focus:outline-none focus:ring-2 focus:ring-[#0066FF]/10 focus:border-[#0066FF] text-xs bg-slate-50/50 focus:bg-white transition-all duration-200 resize-none leading-relaxed" 
+                  />
+                </div>
+
                 <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-[#64748B] uppercase tracking-wider text-[10px] mb-1.5">Trạng thái phát hành</label>
-                    <select value={formData.status} onChange={(e) => setFormData(prev => ({...prev, status: e.target.value as DisplayStatus}))} className="w-full border border-gray-200 rounded-xl px-4 py-3 font-medium text-gray-800 focus:outline-blue-500 text-xs bg-white cursor-pointer">
-                      <option value="Bản nháp">Bản nháp (CURRICULUM_DRAFT)</option>
-                      <option value="Thẩm định">Thẩm định (CURRICULUM_REVIEWING)</option>
-                      <option value="Đang hoạt động">Đang hoạt động (CURRICULUM_ACTIVE)</option>
-                      <option value="Tạm ngưng">Tạm ngưng (CURRICULUM_SUSPENDED)</option>
+                  <div className="space-y-1.5">
+                    <label className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-slate-500">
+                      <Clock size={13} className="text-slate-400" /> Số tháng hoàn thành <span className="text-rose-500">*</span>
+                    </label>
+                    <input 
+                      type="number" 
+                      min={1} 
+                      max={48} 
+                      value={formData.courseFinishedMonths} 
+                      onChange={(e) => setFormData(prev => ({...prev, courseFinishedMonths: parseInt(e.target.value) || 0}))} 
+                      className="w-full border border-slate-200 hover:border-slate-300 rounded-xl px-3.5 py-3 font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#0066FF]/10 focus:border-[#0066FF] text-xs bg-slate-50/50 focus:bg-white transition-all duration-200" 
+                      required 
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-slate-500">
+                      <Layers size={13} className="text-slate-400" /> Loại chương trình
+                    </label>
+                    <select 
+                      value={formData.courseType} 
+                      onChange={(e) => setFormData(prev => ({...prev, courseType: e.target.value}))} 
+                      className="w-full border border-slate-200 hover:border-slate-300 rounded-xl px-3.5 py-3 font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#0066FF]/10 focus:border-[#0066FF] text-xs bg-slate-50/50 focus:bg-white transition-all duration-200 cursor-pointer"
+                    >
+                      <option value="SHORT_TERM">Ngắn hạn (SHORT_TERM)</option>
+                      <option value="LONG_TERM">Dài hạn (LONG_TERM)</option>
                     </select>
                   </div>
-                  <div>
-                    <label className="block text-[#64748B] uppercase tracking-wider text-[10px] mb-1.5">Tên chứng chỉ cấp phát (certificate_name)</label>
-                    <input type="text" placeholder="Ví dụ: LUMER Certified Engineer" value={formData.certificateName} onChange={(e) => setFormData(prev => ({...prev, certificateName: e.target.value}))} className="w-full border border-gray-200 rounded-xl px-4 py-3 font-medium text-gray-800 placeholder-gray-300 focus:outline-blue-500 text-xs bg-white" />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  {/* {isEditMode && (
+                    <div className="space-y-1.5">
+                      <label className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-slate-500">
+                        📌 Trạng thái phát hành
+                      </label>
+                      <select 
+                        value={formData.status} 
+                        onChange={(e) => setFormData(prev => ({...prev, status: e.target.value as DisplayStatus}))} 
+                        className="w-full border border-slate-200 hover:border-slate-300 rounded-xl px-3.5 py-3 font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#0066FF]/10 focus:border-[#0066FF] text-xs bg-slate-50/50 focus:bg-white transition-all duration-200 cursor-pointer"
+                      >
+                        <option value="Bản nháp">Bản nháp (CURRICULUM_DRAFT)</option>
+                        <option value="Thẩm định">Thẩm định (CURRICULUM_REVIEWING)</option>
+                        <option value="Đang hoạt động">Đang hoạt động (CURRICULUM_ACTIVE)</option>
+                        <option value="Tạm ngưng">Tạm ngưng (CURRICULUM_SUSPENDED)</option>
+                      </select>
+                    </div>
+                  )} */}
+                  <div className={isEditMode ? "space-y-1.5" : "col-span-2 space-y-1.5"}>
+                    <label className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-slate-500">
+                      <Award size={13} className="text-slate-400" /> Tên chứng chỉ cấp phát
+                    </label>
+                    <input 
+                      type="text" 
+                      placeholder="Ví dụ: LUMER Certified Engineer" 
+                      value={formData.certificateName} 
+                      onChange={(e) => setFormData(prev => ({...prev, certificateName: e.target.value}))} 
+                      className="w-full border border-slate-200 hover:border-slate-300 rounded-xl px-3.5 py-3 font-medium text-slate-800 placeholder-slate-300 focus:outline-none focus:ring-2 focus:ring-[#0066FF]/10 focus:border-[#0066FF] text-xs bg-slate-50/50 focus:bg-white transition-all duration-200" 
+                    />
                   </div>
                 </div>
-              ) : (
-                <div>
-                  <label className="block text-[#64748B] uppercase tracking-wider text-[10px] mb-1.5">Tên chứng chỉ cấp phát (certificate_name)</label>
-                  <input type="text" placeholder="Ví dụ: LUMER Certified Engineer" value={formData.certificateName} onChange={(e) => setFormData(prev => ({...prev, certificateName: e.target.value}))} className="w-full border border-gray-200 rounded-xl px-4 py-3 font-medium text-gray-800 placeholder-gray-300 focus:outline-blue-500 text-xs bg-white" />
-                </div>
-              )}
 
-              <div>
-                <label className="block text-[#64748B] uppercase tracking-wider text-[10px] mb-1.5">
-                  {isEditMode ? "Thay đổi file đính kèm (Để trống nếu giữ file cũ)" : "Tải lên file chương trình (curriculum_file_path)"}
-                </label>
-                <div className="mt-2 flex items-center gap-3">
-                  <label className="bg-[#F1F5F9] hover:bg-slate-200 text-gray-700 font-bold px-4 py-2.5 rounded-xl cursor-pointer transition border border-gray-200 shadow-sm inline-flex items-center gap-2 text-xs">
-                    📁 Chọn tập tin (.pdf, .docx)...
-                    <input type="file" className="hidden" accept=".pdf,.docx,.xlsx" onChange={handleFileChange} />
+                <div className="space-y-2">
+                  <label className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-slate-500">
+                    <UploadCloud size={13} className="text-slate-400" /> {isEditMode ? "Thay đổi file đính kèm" : "Tải lên tập tin học liệu"}
                   </label>
-                  <span className="text-gray-400 font-medium italic text-xs truncate max-w-62.5">
-                    {formData.syllabusFile ? formData.syllabusFile.name : isEditMode ? "Giữ nguyên file cũ của hệ thống" : "Chưa có file nào được chọn"}
-                  </span>
+                  <div className="flex items-center gap-3 bg-slate-50 p-3 border border-dashed border-slate-200 rounded-xl">
+                    <label className="bg-white hover:bg-slate-50 text-slate-700 font-bold px-4 py-2 border border-slate-200 rounded-xl cursor-pointer transition-all shadow-2xs inline-flex items-center gap-1.5 text-xs whitespace-nowrap active:scale-[0.98]">
+                      📁 Chọn File (.pdf, .docx, .xlsx)
+                      <input type="file" className="hidden" accept=".pdf,.docx,.xlsx" onChange={handleFileChange} />
+                    </label>
+                    <span className="text-slate-400 font-medium italic text-xs truncate flex-1">
+                      {formData.syllabusFile ? formData.syllabusFile.name : isEditMode ? "Giữ nguyên file cũ đã lưu" : "Chưa chọn tập tin"}
+                    </span>
+                  </div>
                 </div>
               </div>
 
-              <div className="flex justify-end space-x-3 pt-6 border-t border-gray-50">
-                <button type="button" onClick={() => setIsOpenModal(false)} className="px-6 py-2.5 bg-[#F1F5F9] hover:bg-slate-200 text-gray-700 font-bold rounded-full transition cursor-pointer border-none text-xs" disabled={isLoading}>Hủy</button>
-                <button type="submit" className="px-6 py-2.5 bg-[#0066FF] hover:bg-blue-700 text-white font-extrabold rounded-full transition cursor-pointer border-none text-xs shadow-md" disabled={isLoading}>
-                  {isLoading ? "⌛ Đang ghi nhận thay đổi..." : isEditMode ? "Cập nhật dữ liệu" : "Xác nhận tạo mới"}
+              {/* Modal Footer Buttons */}
+              <div className="px-6 py-4 border-t border-slate-100 flex justify-end gap-3 bg-slate-50/50 shrink-0">
+                <button 
+                  type="button" 
+                  onClick={() => setIsOpenModal(false)} 
+                  className="px-4.5 py-2.5 bg-white hover:bg-slate-100 border border-slate-200 rounded-xl text-xs text-slate-600 font-bold cursor-pointer transition-all active:scale-95 shadow-2xs" 
+                  disabled={isLoading}
+                >
+                  Đóng lại
+                </button>
+                <button 
+                  type="submit" 
+                  className="px-5 py-2.5 text-white font-extrabold rounded-xl text-xs border-none cursor-pointer transition-all active:scale-95 shadow-md flex items-center gap-2 bg-[#0066FF] hover:bg-blue-600 shadow-blue-500/10 disabled:opacity-60" 
+                  disabled={isLoading}
+                >
+                  {isLoading ? (
+                    <>
+                      <Loader2 size={14} className="animate-spin" />
+                      Đang ghi nhận...
+                    </>
+                  ) : (
+                    <>{isEditMode ? "Cập nhật dữ liệu" : "Xác nhận tạo mới"}</>
+                  )}
                 </button>
               </div>
             </form>

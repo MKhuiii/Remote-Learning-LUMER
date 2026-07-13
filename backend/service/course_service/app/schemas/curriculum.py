@@ -9,6 +9,7 @@ class CurriculumBase(BaseModel):
     course_type: str 
     course_finished_months: int
     certificate_name: Optional[str] = None
+    
     status_id: Optional[str] = "CURRICULUM_DRAFT"
 
 # Schema dùng để nhận data TẠO MỚI (Từ payload gửi lên)

@@ -1,256 +1,367 @@
 'use client';
 
-import React, { useState } from 'react';
+import { useState, useEffect, useMemo } from "react";
 import Navbar from '@/components/Navbar';
+import { Course, Module } from '@/types/course'; 
+import { getCoursesAction } from "@/actions/getCourse";  
+import { getCurriculums } from "@/actions/getCurriculum";
+import { getrInstructorList, User } from "@/actions/getUser"; // Import hàm lấy danh sách User thật từ file của bạn
 
 export default function CourseAssignment() {
-    // 1. Danh sách giảng viên hệ thống để Phòng đào tạo lựa chọn gán cho khóa học
-    const lecturers = [
-        { id: "GV01", name: "TS. Nguyễn Văn A", expertise: "Fullstack Development & Cloud", degree: "Tiến sĩ KHMT" },
-        { id: "GV02", name: "ThS. Trần Thị B", expertise: "Frontend Architecture & UI/UX", degree: "Thạc sĩ CNPM" },
-        { id: "GV03", name: "Chuyên gia Lê Hoàng C", expertise: "DevOps & Cloud Infrastructure", degree: "Solutions Architect" },
-        { id: "GV04", name: "Anh Phạm Minh D", expertise: "Enterprise Applications", degree: "Kỹ sư phần mềm Senior" }
-    ];
+    // ---- Các States quản lý dữ liệu ----
+    const [isLoading, setIsLoading] = useState<boolean>(false);
+    const [courses, setCourses] = useState<Course[]>([]);
+    const [curriculums, setCurriculums] = useState<any[]>([]);
+    
+    // State lưu danh sách giảng viên thật lấy từ cơ sở dữ liệu
+    const [lecturers, setLecturers] = useState<User[]>([]);
+    
+    const [selectedCourseId, setSelectedCourseId] = useState<string | null>(null);
+    const [form, setForm] = useState({
+        course_id: "",
+        title: "",
+        description: "",
+        price: 0,
+        curriculum_id: "", 
+    });
 
-    // 2. Danh sách dữ liệu tĩnh của các khóa học hiện có sinh ra từ CTDT mẫu
-    const [courses, setCourses] = useState([
-        {
-            id: "COURSE-NEXTJS-2026",
-            name: "Khóa học Lập trình Next.js Toàn Diện & Triển khai Hệ thống",
-            templateName: "CTDT mẫu: Chuyên viên Phát triển Web Cao cấp",
-            duration: "12 tuần",
-            level: "Nâng cao (Advanced)",
-            targetAudience: "Sinh viên năm cuối ngành CNTT, Lập trình viên Front-end muốn nâng cấp lên Fullstack.",
-            description: "Tập trung vào kiến trúc App Router, tối ưu hóa hiệu năng Rendering (SSR, SSG, ISR), bảo mật hệ thống và đóng gói Docker.",
-            assignedLecturerId: "GV01",
-            modules: [
-                { title: "Module 1: Next.js Core Concepts & App Router Architecture", duration: "2 tuần" },
-                { title: "Module 2: Data Fetching, Caching, and Server Actions", duration: "2 tuần" },
-                { title: "Module 3: Advanced Authentication & Authorization (Auth.js)", duration: "2 tuần" },
-                { title: "Module 4: Database Integration (Prisma, PostgreSQL) & API Routes", duration: "2 tuần" },
-                { title: "Module 5: State Management & Performance Optimization", duration: "2 tuần" },
-                { title: "Module 6: DevOps Pipeline: Dockerizing & AWS Deployment", duration: "2 tuần" },
-            ]
-        },
-        {
-            id: "COURSE-PYTHON-2026",
-            name: "Khóa học Kỹ nghệ Dữ liệu & Ứng dụng Trí tuệ Nhân tạo",
-            templateName: "CTDT mẫu: Kỹ sư Khoa học Dữ liệu (Data Science)",
-            duration: "16 tuần",
-            level: "Trung cấp - Nâng cao",
-            targetAudience: "Lập trình viên muốn chuyển dịch sang mảng AI/Data, chuyên viên phân tích nghiệp vụ (BA).",
-            description: "Thành thạo khai phá dữ liệu lớn với Python, xây dựng mô hình Machine Learning, Deep Learning và tích hợp các mô hình LLM vào ứng dụng.",
-            assignedLecturerId: "",
-            modules: [
-                { title: "Module 1: Python Advanced & Data Structures for Data Science", duration: "3 tuần" },
-                { title: "Module 2: Data Analysis with Pandas, NumPy & Visualization", duration: "3 tuần" },
-                { title: "Module 3: Mathematics for Machine Learning & Statistical Models", duration: "3 tuần" },
-                { title: "Module 4: Supervised & Unsupervised Machine Learning Algorithms", duration: "3 tuần" },
-                { title: "Module 5: Introduction to Deep Learning with PyTorch", duration: "4 tuần" }
-            ]
-        },
-        {
-            id: "COURSE-UXUI-2026",
-            name: "Khóa học Thiết kế Trải nghiệm Người dùng & Giao diện Chuyên nghiệp",
-            templateName: "CTDT mẫu: Chuyên viên Thiết kế Sản phẩm Số (Product Design)",
-            duration: "8 tuần",
-            level: "Cơ bản đến Trung cấp",
-            targetAudience: "Người mới bắt đầu học thiết kế, Graphic Designer muốn chuyển hướng sang UI/UX.",
-            description: "Nghiên cứu hành vi người dùng, vẽ wireframe, xây dựng Design System và tạo prototype tương tác cao cấp trên Figma.",
-            assignedLecturerId: "GV02",
-            modules: [
-                { title: "Module 1: User Research Methods & Persona Creation", duration: "2 tuần" },
-                { title: "Module 2: Information Architecture & Wireframing Flows", duration: "2 tuần" },
-                { title: "Module 3: Visual Design Principles & Building Figma Design System", duration: "2 tuần" },
-                { title: "Module 4: High-Fidelity Prototyping & Usability Testing", duration: "2 tuần" }
-            ]
+const fetchInitialData = async () => {
+    setIsLoading(true);
+    try {
+        const [coursesData, curriculumsData, usersResult] = await Promise.all([
+            getCoursesAction(), 
+            getCurriculums(),
+            getrInstructorList(1, 100, 5, "ACTIVE") 
+           
+        ]);
+        console.log(curriculumsData);
+        console.log(usersResult);
+        console.log(coursesData);
+        const validCourses: Course[] = coursesData || [];
+        const validCurriculums = curriculumsData || [];
+        
+        // Không cần dùng .filter() thủ công ở client nữa, Backend đã trả về chuẩn danh sách GV
+        if (usersResult.success && usersResult.list) {
+            setLecturers(usersResult.list);
         }
-    ]);
 
-    // ID khóa học đang được chọn để hiển thị chi tiết (Mặc định chọn khóa đầu tiên)
-    const [selectedCourseId, setSelectedCourseId] = useState("COURSE-NEXTJS-2026");
+        const synchronizedData = validCourses.map((course: Course) => {
+            const targetCurriculum = validCurriculums.find((c: any) => {
+                const cId = c.curriculum_id || c.id;
+                const courseCId = course.curriculum_id;
+                return String(cId).toLowerCase() === String(courseCId).toLowerCase();
+            });
+            return { 
+                ...course, 
+                modules: targetCurriculum?.modules || course.modules || [],
+                assignedLecturerId: (course as any).assignedLecturerId || "" 
+            };
+        });
 
-    // Lấy ra thông tin chi tiết của khóa học đang chọn
-    const activeCourse = courses.find(c => c.id === selectedCourseId) || courses[0];
-    // Lấy ra giảng viên đang phụ trách khóa học hiện tại
-    const activeLecturer = lecturers.find(l => l.id === activeCourse.assignedLecturerId);
+        setCourses(synchronizedData);
+        setCurriculums(validCurriculums);
+        
+        if (synchronizedData.length > 0) {
+            setSelectedCourseId(synchronizedData[0].course_id);
+        }
+    } catch (error) {
+        console.error("Lỗi khi tải dữ liệu tổng hợp:", error);
+    } finally {
+        setIsLoading(false);
+    }
+};
 
-    // Hàm thay đổi giảng viên cho khóa học đang chọn
-    const handleAssignLecturer = (lecturerId) => {
-        setCourses(prevCourses =>
-            prevCourses.map(course =>
-                course.id === activeCourse.id ? { ...course, assignedLecturerId: lecturerId } : course
+    useEffect(() => { 
+        fetchInitialData();
+    }, []);
+
+    const curriculumMap = useMemo(() => {
+        const map = new Map<string, { type: string; finishedMonths: string | number; name: string }>();
+        curriculums.forEach(c => {
+            const targetId = c.curriculum_id || c.id;
+            if (!targetId) return;
+            const targetIdStr = String(targetId).toLowerCase();
+            const type = c.course_type || "SHORT_TERM";
+            const finishedMonths = c.course_finished_months !== undefined ? c.course_finished_months : "Chưa rõ";
+            const name = c.curriculum_name || "N/A";
+            map.set(targetIdStr, { type: String(type).toUpperCase(), finishedMonths, name });
+        });
+        return map;
+    }, [curriculums]);
+
+    // ---- Tính toán khóa học đang được chọn dựa theo `course_id` ----
+    const activeCourse = useMemo(() => {
+        return courses.find(c => c.course_id === selectedCourseId) || courses[0];
+    }, [courses, selectedCourseId]);
+
+    // Tìm thông tin chi tiết giảng viên đang phụ trách khóa học hiện tại
+    const activeLecturer = useMemo(() => {
+        if (!activeCourse) return undefined;
+        return lecturers.find(l => l.user_id === (activeCourse as any).assignedLecturerId);
+    }, [activeCourse, lecturers]);
+
+    // ---- Thống kê số lượng ----
+    const totalCourses = courses.length;
+    const assignedCoursesCount = courses.filter(c => (c as any).assignedLecturerId && (c as any).assignedLecturerId !== "").length;
+    const unassignedCoursesCount = totalCourses - assignedCoursesCount;
+
+    const handleAssignLecturer = (lecturerId: string) => {
+        if (!activeCourse) return;
+        setCourses((prevCourses) =>
+            prevCourses.map((course) =>
+                course.course_id === activeCourse.course_id ? { ...course, assignedLecturerId: lecturerId } as any : course
             )
         );
     };
 
+    const handleSubmit = async () => {
+        setIsLoading(true);
+        try {
+            // Logic xử lý gọi API cập nhật gán giảng viên lên backend của bạn ở đây...
+            alert(`Đã cập nhật cấu hình giảng viên thành công cho khóa học: ${activeCourse?.title}`);
+        } catch (error) {
+            console.error("Lỗi khi lưu dữ liệu:", error);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+
+
+    
     return (
         <>
-            <Navbar></Navbar>
-            <div className="min-h-screen bg-[#e6f2ff] text-gray-800 antialiased p-4 sm:p-6">
-                <div className="max-w-7xl mx-auto space-y-6">
+            <Navbar />
+            
+            <div className="min-h-screen bg-[#f4f8fc] text-gray-800 antialiased pb-12">
+                {/* BANNER */}
+                <div className="bg-[#0066ff] text-white pt-10 pb-20 px-4 sm:px-8 relative">
+                    <div className="max-w-7xl mx-auto space-y-4">
+                        <a href="#" className="inline-flex items-center text-xs font-semibold text-white/80 hover:text-white transition-colors">
+                            ← Quay về Dashboard Phòng Đào Tạo
+                        </a>
+                        <div>
+                            <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight">PHÂN CÔNG GIẢNG DẠY</h1>
+                            <p className="text-sm text-white/80 mt-1 max-w-2xl font-light">
+                                Chọn tài liệu và chỉ định giảng viên chính thức quản trị nội dung môn học từ danh sách nhân sự.
+                            </p>
+                        </div>
+                    </div>
+                </div>
 
-                    {/* Tiêu đề bảng điều khiển */}
-                    <div className="bg-white p-5 rounded-xl border border-[#d1e2f3] shadow-sm">
-                        <h1 className="text-xl font-bold text-[#0066cc]">Quản Lý Phân Công Chương Trình Đào Tạo</h1>
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 -mt-12 relative z-10 space-y-8">
+                    {/* KHỐI THẺ THỐNG KÊ */}
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                        <div className="bg-white p-5 rounded-2xl shadow-md border border-[#e1ebf5] text-center flex flex-col justify-center items-center">
+                            <span className="text-3xl font-extrabold text-[#0066ff]">{isLoading ? "..." : totalCourses}</span>
+                            <span className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mt-1">Tổng khóa học</span>
+                        </div>
+                        <div className="bg-white p-5 rounded-2xl shadow-md border border-[#e1ebf5] text-center flex flex-col justify-center items-center">
+                            <span className="text-3xl font-extrabold text-[#10b981]">{isLoading ? "..." : assignedCoursesCount}</span>
+                            <span className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mt-1">Đã phân công</span>
+                        </div>
+                        <div className="bg-white p-5 rounded-2xl shadow-md border border-[#e1ebf5] text-center col-span-2 md:col-span-1 flex flex-col justify-center items-center">
+                            <span className="text-3xl font-extrabold text-amber-500">{isLoading ? "..." : unassignedCoursesCount}</span>
+                            <span className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mt-1">Chưa phân công</span>
+                        </div>
                     </div>
 
-                    {/* Bố cục chia đôi: Bên trái chọn khóa học, Bên phải hiển thị thông tin chi tiết */}
+                    {/* BỐ CỤC CHÍNH */}
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
-
-                        {/* CỘT DANH SÁCH CÁC CTDT HIỆN CÓ (CHIẾM 1 PHẦN) */}
+                        {/* CỘT TRÁI: DANH SÁCH KHÓA HỌC */}
                         <div className="lg:col-span-1 space-y-3">
                             <div className="text-xs font-bold text-gray-500 uppercase tracking-wider px-1">
-                                Danh sách khóa học hiện có ({courses.length})
+                                Danh sách môn học ({totalCourses})
                             </div>
 
-                            {courses.map((course) => {
-                                const assignedTeacher = lecturers.find(l => l.id === course.assignedLecturerId);
-                                const isSelected = course.id === selectedCourseId;
-
-                                return (
-                                    <div
-                                        key={course.id}
-                                        onClick={() => setSelectedCourseId(course.id)}
-                                        className={`p-4 rounded-xl border cursor-pointer transition-all duration-150 shadow-sm ${isSelected
-                                            ? 'bg-white border-2 border-[#0066cc] ring-2 ring-blue-100'
-                                            : 'bg-white border-[#d1e2f3] hover:border-blue-300 hover:bg-white/80'
-                                            }`}
-                                    >
-                                        <h3 className="font-bold text-sm sm:text-base text-gray-900 leading-snug">{course.name}</h3>
-                                        <p className="text-xs text-gray-400 mt-1.5 line-clamp-1">{course.templateName}</p>
-
-                                        <div className="mt-3 pt-2.5 border-t border-gray-100 flex items-center justify-between text-xs">
-                                            <span className="text-gray-500 font-medium">📦 {course.modules.length} Module</span>
-
-                                            {assignedTeacher ? (
-                                                <span className="text-green-700 font-semibold bg-green-50 px-2 py-0.5 rounded border border-green-100">
-                                                    👨‍🏫 {assignedTeacher.name}
-                                                </span>
-                                            ) : (
-                                                <span className="text-amber-700 font-semibold bg-amber-50 px-2 py-0.5 rounded border border-amber-100">
-                                                    ⚠️ Chưa phân công
-                                                </span>
-                                            )}
-                                        </div>
+                            <div className="space-y-3 max-h-[600px] overflow-y-auto pr-1">
+                                {isLoading ? (
+                                    <div className="p-8 text-center bg-white rounded-2xl border border-gray-100 text-xs text-gray-400">
+                                        Đang kết nối API hệ thống...
                                     </div>
-                                );
-                            })}
+                                ) : courses.length === 0 ? (
+                                    <div className="p-8 rounded-2xl border-2 border-dashed border-[#d1e2f3] bg-white text-center text-xs text-gray-400">
+                                        Không có dữ liệu khóa học.
+                                    </div>
+                                ) : (
+                                    courses.map((course: Course) => {
+                                        const assignedTeacher = lecturers.find(l => l.user_id === (course as any).assignedLecturerId);
+                                        const isSelected = course.course_id === selectedCourseId;
+
+                                        return (
+                                            <div
+                                                key={course.course_id}
+                                                onClick={() => setSelectedCourseId(course.course_id)}
+                                                className={`p-5 rounded-2xl border cursor-pointer transition-all duration-200 shadow-sm ${
+                                                    isSelected
+                                                        ? 'bg-white border-2 border-[#0066ff] ring-4 ring-[#0066ff]/10'
+                                                        : 'bg-white border-[#e1ebf5] hover:border-[#0066ff]/50 hover:shadow-md'
+                                                }`}
+                                            >
+                                                <h3 className="font-bold text-sm sm:text-base text-gray-900 leading-snug line-clamp-2">
+                                                    {course.title}
+                                                </h3>
+                                                <p className="text-xs text-gray-400 mt-2">
+                                                    🏷️ Hình thức: <span className="text-gray-600 font-medium">{course.course_type}</span>
+                                                </p>
+
+                                                <div className="mt-4 pt-3 border-t border-gray-100 flex items-center justify-between text-xs">
+                                                    <span className="text-gray-500 font-medium bg-gray-100 px-2.5 py-1 rounded-md">
+                                                        📦 {course.modules?.length || 0} Chương học
+                                                    </span>
+
+                                                    {assignedTeacher ? (
+                                                        <span className="text-emerald-700 font-semibold bg-emerald-50 px-2.5 py-1 rounded-md border border-emerald-100">
+                                                            👨‍🏫 {assignedTeacher.username}
+                                                        </span>
+                                                    ) : (
+                                                        <span className="text-amber-700 font-semibold bg-amber-50 px-2.5 py-1 rounded-md border border-amber-100">
+                                                            ⚠️ Trống
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        );
+                                    })
+                                )}
+                            </div>
                         </div>
 
-                        {/* CỘT CHI TIẾT VÀ PHÂN CÔNG (CHIẾM 2 PHẦN) */}
+                        {/* CỘT PHẢI: CHI TIẾT & CHỌN GIẢNG VIÊN */}
                         <div className="lg:col-span-2 space-y-6">
                             {activeCourse ? (
                                 <>
-                                    {/* 1. Chi tiết học liệu & Mô tả của CTDT đang được chọn */}
-                                    <div className="bg-white p-6 rounded-xl border border-[#d1e2f3] shadow-sm space-y-4">
-                                        <div className="border-b border-[#e6f2ff] pb-3">
-                                            <span className="text-[11px] font-bold uppercase tracking-wider bg-[#e6f2ff] text-[#0066cc] px-2.5 py-1 rounded-md">
-                                                Mã lớp học: {activeCourse.id}
+                                    {/* Thông tin tổng quan */}
+                                    <div className="bg-white p-6 sm:p-8 rounded-2xl border border-[#e1ebf5] shadow-sm space-y-5">
+                                        <div className="border-b border-[#f4f8fc] pb-4">
+                                            <span className="text-[10px] font-bold uppercase tracking-widest bg-[#e6f2ff] text-[#0066ff] px-3 py-1.5 rounded-lg">
+                                                ID: {activeCourse.course_id}
                                             </span>
-                                            <h2 className="text-lg font-bold text-gray-950 mt-2.5">{activeCourse.name}</h2>
-                                            <p className="text-xs text-gray-400 mt-1">Nguồn gốc: {activeCourse.templateName}</p>
+                                            <h2 className="text-xl sm:text-2xl font-bold text-gray-950 mt-3.5 leading-snug">
+                                                {activeCourse.title}
+                                            </h2>
                                         </div>
 
                                         <div className="grid grid-cols-2 gap-4 text-xs sm:text-sm text-gray-600">
-                                            <p><span className="text-gray-400 font-medium">Thời lượng:</span> <strong className="text-gray-800 font-medium block mt-0.5">{activeCourse.duration}</strong></p>
-                                            <p><span className="text-gray-400 font-medium">Trình độ khóa học:</span> <strong className="text-gray-800 font-medium block mt-0.5">{activeCourse.level}</strong></p>
-                                        </div>
-
-                                        <div className="text-xs sm:text-sm pt-2">
-                                            <span className="text-gray-400 font-medium block mb-1">Đối tượng hướng tới:</span>
-                                            <p className="text-gray-700 bg-gray-50 p-2.5 rounded-lg border border-gray-100 leading-relaxed">{activeCourse.targetAudience}</p>
+                                            <div className="bg-gray-50 p-3 rounded-xl border border-gray-100">
+                                                <span className="text-gray-400 font-medium block">Loại hình môn học</span>
+                                                <strong className="text-[#0066ff] text-base font-bold block mt-1">{activeCourse.course_type}</strong>
+                                            </div>
+                                            <div className="bg-gray-50 p-3 rounded-xl border border-gray-100">
+                                                <span className="text-gray-400 font-medium block">Học phí</span>
+                                                <strong className="text-gray-800 text-base font-bold block mt-1">
+                                                    {activeCourse.price?.toLocaleString('vi-VN')} VND
+                                                </strong>
+                                            </div>
                                         </div>
 
                                         <div className="text-xs sm:text-sm">
-                                            <span className="text-gray-400 font-medium block mb-1">Tóm tắt nội dung:</span>
-                                            <p className="text-gray-600 leading-relaxed">{activeCourse.description}</p>
+                                            <span className="text-gray-400 font-semibold block mb-1.5">Mô tả tóm tắt:</span>
+                                            <p className="text-gray-600 bg-gray-50/55 p-3 rounded-xl border border-gray-100 leading-relaxed">
+                                                {activeCourse.description || "Chưa có nội dung mô tả."}
+                                            </p>
                                         </div>
                                     </div>
 
-                                    {/* 2. Cấu trúc danh sách các Module chi tiết */}
-                                    <div className="bg-white p-6 rounded-xl border border-[#d1e2f3] shadow-sm">
-                                        <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">
-                                            Khung chương trình chi tiết ({activeCourse.modules.length} Module nội dung)
+                                    {/* Cấu trúc chương học */}
+                                    <div className="bg-white p-6 sm:p-8 rounded-2xl border border-[#e1ebf5] shadow-sm">
+                                        <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4">
+                                            Khung chương trình đào tạo liên kết ({activeCourse.modules?.length || 0} Chương)
                                         </h3>
-                                        <div className="divide-y divide-[#e6f2ff] max-h-60 overflow-y-auto pr-1">
-                                            {activeCourse.modules.map((mod, idx) => (
-                                                <div key={idx} className="py-2.5 first:pt-0 last:pb-0 flex justify-between items-center text-xs sm:text-sm gap-4">
-                                                    <div className="flex items-start gap-2">
-                                                        <span className="text-[#0066cc] font-bold text-xs bg-[#e6f2ff] px-1.5 py-0.5 rounded shrink-0">M{idx + 1}</span>
-                                                        <span className="text-gray-700 font-medium">{mod.title}</span>
+                                        <div className="space-y-4 max-h-60 overflow-y-auto pr-1">
+                                            {!activeCourse.modules || activeCourse.modules.length === 0 ? (
+                                                <p className="text-xs text-gray-400 py-2">Chưa cấu hình chương học.</p>
+                                            ) : (
+                                                activeCourse.modules.map((mod: Module, idx: number) => (
+                                                    <div key={mod.module_id} className="p-4 bg-gray-50/70 rounded-xl border border-gray-100 space-y-2">
+                                                        <div className="flex justify-between items-center">
+                                                            <h4 className="text-xs sm:text-sm font-bold text-gray-900">
+                                                                Chương {idx + 1}: {mod.title}
+                                                            </h4>
+                                                            <span className="text-[10px] font-bold text-[#0066ff] bg-[#e6f2ff] px-2 py-0.5 rounded-md">
+                                                                {mod.lessons?.length || 0} bài học
+                                                            </span>
+                                                        </div>
+                                                        {mod.lessons && mod.lessons.length > 0 && (
+                                                            <div className="pl-4 border-l-2 border-gray-200 space-y-1.5 mt-2">
+                                                                {mod.lessons.map((lesson) => (
+                                                                    <div key={lesson.lesson_id} className="flex justify-between items-center text-xs text-gray-600">
+                                                                        <span>• {lesson.title}</span>
+                                                                        <span className="text-gray-400 text-[11px]">{lesson.duration}</span>
+                                                                    </div>
+                                                                ))}
+                                                            </div>
+                                                        )}
                                                     </div>
-                                                    <span className="text-gray-400 text-xs shrink-0 bg-gray-50 px-2 py-0.5 rounded border border-gray-100">{mod.duration}</span>
-                                                </div>
-                                            ))}
+                                                ))
+                                            )}
                                         </div>
                                     </div>
 
-                                    {/* 3. Phân công / Thay đổi Giảng viên trực tiếp cho khóa đang xem */}
-                                    <div className="bg-white p-6 rounded-xl border border-[#d1e2f3] shadow-sm grid grid-cols-1 md:grid-cols-2 gap-6">
-                                        <div className="space-y-3">
+                                    {/* Panel Phân Công Giảng Viên Thật */}
+                                    <div className="bg-white p-6 sm:p-8 rounded-2xl border border-[#e1ebf5] shadow-sm grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        <div className="space-y-4">
                                             <div>
-                                                <h3 className="text-base font-bold text-[#0066cc]">Phân công Nhân sự</h3>
-                                                <p className="text-[11px] text-gray-400 mt-0.5">Chỉ định duy nhất một giảng viên phụ trách xây dựng học liệu và kiểm duyệt.</p>
+                                                <h3 className="text-base font-bold text-[#0066ff]">Chỉ định nhân sự giảng dạy</h3>
+                                                <p className="text-[11px] text-gray-400 mt-1 leading-relaxed">
+                                                    Danh sách tài khoản hiển thị phía dưới được lấy trực tiếp từ database hệ thống thuộc quyền Giảng viên.
+                                                </p>
                                             </div>
 
                                             <div className="flex flex-col gap-1.5">
-                                                <label className="text-xs font-semibold text-gray-500">Chọn giảng viên đảm nhận:</label>
+                                                <label className="text-xs font-bold text-gray-500">Chọn giảng viên:</label>
                                                 <select
-                                                    value={activeCourse.assignedLecturerId}
+                                                    value={(activeCourse as any).assignedLecturerId || ""}
                                                     onChange={(e) => handleAssignLecturer(e.target.value)}
-                                                    className="w-full text-xs bg-white border border-[#d1e2f3] rounded-lg p-2.5 focus:outline-none focus:border-[#0066cc] text-gray-700 cursor-pointer shadow-inner"
+                                                    className="w-full text-xs bg-white border border-[#d1e2f3] rounded-xl p-3 focus:ring-2 focus:ring-[#0066ff]/20 focus:border-[#0066ff] text-gray-700 cursor-pointer shadow-sm outline-none"
                                                 >
                                                     <option value="">-- Chưa chỉ định giảng viên --</option>
-                                                    {lecturers.map(lecturer => (
-                                                        <option key={lecturer.id} value={lecturer.id}>
-                                                            {lecturer.name}
+                                                    {lecturers.map((lecturer) => (
+                                                        <option key={lecturer.user_id} value={lecturer.user_id}>
+                                                            {lecturer.username} ({lecturer.email})
                                                         </option>
                                                     ))}
                                                 </select>
                                             </div>
                                         </div>
 
-                                        {/* Chi tiết thông tin giảng viên đang chọn phụ trách */}
                                         <div className="flex flex-col justify-center">
                                             {activeLecturer ? (
-                                                <div className="bg-[#e6f2ff]/40 p-4 rounded-lg border border-[#d1e2f3] text-xs space-y-1">
-                                                    <p className="text-[#0066cc] font-bold text-sm">Hồ sơ giảng viên phụ trách:</p>
-                                                    <p><span className="text-gray-400 font-medium">Họ tên:</span> <span className="text-gray-800 font-semibold">{activeLecturer.name}</span></p>
-                                                    <p><span className="text-gray-400 font-medium">Học vị:</span> <span className="text-gray-800">{activeLecturer.degree}</span></p>
-                                                    <p><span className="text-gray-400 font-medium">Lĩnh vực:</span> <span className="text-gray-800">{activeLecturer.expertise}</span></p>
-                                                    <div className="pt-2 mt-1 border-t border-dashed border-[#d1e2f3] text-amber-700 font-medium flex items-center gap-1.5">
-                                                        <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-ping"></span>
-                                                        Hệ thống: Khóa học ở trạng thái chờ giảng viên duyệt bài giảng.
+                                                <div className="bg-[#e6f2ff]/30 p-5 rounded-xl border border-[#d1e2f3] text-xs space-y-2">
+                                                    <p className="text-[#0066ff] font-bold text-sm">Hồ sơ phụ trách:</p>
+                                                    <div className="space-y-1 text-gray-600">
+                                                        <p><span className="text-gray-400 font-medium">Username:</span> <span className="text-gray-800 font-semibold">{activeLecturer.username}</span></p>
+                                                        <p><span className="text-gray-400 font-medium">Email hệ thống:</span> <span className="text-gray-800">{activeLecturer.email}</span></p>
+                                                        <p><span className="text-gray-400 font-medium">Trạng thái:</span> <span className="text-emerald-600 font-medium">{activeLecturer.status_id}</span></p>
                                                     </div>
                                                 </div>
                                             ) : (
-                                                <div className="bg-amber-50 border border-amber-100 text-amber-800 p-4 rounded-lg text-xs leading-relaxed flex items-start gap-2">
-                                                    <span>⚠️</span>
-                                                    <span><strong>Cảnh báo:</strong> Khóa học này hiện chưa được giao cho nhân sự nào quản lý. Vui lòng chọn một giảng viên để tiếp quản công việc biên soạn học liệu.</span>
+                                                <div className="bg-amber-50 border border-amber-100 text-amber-800 p-5 rounded-xl text-xs leading-relaxed flex items-start gap-2.5">
+                                                    <span className="text-base">⚠️</span>
+                                                    <span>
+                                                        <strong>Chưa phân công:</strong> Môn học này chưa có giảng viên phụ trách. Hãy chọn một tài khoản từ danh sách.
+                                                    </span>
                                                 </div>
                                             )}
                                         </div>
                                     </div>
 
-                                    {/* Các nút xử lý dữ liệu cuối trang */}
-                                    <div className="flex items-center justify-end gap-3">
+                                    {/* Nút lưu thay đổi */}
+                                    <div className="flex items-center justify-end">
                                         <button
-                                            disabled={!activeCourse.assignedLecturerId}
-                                            onClick={() => alert(`Lưu thành công cấu hình nhân sự cho khóa học: ${activeCourse.name}`)}
-                                            className="px-6 py-2.5 bg-[#0066cc] hover:bg-[#0052a3] text-white text-xs font-bold rounded-lg shadow-sm transition-colors duration-200 disabled:bg-gray-300 disabled:cursor-not-allowed"
+                                            onClick={handleSubmit}
+                                            className="px-8 py-3.5 bg-[#0066ff] hover:bg-[#0052cc] text-white text-xs font-bold rounded-xl shadow-md transition-all duration-200"
                                         >
                                             Xác nhận & Lưu thay đổi
                                         </button>
                                     </div>
                                 </>
                             ) : (
-                                <div className="bg-white p-12 text-center rounded-xl border border-[#d1e2f3] text-gray-400 text-sm">
-                                    Vui lòng chọn một chương trình đào tạo từ danh sách bên trái.
+                                <div className="bg-white p-16 text-center rounded-2xl border border-[#e1ebf5] text-gray-400 text-sm shadow-sm">
+                                    Vui lòng chọn một chương trình đào tạo ở danh sách bên trái.
                                 </div>
                             )}
                         </div>
-
                     </div>
                 </div>
             </div>

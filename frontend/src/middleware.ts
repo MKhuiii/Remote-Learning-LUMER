@@ -4,7 +4,6 @@ import type { NextRequest } from 'next/server'
 export function middleware(request: NextRequest) {
   const path = request.nextUrl.pathname
 
-  // Bỏ qua không debug trang unauthorized và trang login để đỡ rối log
   if (path === '/unauthorized' || path.startsWith('/login')) {
     return NextResponse.next()
   }
@@ -12,7 +11,6 @@ export function middleware(request: NextRequest) {
   const token = request.cookies.get('token')?.value
   const userRole = request.cookies.get('user_role')?.value
 
-  // 🔴 DÒNG DEBUG 1: Kiểm tra xem Middleware có đọc được Cookie không
   console.log(`\n============== MIDDLEWARE CHECK ==============`);
   console.log(`👉 Đang vào Path: ${path}`);
   console.log(`👉 Token lấy được: ${token ? "ĐÃ CÓ TOKEN (OK)" : "TRỐNG (NULL)"}`);
@@ -43,14 +41,19 @@ export function middleware(request: NextRequest) {
       return NextResponse.redirect(new URL('/unauthorized', request.url))
     }
 
-    if (path.startsWith('/training-management') && roleClean !== 'faculty' && roleClean !== 'instructor') {
-      console.log(`❌ Bị chặn vì: Vào khu vực Đào tạo nhưng Role thực tế là "${roleClean}"`);
-      return NextResponse.redirect(new URL('/unauthorized', request.url))
+    if (path.startsWith('/instructor-management')) {
+      if (roleClean !== 'manager' && roleClean !== 'instructor') {
+        console.log(`❌ Bị chặn vì: Vào khu vực Giảng viên nhưng Role thực tế là "${roleClean}"`);
+        return NextResponse.redirect(new URL('/unauthorized', request.url))
+      }
     }
 
-    if (path.startsWith('/instructor-management') && roleClean !== 'faculty' && roleClean !== 'instructor') {
-      console.log(`❌ Bị chặn vì: Vào khu vực Giảng viên nhưng Role thực tế là "${roleClean}"`);
-      return NextResponse.redirect(new URL('/unauthorized', request.url))
+    // 2. Kiểm tra khu vực Quản lý đào tạo
+    if (path.startsWith('/training-management')) {
+      if (roleClean !== 'faculty' && roleClean !== 'instructor' && roleClean !== 'manager') {
+        console.log(`❌ Bị chặn vì: Vào khu vực Đào tạo nhưng Role thực tế là "${roleClean}"`);
+        return NextResponse.redirect(new URL('/unauthorized', request.url))
+      }
     }
 
     if (path.startsWith('/dashboard-student') && roleClean !== 'user' && roleClean !== 'student') {
@@ -58,7 +61,6 @@ export function middleware(request: NextRequest) {
       return NextResponse.redirect(new URL('/unauthorized', request.url))
     }
 
-    // Nếu vượt qua hết tất cả các tầng check trên
     console.log(`✅ HỢP LỆ! Cho phép truy cập vào: ${path}`);
   }
 
