@@ -1,17 +1,17 @@
 export interface Lesson {
-  lesson_id: string;  
-  module_id: string;   
+  lesson_id: string;
+  module_id: string;
   title: string;
-  duration: string;   
-  video_url?: string | null; 
+  duration: string;
+  video_url?: string | null;
 }
 
 // 🟢 2. Cấu trúc chương học (Module) chứa danh sách bài học
 export interface Module {
-  module_id: string;  
-  course_id: string;  
+  module_id: string;
+  course_id: string;
   title: string;
-  lessons: Lesson[];   
+  lessons: Lesson[];
 }
 
 export interface Course {
@@ -25,8 +25,8 @@ export interface Course {
   image_url: string | null;
   created_at?: string;
   status_id: string;
-  
-  modules?: Module[];  
+
+  modules?: Module[];
 }
 
 export interface CurriculumCreatePayload {
