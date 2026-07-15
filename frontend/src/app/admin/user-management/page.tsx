@@ -349,7 +349,7 @@ export default function UserManagementPage() {
                     <td className="p-4">{renderRoleBadge(user.role_id)}</td>
                     <td className="p-4">
                       <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${user.status_id === "ACTIVE" ? "bg-green-100 text-green-700 border border-green-200" :
-                          user.status_id === "UNACTIVE" ? "bg-amber-100 text-amber-700 border border-amber-200" : "bg-red-100 text-red-700 border border-red-200"
+                        user.status_id === "UNACTIVE" ? "bg-amber-100 text-amber-700 border border-amber-200" : "bg-red-100 text-red-700 border border-red-200"
                         }`}>
                         {user.status_id === "ACTIVE" ? "Hoạt động" : user.status_id === "UNACTIVE" ? "Không hoạt động" : "Bị khóa"}
                       </span>
@@ -472,7 +472,7 @@ export default function UserManagementPage() {
                   <div>
                     <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Trạng thái hiện tại</p>
                     <p className={`font-bold mt-0.5 ${(userDetail?.status_id || selectedUser.status_id) === "ACTIVE" ? "text-green-600" :
-                        (userDetail?.status_id || selectedUser.status_id) === "UNACTIVE" ? "text-amber-500" : "text-red-500"
+                      (userDetail?.status_id || selectedUser.status_id) === "UNACTIVE" ? "text-amber-500" : "text-red-500"
                       }`}>
                       {(userDetail?.status_id || selectedUser.status_id) === "ACTIVE" ? "🟢 Đang hoạt động" :
                         (userDetail?.status_id || selectedUser.status_id) === "UNACTIVE" ? "🟡 Không hoạt động" : "🔴 Đã bị khóa"}

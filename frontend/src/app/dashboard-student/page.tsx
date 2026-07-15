@@ -58,8 +58,8 @@ export default function DashboardPage() {
             <button
               onClick={() => setActiveTab("learning")}
               className={`pb-3 font-medium transition ${activeTab === "learning"
-                  ? "border-b-2 border-[#0056D2] text-[#0056D2]"
-                  : "text-slate-500 hover:text-[#0056D2]"
+                ? "border-b-2 border-[#0056D2] text-[#0056D2]"
+                : "text-slate-500 hover:text-[#0056D2]"
                 }`}
             >
               Đang học
@@ -68,8 +68,8 @@ export default function DashboardPage() {
             <button
               onClick={() => setActiveTab("completed")}
               className={`pb-3 font-medium transition ${activeTab === "completed"
-                  ? "border-b-2 border-[#0056D2] text-[#0056D2]"
-                  : "text-slate-500 hover:text-[#0056D2]"
+                ? "border-b-2 border-[#0056D2] text-[#0056D2]"
+                : "text-slate-500 hover:text-[#0056D2]"
                 }`}
             >
               Hoàn thành
@@ -78,8 +78,8 @@ export default function DashboardPage() {
             <button
               onClick={() => setActiveTab("certificate")}
               className={`pb-3 font-medium transition ${activeTab === "certificate"
-                  ? "border-b-2 border-[#0056D2] text-[#0056D2]"
-                  : "text-slate-500 hover:text-[#0056D2]"
+                ? "border-b-2 border-[#0056D2] text-[#0056D2]"
+                : "text-slate-500 hover:text-[#0056D2]"
                 }`}
             >
               Chứng chỉ
@@ -88,8 +88,8 @@ export default function DashboardPage() {
             <button
               onClick={() => setActiveTab("profile")}
               className={`pb-3 font-medium transition ${activeTab === "profile"
-                  ? "border-b-2 border-[#0056D2] text-[#0056D2]"
-                  : "text-slate-500 hover:text-[#0056D2]"
+                ? "border-b-2 border-[#0056D2] text-[#0056D2]"
+                : "text-slate-500 hover:text-[#0056D2]"
                 }`}
             >
               Hồ sơ
@@ -193,8 +193,6 @@ export default function DashboardPage() {
               <div className="space-y-3 text-slate-600">
                 <p>📚 Đang học: 3 khóa</p>
                 <p>✅ Hoàn thành: 5 khóa</p>
-                <p>🏆 Chứng chỉ: 2</p>
-                <p>⭐ Điểm TB: 4.9</p>
               </div>
             </div>
 

@@ -17,7 +17,7 @@ export default function TeacherDashboard() {
         {
             title: "Quản lý môn học",
             desc: "Tạo môn học, thiết lập các module (chương) và bài học chi tiết.",
-            route: "",
+            route: "/instructor-management/course-content",
             icon: "📁",
         },
         {
