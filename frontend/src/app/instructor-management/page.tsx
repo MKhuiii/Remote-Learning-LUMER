@@ -36,6 +36,31 @@ export default function TeacherDashboard() {
   return (
     <div className="min-h-screen bg-slate-100">
       <Navbar />
+        {
+            title: "Đề cương môn học",
+            desc: "Biên soạn mục tiêu, nội dung chi tiết và chuẩn đầu ra cho từng môn.",
+            route: "/instructor-management/course-outline",
+            icon: "📘",
+        },
+        {
+            title: "Quản lý môn học",
+            desc: "Tạo môn học, thiết lập các module (chương) và bài học chi tiết.",
+            route: "/instructor-management/course-content",
+            icon: "📁",
+        },
+        {
+            title: "Ngân hàng câu hỏi",
+            desc: "Kho lưu trữ câu hỏi dùng chung cho toàn bộ môn học để tạo đề thi.",
+            route: "/instructor-management/questions-bank",
+            icon: "🗂️",
+        },
+        {
+            title: "Quản lý bài thi",
+            desc: "Tạo và cấu hình các bài kiểm tra, bài thi cuối kỳ cho học viên.",
+            route: "/instructor-management/exam-manage",
+            icon: "📝",
+        },
+    ];
 
       {/* Header */}
       <section className="bg-gradient-to-r from-[#66CCFF] to-[#0066FF] text-white">

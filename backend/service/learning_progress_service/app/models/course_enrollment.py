@@ -1,8 +1,11 @@
 import uuid
 from uuid import UUID
 from datetime import datetime
-from typing import Optional
-from sqlmodel import Field, SQLModel
+from typing import Optional, TYPE_CHECKING
+from sqlmodel import Field, SQLModel, Relationship
+
+if TYPE_CHECKING:
+    from app.models.certificate import Certificate
 
 class CourseEnrollment(SQLModel, table=True):
     __tablename__ = "course_enrollment"
@@ -15,3 +18,8 @@ class CourseEnrollment(SQLModel, table=True):
     current_overall_progress: float = Field(default=0.0)    # Tiến độ tổng quan của khóa học (0% - 100%)
     is_completed: bool = Field(default=False)               # Trạng thái hoàn thành toàn bộ khóa học để cấp chứng chỉ
     completed_at: Optional[datetime] = Field(default=None)  # Thời điểm khóa học chính thức hoàn thành
+
+    certificate: Optional["Certificate"] = Relationship(
+        back_populates="enrollment", 
+        sa_relationship_kwargs={"uselist": False}
+    )

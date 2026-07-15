@@ -13,7 +13,8 @@ from app.schemas.course_enrollment import (
     CourseInProgress, 
     CourseEnrollmentUpdate, 
     CourseEnrollmentResponse,
-    CourseEnrollmentCreate
+    CourseEnrollmentCreate,
+    GeneralUserEnrollmentInfo
 )
 
 router = APIRouter(prefix="/course_enrollment", tags=["course_enrollment"])
@@ -199,3 +200,20 @@ def unenroll_course(
     crud_course_enrollment.delete(db, enroll.enrollment_id)
     
     return None
+
+@router.get("/statistics/me", response_model=GeneralUserEnrollmentInfo)
+def get_user_statistics(
+    db: SessionDep,
+    current_user: dict = Depends(get_current_user_role)
+):
+    """
+    API lấy thông số số lượng (Đang học, Hoàn thành, Chứng chỉ) của học viên hiện tại
+    """
+    # Trích xuất và ép kiểu user_id về UUID giống hệt API mẫu của bạn
+    user_id = UUID(current_user["user_id"])
+    
+    # Gọi tầng CRUD xử lý logic tính toán dữ liệu
+    stats = crud_course_enrollment.get_general_statistics(db, user_id=user_id)
+    
+    return stats
+    

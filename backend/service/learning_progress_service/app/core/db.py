@@ -10,4 +10,5 @@ def init_db() -> None:
     import app.models.lesson_progress
     import app.models.user_lesson_note
     import app.models.video_progress
+    import app.models.certificate
     SQLModel.metadata.create_all(engine)

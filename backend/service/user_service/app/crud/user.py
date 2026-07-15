@@ -42,6 +42,11 @@ class CRUDUser(CRUDBase[User, UserCreate, UserUpdate, UUID]):
         statement = select(self.model).where(self.model.status_id == status_id, self.model.role_id == role_id).offset(skip).limit(limit)
         return db.exec(statement).all()
 
+    def get_name_by_id(self, db: Session, user_id: UUID) -> str:
+        statement = select(User.username).where(
+            User.user_id == user_id
+        )    
+        return db.exec(statement).first()
     # Lấy thông tin user dựa theo email
     def get_by_email(self, db: Session, email: EmailStr) -> User | None:
         statement = select(self.model).where(self.model.email == email)
