@@ -47,5 +47,9 @@ class CRUDCourse(CRUDBase[Course, CourseCreate, CourseUpdate, UUID]):
         results = db.exec(statement).all()
         # Trả về list dạng dict [{"lesson_id": ..., "is_optional": ...}]
         return [{"lesson_id": r[0], "is_optional": r[1]} for r in results]
-    
+    def get_course_name(self, db: Session, course_id: UUID) -> str:
+        statement = select(Course.title).where(
+            Course.course_id == course_id
+        )
+        return db.exec(statement).first()
 crud_course = CRUDCourse(Course)

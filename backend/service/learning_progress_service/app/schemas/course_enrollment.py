@@ -26,3 +26,8 @@ class CourseInProgress(BaseModel):
     course_title: str
     current_overall_progress: float
     is_completed: bool
+
+class GeneralUserEnrollmentInfo(BaseModel):
+    inprogress_courses: int
+    completed_courses: int
+    certificate: int

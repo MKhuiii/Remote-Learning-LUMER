@@ -15,10 +15,10 @@ class ProfileCreate(BaseModel):
     avatar_url: str | None = None
 
 class ProfileInfo(BaseModel):
-    firstname: str
-    lastname: str
-    bio: str
-    avatar_url: str
+    firstname: str | None = None
+    lastname: str | None = None
+    bio: str | None = None
+    avatar_url: str | None = None
 
 class ProfileAvtPath(BaseModel):
     avatar_url: str

@@ -180,7 +180,7 @@ export async function updateUserInfo(userId: string, editUserData: any): Promise
     const res = await fetch(`${userBackendUrl}/update-user/${userId}`, {
       method: "PUT",
       headers: headers,
-      body: JSON.stringify(formattedPayload), // Gửi object phẳng sạch sẽ
+      body: JSON.stringify(formattedPayload),
     });
 
     if (!res.ok) {
@@ -368,17 +368,20 @@ export async function fetchUserProfile(): Promise<ProfileInfo | null> {
 }
 
 // 🌟 Hàm cập nhật thông tin tài khoản (/update-user)
-export async function updateUserData(data: UserInfoUpdate): Promise<boolean> {
+export async function updateUserData(userId: string, data: UserInfoUpdate): Promise<boolean> {
   const backendUrl = process.env.NEXT_PUBLIC_USER_BACKEND_URL;
   if (!backendUrl) throw new Error("Thiếu NEXT_PUBLIC_USER_BACKEND_URL");
   const headers = await getAuthHeaders();
   if (!headers) return false;
 
-  const response = await fetch(`${backendUrl}/update-user`, {
-    method: "PUT", // hoặc PATCH tùy thuộc vào thiết kế Backend của bạn
+  // Thêm userId vào sau đường dẫn giống với updateUserInfo
+  const response = await fetch(`${backendUrl}/update-user/${userId}`, {
+    method: "PUT", // Hoặc PATCH tùy thuộc vào thiết kế Backend của bạn
     headers,
     body: JSON.stringify(data),
   });
+
+
   return response.ok;
 }
 

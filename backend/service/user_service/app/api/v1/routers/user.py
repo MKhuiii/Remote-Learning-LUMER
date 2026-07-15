@@ -177,27 +177,32 @@ def update_user_status(
     
     return user_data
 
-@router.put("/update-user", response_model=UserDetailInfo)
+@router.put("/update-user/{user_id}", response_model=UserDetailInfo)
 def update_user(
     session: SessionDep,
+    user_id: UUID,  # ĐÃ THÊM: Tiếp nhận tham số user_id kiểu UUID từ URL path
     user_update: UserInfoUpdate,
     current_user: dict = Depends(get_current_user_role)
 ):
-    user_id = current_user["user_id"]
-    db_user = crud_user.get_by_id(session, user_id)
+    # 1. Kiểm tra quyền hạn (Chính chủ hoặc Admin mới được phép sửa)
     is_owner = str(current_user["user_id"]) == str(user_id)
     is_admin = str(current_user["role_name"]) == "Admin"
     
     if not is_owner and not is_admin:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Không có quyền chỉnh sửa dữ liệu"
+            detail="Không có quyền chỉnh sửa dữ liệu người dùng này"
         )
+        
+    # 2. Truy vấn user cần cập nhật từ Database bằng user_id mục tiêu
+    db_user = crud_user.get_by_id(session, user_id)
     if db_user is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Người dùng không tồn tại"
         )
+        
+    # 3. Tiến hành cập nhật thông tin
     updated_user = crud_user.update(session, db_user, user_update)
     role_name = crud_role.get_name_by_id(session, updated_user.role_id) or "Unknown"
 
@@ -205,9 +210,6 @@ def update_user(
     user_data["role_name"] = role_name
     
     return user_data
-
-    
-
 
 @router.get("/get-instructor-list", response_model=List[UserGeneralInfo])
 def get_instructor_list(
@@ -238,3 +240,10 @@ def get_instructor_list(
         user_info_list.append(user_data)
 
     return user_info_list
+
+@router.get("/get-name/{user_id}")
+def get_name_by_id(
+    db: SessionDep,
+    user_id: UUID
+):
+    return crud_user.get_name_by_id(db, user_id)

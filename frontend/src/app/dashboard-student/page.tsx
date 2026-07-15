@@ -3,7 +3,9 @@
 import { useState, useEffect } from "react";
 import Navbar from "@/components/Navbar";
 import { fetchCurrentUser, fetchUserProfile, updateUserData, updateUserProfile } from "@/actions/getUser";
+import { fetchUserStatistics, fetchInprogressCourses, fetchCompletedCourses } from "@/actions/getEnrollment";
 import { UserDataInfo, ProfileInfo } from "@/types/user";
+import { GeneralUserEnrollmentInfo, CourseInProgress } from "@/types/enrollment";
 
 const ROLE_TRANSLATIONS: Record<string, string> = {
   "Admin": "Quản trị viên hệ thống",
@@ -13,27 +15,10 @@ const ROLE_TRANSLATIONS: Record<string, string> = {
   "Manager": "Quản lý đào tạo"
 };
 
-const DASHBOARD_MOCK_DATA = {
-  statistics: [
-    { title: "3", text: "Khóa học đang học" },
-    { title: "5", text: "Khóa học hoàn thành" },
-    { title: "2", text: "Chứng chỉ" },
-    { title: "4.9", text: "Điểm trung bình" },
-  ],
-  learningCourses: [
-    { title: "Lập trình Web với Next.js", progress: 70 },
-    { title: "FastAPI Backend", progress: 35 },
-    { title: "ReactJS nâng cao", progress: 55 },
-  ],
-  completedCourses: [
-    { title: "Java Core" }, { title: "MySQL" }, { title: "HTML CSS" }, { title: "Spring Boot" },
-  ],
+const COMPLEMENTARY_MOCK_DATA = {
   certificates: [
     { title: "Java Core Certificate", date: "20/05/2026" },
     { title: "ReactJS Certificate", date: "10/06/2026" },
-  ],
-  recentActivities: [
-    "Hoàn thành bài học React Hooks", "Nhận chứng chỉ Java Core", "Hoàn thành 70% khóa Next.js",
   ]
 };
 
@@ -44,7 +29,15 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
-  // 🌟 State quản lý chế độ chỉnh sửa & dữ liệu Form chung
+  const [statistics, setStatistics] = useState<GeneralUserEnrollmentInfo>({
+    inprogress_courses: 0,
+    completed_courses: 0,
+    certificate: 0
+  });
+  const [learningCourses, setLearningCourses] = useState<CourseInProgress[]>([]);
+  const [completedCourses, setCompletedCourses] = useState<CourseInProgress[]>([]);
+
+  // State quản lý chế độ chỉnh sửa & dữ liệu Form chung
   const [isEditing, setIsEditing] = useState<boolean>(false);
   const [submitting, setSubmitting] = useState<boolean>(false);
   const [submitSuccess, setSubmitSuccess] = useState<string | null>(null);
@@ -57,17 +50,32 @@ export default function DashboardPage() {
     avatar_url: ""
   });
 
-  // Hàm load lại toàn bộ thông tin mới từ Backend
+  // Tải toàn bộ dữ liệu (Bao gồm User profile, Thống kê, Khóa học đang học & Khóa học hoàn thành)
   async function loadAllData() {
     try {
       setLoading(true);
       setError(null);
-      const [userData, profileData] = await Promise.all([
+
+      // Chạy song song tất cả các request để tối ưu tốc độ phản hồi
+      const [
+        userData,
+        profileData,
+        statsData,
+        inprogressData,
+        completedData
+      ] = await Promise.all([
         fetchCurrentUser(),
-        fetchUserProfile()
+        fetchUserProfile(),
+        fetchUserStatistics(),
+        fetchInprogressCourses(),
+        fetchCompletedCourses()
       ]);
+
       setUser(userData);
       setProfile(profileData);
+      setStatistics(statsData);
+      setLearningCourses(inprogressData);
+      setCompletedCourses(completedData);
 
       // Đổ dữ liệu hiện tại vào Form
       if (userData && profileData) {
@@ -101,20 +109,25 @@ export default function DashboardPage() {
     }));
   };
 
-  // 🌟 Hàm xử lý SUBMIT form duy nhất cập nhật cả 2 API cùng lúc
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!user?.user_id) {
+      setError("Không tìm thấy ID người dùng để cập nhật.");
+      return;
+    }
+
     setSubmitting(true);
     setError(null);
     setSubmitSuccess(null);
 
     try {
-      // 1. Tách cấu trúc payload gửi đi theo đúng định dạng các lớp Backend
+      // 1. Chuẩn bị payload cập nhật User thông qua schema UserInfoUpdate
       const userPayload = {
         username: formData.username,
         birthdate: formData.birthdate || undefined,
       };
 
+      // 2. Chuẩn bị payload cập nhật Profile thông qua ProfileUpdate
       const profilePayload = {
         firstname: formData.firstname,
         lastname: formData.lastname,
@@ -122,16 +135,17 @@ export default function DashboardPage() {
         avatar_url: formData.avatar_url,
       };
 
-      // 2. Gửi song song cả 2 request PUT lên Backend
+      // 3. Gọi các Server Actions song song
+      // Truyền user.user_id làm tham số đầu tiên của updateUserData giống như thiết kế mới của bạn
       const [userOk, profileOk] = await Promise.all([
-        updateUserData(userPayload),
+        updateUserData(user.user_id, userPayload),
         updateUserProfile(profilePayload)
       ]);
 
       if (userOk && profileOk) {
         setSubmitSuccess("Cập nhật thông tin hồ sơ thành công!");
-        setIsEditing(false); // Đóng chế độ edit
-        await loadAllData(); // Refresh lại dữ liệu hiển thị mới nhất
+        setIsEditing(false);
+        await loadAllData(); // Tải lại toàn bộ dữ liệu mới nhất
       } else {
         setError("Cập nhật thất bại. Vui lòng kiểm tra lại thông tin.");
       }
@@ -163,7 +177,7 @@ export default function DashboardPage() {
 
       {/* Hero Banner */}
       <section className="bg-blue-500 border-b border-slate-200">
-        <div className="max-w-7xl mx-auto px-6 py-12">
+        <div className="max-w-5xl mx-auto px-6 py-12">
           <span className="bg-blue-100 text-[#0056D2] px-4 py-2 rounded-full text-sm font-medium">
             Hệ thống đào tạo trực tuyến
           </span>
@@ -200,17 +214,17 @@ export default function DashboardPage() {
         </div>
       </section>
 
-      {/* Statistics */}
-      <section className="max-w-7xl mx-auto px-6 -mt-6">
-        <div className="grid md:grid-cols-4 gap-4">
-          {DASHBOARD_MOCK_DATA.statistics.map((stat, index) => (
-            <StatCard key={index} title={stat.title} text={stat.text} />
-          ))}
+      {/* Statistics - Hiển thị số liệu động từ API */}
+      <section className="max-w-5xl mx-auto px-6 -mt-6">
+        <div className="grid md:grid-cols-3 gap-4">
+          <StatCard title={statistics.inprogress_courses.toString()} text="Khóa học đang học" />
+          <StatCard title={statistics.completed_courses.toString()} text="Khóa học hoàn thành" />
+          <StatCard title={statistics.certificate.toString()} text="Chứng chỉ" />
         </div>
       </section>
 
       {/* Tabs */}
-      <section className="max-w-7xl mx-auto px-6 mt-10">
+      <section className="max-w-5xl mx-auto px-6 mt-10">
         <div className="border-b border-slate-200">
           <div className="flex gap-8 overflow-x-auto">
             {["learning", "completed", "certificate", "profile"].map((tab) => {
@@ -234,262 +248,255 @@ export default function DashboardPage() {
         </div>
       </section>
 
-      {/* Content */}
-      <section className="max-w-7xl mx-auto px-6 py-8">
-        <div className="grid lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2">
+      {/* Content Area - Đã bỏ Sidebar và chuyển thành 1 cột trung tâm */}
+      <section className="max-w-5xl mx-auto px-6 py-8">
+        <div className="w-full">
 
-            {/* TAB: ĐANG HỌC */}
-            {activeTab === "learning" && (
-              <div className="bg-white rounded-2xl border border-slate-200 p-6">
-                <h2 className="text-2xl font-bold text-slate-900 mb-6">Khóa học đang học</h2>
-                <div className="space-y-6">
-                  {DASHBOARD_MOCK_DATA.learningCourses.map((course, index) => (
-                    <CourseProgressCard key={index} title={course.title} progress={course.progress} />
-                  ))}
-                </div>
+          {/* TAB: ĐANG HỌC */}
+          {activeTab === "learning" && (
+            <div className="bg-white rounded-2xl border border-slate-200 p-6">
+              <h2 className="text-2xl font-bold text-slate-900 mb-6">Khóa học đang học</h2>
+              <div className="space-y-6">
+                {learningCourses.length > 0 ? (
+                  learningCourses.map((course, index) => (
+                    <CourseProgressCard
+                      key={index}
+                      title={course.course_title}
+                      progress={course.current_overall_progress}
+                    />
+                  ))
+                ) : (
+                  <p className="text-slate-500 py-12 text-center">Bạn chưa tham gia khóa học nào.</p>
+                )}
               </div>
-            )}
+            </div>
+          )}
 
-            {/* TAB: HOÀN THÀNH */}
-            {activeTab === "completed" && (
-              <div className="bg-white rounded-2xl border border-slate-200 p-6">
-                <h2 className="text-2xl font-bold text-slate-900 mb-6">Khóa học hoàn thành</h2>
-                <div className="space-y-4">
-                  {DASHBOARD_MOCK_DATA.completedCourses.map((course, index) => (
-                    <CompletedCourse key={index} title={course.title} />
-                  ))}
-                </div>
+          {/* TAB: HOÀN THÀNH */}
+          {activeTab === "completed" && (
+            <div className="bg-white rounded-2xl border border-slate-200 p-6">
+              <h2 className="text-2xl font-bold text-slate-900 mb-6">Khóa học hoàn thành</h2>
+              <div className="space-y-4">
+                {completedCourses.length > 0 ? (
+                  completedCourses.map((course, index) => (
+                    <CompletedCourse
+                      key={index}
+                      title={course.course_title}
+                    />
+                  ))
+                ) : (
+                  <p className="text-slate-500 py-12 text-center">Bạn chưa hoàn thành khóa học nào.</p>
+                )}
               </div>
-            )}
+            </div>
+          )}
 
-            {/* TAB: CHỨNG CHỈ */}
-            {activeTab === "certificate" && (
-              <div className="bg-white rounded-2xl border border-slate-200 p-6">
-                <h2 className="text-2xl font-bold text-slate-900 mb-6">Chứng chỉ</h2>
-                <div className="space-y-4">
-                  {DASHBOARD_MOCK_DATA.certificates.map((cert, index) => (
+          {/* TAB: CHỨNG CHỈ */}
+          {activeTab === "certificate" && (
+            <div className="bg-white rounded-2xl border border-slate-200 p-6">
+              <h2 className="text-2xl font-bold text-slate-900 mb-6">Chứng chỉ đã đạt được</h2>
+              {COMPLEMENTARY_MOCK_DATA.certificates.length > 0 ? (
+                <div className="grid md:grid-cols-2 gap-4">
+                  {COMPLEMENTARY_MOCK_DATA.certificates.map((cert, index) => (
                     <CertificateCard key={index} title={cert.title} date={cert.date} />
                   ))}
                 </div>
+              ) : (
+                <p className="text-slate-500 py-12 text-center">Bạn chưa nhận được chứng chỉ nào.</p>
+              )}
+            </div>
+          )}
+
+          {/* TAB: HỒ SƠ */}
+          {activeTab === "profile" && (
+            <div className="bg-white rounded-2xl border border-slate-200 p-6">
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-2xl font-bold text-slate-900">Hồ sơ cá nhân</h2>
+                {!isEditing && user && (
+                  <button
+                    onClick={() => setIsEditing(true)}
+                    className="bg-[#0056D2] hover:bg-[#0046AE] text-white px-4 py-2 rounded-lg text-sm font-semibold transition"
+                  >
+                    Chỉnh sửa hồ sơ
+                  </button>
+                )}
               </div>
-            )}
 
-            {/* TAB: HỒ SƠ */}
-            {activeTab === "profile" && (
-              <div className="bg-white rounded-2xl border border-slate-200 p-6">
-                <div className="flex justify-between items-center mb-6">
-                  <h2 className="text-2xl font-bold text-slate-900">Hồ sơ cá nhân</h2>
-                  {!isEditing && user && (
-                    <button
-                      onClick={() => setIsEditing(true)}
-                      className="bg-[#0056D2] hover:bg-[#0046AE] text-white px-4 py-2 rounded-lg text-sm font-semibold transition"
-                    >
-                      Chỉnh sửa hồ sơ
-                    </button>
-                  )}
+              {submitSuccess && (
+                <div className="p-4 mb-4 bg-green-50 border border-green-200 text-green-700 rounded-xl text-sm font-semibold">
+                  {submitSuccess}
                 </div>
+              )}
 
-                {submitSuccess && (
-                  <div className="p-4 mb-4 bg-green-50 border border-green-200 text-green-700 rounded-xl text-sm font-semibold">
-                    {submitSuccess}
-                  </div>
-                )}
+              {error && (
+                <div className="p-4 mb-4 bg-red-50 border border-red-200 text-red-600 rounded-xl text-sm">
+                  {error}
+                </div>
+              )}
 
-                {error && (
-                  <div className="p-4 mb-4 bg-red-50 border border-red-200 text-red-600 rounded-xl text-sm">
-                    {error}
-                  </div>
-                )}
-
-                {loading && !isEditing ? (
-                  <div className="space-y-4 animate-pulse">
-                    <div className="h-5 bg-slate-200 rounded w-1/3"></div>
-                    <div className="h-5 bg-slate-200 rounded w-1/2"></div>
-                    <div className="h-5 bg-slate-200 rounded w-1/4"></div>
-                    <div className="h-5 bg-slate-200 rounded w-1/3"></div>
-                  </div>
-                ) : isEditing ? (
-                  /* 🌟 HIỂN THỊ FORM CHỈNH SỬA CHUNG */
-                  <form onSubmit={handleFormSubmit} className="space-y-5">
-
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-1">Họ</label>
-                        <input
-                          type="text"
-                          name="lastname"
-                          value={formData.lastname}
-                          onChange={handleInputChange}
-                          className="w-full border border-slate-200 rounded-lg p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                          placeholder="Nguyễn"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-1">Tên</label>
-                        <input
-                          type="text"
-                          name="firstname"
-                          value={formData.firstname}
-                          onChange={handleInputChange}
-                          className="w-full border border-slate-200 rounded-lg p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                          placeholder="Văn A"
-                        />
-                      </div>
-                    </div>
-
+              {loading && !isEditing ? (
+                <div className="space-y-4 animate-pulse">
+                  <div className="h-5 bg-slate-200 rounded w-1/3"></div>
+                  <div className="h-5 bg-slate-200 rounded w-1/2"></div>
+                  <div className="h-5 bg-slate-200 rounded w-1/4"></div>
+                  <div className="h-5 bg-slate-200 rounded w-1/3"></div>
+                </div>
+              ) : isEditing ? (
+                <form onSubmit={handleFormSubmit} className="space-y-5">
+                  <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-1">Tên tài khoản (Username)</label>
+                      <label className="block text-sm font-medium text-slate-700 mb-1">Họ</label>
                       <input
                         type="text"
-                        name="username"
-                        value={formData.username}
+                        name="lastname"
+                        value={formData.lastname}
                         onChange={handleInputChange}
-                        required
                         className="w-full border border-slate-200 rounded-lg p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        placeholder="Nguyễn"
                       />
                     </div>
-
                     <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-1">Ngày sinh</label>
+                      <label className="block text-sm font-medium text-slate-700 mb-1">Tên</label>
                       <input
-                        type="date"
-                        name="birthdate"
-                        value={formData.birthdate}
+                        type="text"
+                        name="firstname"
+                        value={formData.firstname}
                         onChange={handleInputChange}
                         className="w-full border border-slate-200 rounded-lg p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        placeholder="Văn A"
                       />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-1">Ảnh đại diện (URL)</label>
-                      <input
-                        type="url"
-                        name="avatar_url"
-                        value={formData.avatar_url}
-                        onChange={handleInputChange}
-                        placeholder="https://..."
-                        className="w-full border border-slate-200 rounded-lg p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-1">Tiểu sử / Giới thiệu bản thân</label>
-                      <textarea
-                        name="bio"
-                        rows={3}
-                        value={formData.bio}
-                        onChange={handleInputChange}
-                        placeholder="Một vài dòng viết về bản thân bạn..."
-                        className="w-full border border-slate-200 rounded-lg p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      />
-                    </div>
-
-                    <div className="flex gap-3 justify-end pt-2 border-t">
-                      <button
-                        type="button"
-                        disabled={submitting}
-                        onClick={() => {
-                          setIsEditing(false);
-                          setError(null);
-                        }}
-                        className="px-4 py-2 border border-slate-300 text-slate-700 rounded-lg text-sm font-semibold hover:bg-slate-50 transition"
-                      >
-                        Hủy
-                      </button>
-                      <button
-                        type="submit"
-                        disabled={submitting}
-                        className="px-5 py-2 bg-[#0056D2] hover:bg-[#0046AE] text-white rounded-lg text-sm font-semibold transition disabled:opacity-50"
-                      >
-                        {submitting ? "Đang lưu..." : "Lưu thay đổi"}
-                      </button>
-                    </div>
-                  </form>
-                ) : user ? (
-                  /* HIỂN THỊ THÔNG TIN CHI TIẾT TĨNH */
-                  <div className="space-y-4 text-slate-700">
-
-                    <div className="flex items-center gap-4 border-b pb-4">
-                      <strong className="text-slate-500">Ảnh đại diện:</strong>
-                      <img src={userAvatar} alt="avatar mini" className="w-12 h-12 rounded-full border object-cover" />
-                    </div>
-
-                    <p className="flex justify-between border-b pb-2">
-                      <strong className="text-slate-500">Họ và tên:</strong>
-                      <span className="font-semibold text-slate-900">{fullName || "Chưa cập nhật"}</span>
-                    </p>
-
-                    <p className="flex justify-between border-b pb-2">
-                      <strong className="text-slate-500">Tên tài khoản:</strong>
-                      <span>{user.username}</span>
-                    </p>
-
-                    <p className="flex justify-between border-b pb-2">
-                      <strong className="text-slate-500">Email:</strong>
-                      <span>{user.email}</span>
-                    </p>
-
-                    <p className="flex justify-between border-b pb-2">
-                      <strong className="text-slate-500">Ngày sinh:</strong>
-                      <span>{formatDate(user.birthdate)}</span>
-                    </p>
-
-                    <p className="flex justify-between border-b pb-2">
-                      <strong className="text-slate-500">Vai trò:</strong>
-                      <span className="bg-blue-50 text-[#0056D2] px-2.5 py-0.5 rounded-full text-xs font-semibold">
-                        {ROLE_TRANSLATIONS[user.role_name] || user.role_name}
-                      </span>
-                    </p>
-
-                    <p className="flex justify-between border-b pb-2">
-                      <strong className="text-slate-500">Trạng thái:</strong>
-                      <span className="text-green-600 font-semibold text-sm">{user.display_status}</span>
-                    </p>
-
-                    <p className="flex justify-between border-b pb-2">
-                      <strong className="text-slate-500">Ngày tham gia:</strong>
-                      <span>{formatDate(user.created_at)}</span>
-                    </p>
-
-                    <div className="pt-2">
-                      <strong className="text-slate-500 block mb-1">Tiểu sử / Giới thiệu:</strong>
-                      <div className="bg-slate-50 border rounded-xl p-3 text-sm text-slate-600 italic">
-                        {profile?.bio || "Chưa có thông tin giới thiệu bản thân."}
-                      </div>
                     </div>
                   </div>
-                ) : null}
-              </div>
-            )}
-          </div>
 
-          {/* Sidebar */}
-          <div className="space-y-6">
-            <div className="bg-white rounded-2xl border border-slate-200 p-6">
-              <h2 className="text-xl font-bold text-slate-900 mb-4">Thông tin học viên</h2>
-              <div className="space-y-3 text-slate-600">
-                <p>📚 Đang học: {DASHBOARD_MOCK_DATA.learningCourses.length} khóa</p>
-                <p>✅ Hoàn thành: {DASHBOARD_MOCK_DATA.completedCourses.length} khóa</p>
-              </div>
-            </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Tên tài khoản (Username)</label>
+                    <input
+                      type="text"
+                      name="username"
+                      value={formData.username}
+                      onChange={handleInputChange}
+                      required
+                      className="w-full border border-slate-200 rounded-lg p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
 
-            <div className="bg-white rounded-2xl border border-slate-200 p-6">
-              <h2 className="text-xl font-bold text-slate-900 mb-4">Hoạt động gần đây</h2>
-              <ul className="space-y-3 text-slate-600 list-disc pl-4">
-                {DASHBOARD_MOCK_DATA.recentActivities.map((activity, index) => (
-                  <li key={index}>{activity}</li>
-                ))}
-              </ul>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Ngày sinh</label>
+                    <input
+                      type="date"
+                      name="birthdate"
+                      value={formData.birthdate}
+                      onChange={handleInputChange}
+                      className="w-full border border-slate-200 rounded-lg p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Ảnh đại diện (URL)</label>
+                    <input
+                      type="url"
+                      name="avatar_url"
+                      value={formData.avatar_url}
+                      onChange={handleInputChange}
+                      placeholder="https://..."
+                      className="w-full border border-slate-200 rounded-lg p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Tiểu sử / Giới thiệu bản thân</label>
+                    <textarea
+                      name="bio"
+                      rows={3}
+                      value={formData.bio}
+                      onChange={handleInputChange}
+                      placeholder="Một vài dòng viết về bản thân bạn..."
+                      className="w-full border border-slate-200 rounded-lg p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+
+                  <div className="flex gap-3 justify-end pt-2 border-t">
+                    <button
+                      type="button"
+                      disabled={submitting}
+                      onClick={() => {
+                        setIsEditing(false);
+                        setError(null);
+                      }}
+                      className="px-4 py-2 border border-slate-300 text-slate-700 rounded-lg text-sm font-semibold hover:bg-slate-50 transition"
+                    >
+                      Hủy
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={submitting}
+                      className="px-5 py-2 bg-[#0056D2] hover:bg-[#0046AE] text-white rounded-lg text-sm font-semibold transition disabled:opacity-50"
+                    >
+                      {submitting ? "Đang lưu..." : "Lưu thay đổi"}
+                    </button>
+                  </div>
+                </form>
+              ) : user ? (
+                <div className="space-y-4 text-slate-700">
+                  <div className="flex items-center gap-4 border-b pb-4">
+                    <strong className="text-slate-500 w-32 shrink-0">Ảnh đại diện:</strong>
+                    <img src={userAvatar} alt="avatar mini" className="w-12 h-12 rounded-full border object-cover" />
+                  </div>
+
+                  <div className="flex justify-between border-b pb-2">
+                    <strong className="text-slate-500 w-32 shrink-0">Họ và tên:</strong>
+                    <span className="font-semibold text-slate-900">{fullName || "Chưa cập nhật"}</span>
+                  </div>
+
+                  <div className="flex justify-between border-b pb-2">
+                    <strong className="text-slate-500 w-32 shrink-0">Tên tài khoản:</strong>
+                    <span className="text-slate-900">{user.username}</span>
+                  </div>
+
+                  <div className="flex justify-between border-b pb-2">
+                    <strong className="text-slate-500 w-32 shrink-0">Email:</strong>
+                    <span className="text-slate-900">{user.email}</span>
+                  </div>
+
+                  <div className="flex justify-between border-b pb-2">
+                    <strong className="text-slate-500 w-32 shrink-0">Ngày sinh:</strong>
+                    <span className="text-slate-900">{formatDate(user.birthdate)}</span>
+                  </div>
+
+                  <div className="flex justify-between border-b pb-2">
+                    <strong className="text-slate-500 w-32 shrink-0">Vai trò:</strong>
+                    <span className="bg-blue-50 text-[#0056D2] px-2.5 py-0.5 rounded-full text-xs font-semibold self-start">
+                      {ROLE_TRANSLATIONS[user.role_name] || user.role_name}
+                    </span>
+                  </div>
+
+                  <div className="flex justify-between border-b pb-2">
+                    <strong className="text-slate-500 w-32 shrink-0">Trạng thái:</strong>
+                    <span className="text-green-600 font-semibold text-sm">{user.display_status}</span>
+                  </div>
+
+                  <div className="flex justify-between border-b pb-2">
+                    <strong className="text-slate-500 w-32 shrink-0">Ngày tham gia:</strong>
+                    <span className="text-slate-900">{formatDate(user.created_at)}</span>
+                  </div>
+
+                  <div className="pt-2">
+                    <strong className="text-slate-500 block mb-1">Tiểu sử / Giới thiệu:</strong>
+                    <div className="bg-slate-50 border rounded-xl p-4 text-sm text-slate-600 italic">
+                      {profile?.bio || "Chưa có thông tin giới thiệu bản thân."}
+                    </div>
+                  </div>
+                </div>
+              ) : null}
             </div>
-          </div>
+          )}
         </div>
       </section>
     </div>
   );
 }
 
-// Các component phụ trợ...
+// Các component phụ trợ giữ nguyên
 function StatCard({ title, text }: { title: string; text: string }) {
   return (
     <div className="bg-white rounded-2xl border border-slate-200 p-6 text-center hover:shadow-md transition">

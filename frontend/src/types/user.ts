@@ -1,4 +1,5 @@
 export interface UserDataInfo {
+    user_id: string;
     role_name: string;
     username: string;
     email: string;
