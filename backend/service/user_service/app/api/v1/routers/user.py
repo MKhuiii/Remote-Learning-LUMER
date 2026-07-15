@@ -22,6 +22,8 @@ def get_user_list(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Yêu cầu không hợp lệ! Bạn chỉ được phép lọc theo 'status_id' HOẶC 'role_id', không được chọn cả hai."
         )
+    
+    # 1. Lấy danh sách users từ database
     if query.status_id is not None:
         users = crud_user.get_multi_by_status(
             session, query.status_id, query.skip, query.limit
@@ -33,27 +35,53 @@ def get_user_list(
     else:
         users = crud_user.get_multi(session, skip=query.skip, limit=query.limit)
 
-    # Duyệt qua danh sách và thêm trường role_name 
     user_info_list = []
     
     if users:  
-        # Nếu lọc theo role_id cố định -> Chỉ cần tìm duy nhất 1 tên role
+        # 2. Chuẩn bị Map cho Role Name
         if query.role_id is not None:
             role_name = crud_role.get_name_by_id(session, query.role_id) or "Unknown"
             role_mapping = {query.role_id: role_name}
-            
-        # Nếu danh sách trả về hỗn hợp nhiều role (Lọc theo status hoặc lấy tất cả)
         else:
             distinct_role_ids = list({user.role_id for user in users if user.role_id is not None})
             role_mapping = crud_role.get_role_mapping_by_ids(session, distinct_role_ids)
         
-        # Thêm role_name vào từng user dựa trên map đã chuẩn bị
+        # 3. Chuẩn bị Map cho Display Status (Sử dụng hàm select đã tối ưu)
+        distinct_status_ids = list({user.status_id for user in users if user.status_id is not None})
+        status_mapping = crud_status.get_status_mapping_by_ids(session, distinct_status_ids)
+
+        # 4. Trộn dữ liệu và ĐÈ status_id thành display_status
         for user in users:
             user_data = user.model_dump()
+            
+            # Thêm trường role_name
             user_data["role_name"] = role_mapping.get(user.role_id, "Unknown")
+            
+            user_data["display_status"] = status_mapping.get(user.status_id, "Unknown")
+            
             user_info_list.append(user_data)
 
     return user_info_list
+
+@router.get("/me",  response_model=UserGeneralInfo)
+def get_my_info(
+    db: SessionDep,
+    current_user: dict = Depends(get_current_user_role)
+):
+    user_id = current_user["user_id"]
+    user = crud_user.get_by_id(db, user_id)
+    if user is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Không tìm thấy hồ sơ người dùng"
+        )
+    role_name = crud_role.get_name_by_id(db, user.role_id) or "Unknown"
+    display_status = crud_status.get_display_status(db, user.status_id)
+    
+    user_data = user.model_dump()
+    user_data["role_name"] = role_name
+    user_data["display_status"] = display_status
+    return user_data
 
 @router.post("/create-user")
 def create_user(
@@ -200,11 +228,13 @@ def get_instructor_list(
     if not users:
             return []
     role_name = crud_role.get_name_by_id(session, query.role_id) or "Unknown"
+    display_status = crud_status.get_display_status(session, user.status_id)
         
     user_info_list = []
     for user in users:
         user_data = user.model_dump()
         user_data["role_name"] = role_name  # Gán thẳng role_name tìm được
+        user_data["status_id"] = display_status
         user_info_list.append(user_data)
 
     return user_info_list

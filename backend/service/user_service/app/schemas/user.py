@@ -38,6 +38,7 @@ class UserGeneralInfo(BaseModel):
     email: EmailStr
     created_at: datetime 
     status_id: str
+    display_status: str
 
 # Thông tin chi tiết người dùng, hiển thị trong phần hồ sơ chi tiết 
 class UserDetailInfo(BaseModel):
