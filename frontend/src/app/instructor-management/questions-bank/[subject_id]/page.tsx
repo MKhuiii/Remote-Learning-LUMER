@@ -194,14 +194,7 @@ export default function QuestionBankPage() {
 
           {/* Statistic */}
 
-          <StatisticCards
-            totalQuestions={questions.length}
-            easyCount={questions.filter((q) => q.mucDo === "Dễ").length}
-            mediumCount={
-              questions.filter((q) => q.mucDo === "Trung bình").length
-            }
-            hardCount={questions.filter((q) => q.mucDo === "Khó").length}
-          />
+          <StatisticCards questions={questions} />
 
           {/* Subject */}
 
@@ -222,7 +215,7 @@ export default function QuestionBankPage() {
             setSelectedTopic={setSelectedTopic}
             modules={modules}
             topics={topics}
-            onAdd={() => {
+            onAddQuestion={() => {
               setEditingQuestion(undefined);
 
               setOpenModal(true);
