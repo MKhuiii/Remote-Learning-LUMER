@@ -177,7 +177,11 @@ export default function QuestionBankPage() {
                 </div>
 
                 <button
-                  onClick={() => router.push(`/question-bank/${subject.id}`)}
+                  onClick={() =>
+                    router.push(
+                      `/instructor-management/questions-bank/${subject.id}`,
+                    )
+                  }
                   className="w-full mt-6 bg-[#0066FF] hover:bg-blue-700 text-white py-3 rounded-xl font-bold transition"
                 >
                   Quản lý câu hỏi →
