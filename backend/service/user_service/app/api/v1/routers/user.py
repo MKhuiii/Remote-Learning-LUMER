@@ -177,13 +177,13 @@ def update_user_status(
     
     return user_data
 
-@router.put("/update-user/{user_id}", response_model=UserDetailInfo)
+@router.put("/update-user", response_model=UserDetailInfo)
 def update_user(
     session: SessionDep,
-    user_id: UUID,
     user_update: UserInfoUpdate,
     current_user: dict = Depends(get_current_user_role)
 ):
+    user_id = current_user["user_id"]
     db_user = crud_user.get_by_id(session, user_id)
     is_owner = str(current_user["user_id"]) == str(user_id)
     is_admin = str(current_user["role_name"]) == "Admin"

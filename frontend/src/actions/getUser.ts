@@ -1,6 +1,7 @@
 "use server";
 import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
+import { UserDataInfo, ProfileInfo, UserInfoUpdate, ProfileUpdate } from "@/types/user";
 
 export interface ActionResponseList {
   success: boolean;
@@ -78,9 +79,9 @@ async function getAuthHeaders() {
 
 // Sửa lại hàm getrList để nhận thêm bộ lọc theo đúng Swagger
 export async function getrList(
-  page: number, 
-  limit: number, 
-  roleId?: number, 
+  page: number,
+  limit: number,
+  roleId?: number,
   statusId?: string
 ): Promise<ActionResponseList> {
   try {
@@ -290,8 +291,8 @@ export async function getInforUser(userId: string): Promise<ActionResponseDetail
 
 
 export async function getrInstructorList(
-  page: number, 
-  limit: number, 
+  page: number,
+  limit: number,
   roleId: number,     // Đổi thành bắt buộc
   statusId: string    // Đổi thành bắt buộc
 ): Promise<ActionResponseList> {
@@ -322,7 +323,7 @@ export async function getrInstructorList(
     if (res.status === 401) {
       return { success: false, message: "Phiên đăng nhập hết hạn hoặc không có quyền hợp lệ!" };
     }
-    
+
     if (res.status === 400) {
       return { success: false, message: "Yêu cầu không hợp lệ, thiếu dữ liệu bộ lọc!" };
     }
@@ -336,4 +337,62 @@ export async function getrInstructorList(
   } catch (error: any) {
     return { success: false, message: error.message || "Lỗi kết nối mạng" };
   }
+}
+
+
+export async function fetchCurrentUser(): Promise<UserDataInfo | null> {
+  const backendUrl = process.env.NEXT_PUBLIC_USER_BACKEND_URL;
+  if (!backendUrl) throw new Error("Thiếu NEXT_PUBLIC_USER_BACKEND_URL");
+  const headers = await getAuthHeaders();
+  if (!headers) return null;
+  const response = await fetch(`${backendUrl}/me`, { method: "GET", headers, next: { revalidate: 0 } });
+  if (!response.ok) return null;
+  return response.json();
+}
+
+export async function fetchUserProfile(): Promise<ProfileInfo | null> {
+  const backendUrl = process.env.NEXT_PUBLIC_USER_BACKEND_URL;
+  if (!backendUrl) throw new Error("Thiếu NEXT_PUBLIC_USER_BACKEND_URL trong biến môi trường.");
+
+  const headers = await getAuthHeaders();
+  if (!headers) return null;
+
+  const response = await fetch(`${backendUrl}/get-profile`, {
+    method: "GET",
+    headers,
+    next: { revalidate: 0 }
+  });
+
+  if (!response.ok) return null;
+  return response.json();
+}
+
+// 🌟 Hàm cập nhật thông tin tài khoản (/update-user)
+export async function updateUserData(data: UserInfoUpdate): Promise<boolean> {
+  const backendUrl = process.env.NEXT_PUBLIC_USER_BACKEND_URL;
+  if (!backendUrl) throw new Error("Thiếu NEXT_PUBLIC_USER_BACKEND_URL");
+  const headers = await getAuthHeaders();
+  if (!headers) return false;
+
+  const response = await fetch(`${backendUrl}/update-user`, {
+    method: "PUT", // hoặc PATCH tùy thuộc vào thiết kế Backend của bạn
+    headers,
+    body: JSON.stringify(data),
+  });
+  return response.ok;
+}
+
+// 🌟 Hàm cập nhật thông tin hồ sơ (/update-profile)
+export async function updateUserProfile(data: ProfileUpdate): Promise<boolean> {
+  const backendUrl = process.env.NEXT_PUBLIC_USER_BACKEND_URL;
+  if (!backendUrl) throw new Error("Thiếu NEXT_PUBLIC_USER_BACKEND_URL");
+  const headers = await getAuthHeaders();
+  if (!headers) return false;
+
+  const response = await fetch(`${backendUrl}/update-profile`, {
+    method: "PATCH",
+    headers,
+    body: JSON.stringify(data),
+  });
+  return response.ok;
 }

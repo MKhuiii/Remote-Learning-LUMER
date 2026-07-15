@@ -40,6 +40,14 @@ class UserGeneralInfo(BaseModel):
     status_id: str
     display_status: str
 
+class UserDataInfo(BaseModel):
+    role_name: str
+    username: str
+    email: EmailStr
+    created_at: datetime 
+    display_status: str
+    birthdate: date
+
 # Thông tin chi tiết người dùng, hiển thị trong phần hồ sơ chi tiết 
 class UserDetailInfo(BaseModel):
     user_id: UUID 
