@@ -151,6 +151,7 @@ export default function QuanLyBiensOanSyllabus() {
   }, [selectedCourseId, allSubjects]);
 
   // --- 4. LẤY SYLLABUS TỪ DATABASE KHI CHỌN SUBJECT (Gửi kèm Token lấy từ Cookie Client-side) ---
+  // --- 4. LẤY SYLLABUS TỪ DATABASE KHI CHỌN SUBJECT ---
   const taiSyllabusThangTuDB = async (subjectId: string) => {
     if (!subjectId) {
       setSyllabusList([]);
@@ -158,20 +159,33 @@ export default function QuanLyBiensOanSyllabus() {
     }
     setIsSyllabusLoading(true);
     try {
-      // Vì Cookie của bạn tên là 'token' chứa chuỗi JWT (Mục HttpOnly), 
-      // Trên một số cấu hình localhost Next.js Client-side, việc truyền token từ Client-action có thể bị trống.
-      // Chúng ta lấy thủ công 'token' (nếu trình duyệt cho phép đọc) hoặc gửi kèm định dạng Session.
-      const token = getCookie("token") || ""; 
-      
       const data = await getSyllabusAction(subjectId);
       
-      const finalSyllabus = Array.isArray(data) 
-        ? data 
-        : ((data as any)?.data || []);
-        
+      console.log("📥 [GET SYLLABUS DATA]: Raw Response từ API:", data);
+
+      let finalSyllabus: SyllabusItem[] = [];
+
+      if (data) {
+        // Trường hợp 1: API trả về trực tiếp một mảng các Syllabus
+        if (Array.isArray(data)) {
+          finalSyllabus = data;
+        } 
+        // Trường hợp 2: API bọc mảng trong một object có trường "data" hoặc "results"
+        else if (Array.isArray((data as any).data)) {
+          finalSyllabus = (data as any).data;
+        } else if (Array.isArray((data as any).results)) {
+          finalSyllabus = (data as any).results;
+        }
+        // Trường hợp 3: API trả về duy nhất 1 Object Syllabus (Chưa bọc mảng)
+        else if ((data as any).syllabus_id) {
+          finalSyllabus = [data as any]; // Ép thành mảng 1 phần tử để hiển thị
+        }
+      }
+
+      console.log("📊 [GET SYLLABUS DATA]: Mảng sau khi chuẩn hóa:", finalSyllabus);
       setSyllabusList(finalSyllabus);
     } catch (error) {
-      console.error("Lỗi tải Syllabus thực tế từ Server:", error);
+      console.error("❌ Lỗi tải Syllabus thực tế từ Server:", error);
       setSyllabusList([]); 
     } finally {
       setIsSyllabusLoading(false);
