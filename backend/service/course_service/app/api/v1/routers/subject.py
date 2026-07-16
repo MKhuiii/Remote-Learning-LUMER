@@ -13,7 +13,7 @@ router = APIRouter(prefix="/subjects", tags=["subjects"])
 def create_subject(
     db: SessionDep,
     subject_in: SubjectCreate,
-    current_user: dict = Depends(RoleChecker(["Admin", "Instructor"]))
+    current_user: dict = Depends(RoleChecker(["Admin", "Instructor", "Manager"]))
 ):
     return crud_subject.create(db, subject_in)
 
@@ -22,7 +22,7 @@ def create_subject(
 def get_subject(
     db: SessionDep,
     subject_id: UUID,
-    current_user: dict = Depends(RoleChecker(["Admin", "Instructor", "Student"]))
+    current_user: dict = Depends(RoleChecker(["Admin", "Instructor", "Student", "Manager"]))
 ):
     subject = crud_subject.get_by_id(db, subject_id)
     if not subject:
@@ -35,7 +35,7 @@ def get_subjects(
     db: SessionDep,
     skip: int = 0,
     limit: int = 10,
-    current_user: dict = Depends(RoleChecker(["Admin", "Instructor"]))
+    current_user: dict = Depends(RoleChecker(["Admin", "Instructor", "Manager"]))
 ):
     return crud_subject.get_multi(db, skip=skip, limit=limit)
 
@@ -45,7 +45,7 @@ def update_subject(
     db: SessionDep,
     subject_id: UUID,
     subject_in: SubjectUpdate,
-    current_user: dict = Depends(RoleChecker(["Admin", "Instructor"]))
+    current_user: dict = Depends(RoleChecker(["Admin", "Instructor", "Manager"]))
 ):
     db_obj = crud_subject.get_by_id(db, subject_id)
     if not db_obj:

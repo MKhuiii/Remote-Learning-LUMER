@@ -4,10 +4,6 @@ import { cookies } from 'next/headers'
 
 const userBackendUrl = process.env.NEXT_PUBLIC_COURSE_BACKEND_URL;
 
-// ==========================================
-// ĐỊNH NGHĨA INTERFACES (Đã đồng bộ TypeScript)
-// ==========================================
-
 export interface Subject {
   subject_id: string;
   course_id: string;
@@ -23,28 +19,26 @@ export interface Course {
   title: string;
   description?: string;
   status_id?: string;
-  instructor_id?: string | null;       // 🟢 Sửa từ 'string | null' thành optional để khớp với API (Tránh lỗi Type ở hình 2)
-  curriculum_id: string;               // Khóa ngoại kết nối
-  curriculum_file_path?: string | null; // Sẽ được map chéo từ dữ liệu Curriculum gốc
-  subjects: Subject[];                 // Danh sách chương học con
+  instructor_id?: string | null;       
+  curriculum_id: string;               
+  curriculum_file_path?: string | null; 
+  subjects: Subject[];                 
 }
 
 export interface Curriculum {
   curriculum_id: string;
   title?: string;
-  description?: string;                // 🟢 Thêm dấu '?' để chấp nhận cả undefined (Tránh lỗi Type ở hình 3)
+  description?: string;                
   curriculum_file_path?: string | null;
   status_id?: string;
 }
 
-
-// --- PHẦN ĐỊNH NGHĨA THÊM INTERFACES ---
 export interface CourseModule {
   module_id: string;
   subject_id: string;
   title: string;
   order_index?: number;
-  lessons?: CourseLesson[]; // Chứa danh sách bài học con bên trong
+  lessons?: CourseLesson[]; 
 }
 
 export interface CourseLesson {
@@ -58,86 +52,42 @@ export interface CourseLesson {
   is_optional?: boolean;
 }
 
-
-
-
-
-// ==========================================
-// CÁC HÀM XỬ LÝ ACTIONS
-// ==========================================
-
-/**
- * Lấy danh sách toàn bộ khóa học cùng đề cương chi tiết 
- * (Đã được map chéo file từ Curriculum và gom nhóm toàn bộ Subjects)
- */
 export async function getCoursesAction(token: string): Promise<Course[]> {
   const cleanToken = token.trim().replace(/^"|"$/g, "");
   try {
-    // 🟢 Bước 1: Fetch song song đồng thời cả 3 thực thể: Courses, Curriculums và Subjects
-    const [coursesResponse, curriculumsResponse, subjectsResponse] = await Promise.all([
-      fetch(`${userBackendUrl}/courses/`, {
-        method: "GET",
-        headers: { "Authorization": `Bearer ${cleanToken}`, "Accept": "application/json" },
-      }),
-      fetch(`${userBackendUrl}/curriculums/`, {
-        method: "GET",
-        headers: { "Authorization": `Bearer ${cleanToken}`, "Accept": "application/json" },
-      }),
-      fetch(`${userBackendUrl}/subjects/`, { // <-- Gọi thêm endpoint lấy tất cả các chương học con để giải quyết việc UI rỗng
-        method: "GET",
-        headers: { "Authorization": `Bearer ${cleanToken}`, "Accept": "application/json" },
-      }).catch(() => null) // Bọc catch phòng trường hợp API /subjects/ bị lỗi đơn lẻ không làm sập luồng chính
-    ]);
-
-    if (!coursesResponse.ok) {
-      throw new Error(`Không thể lấy danh sách khóa học: ${coursesResponse.status}`);
-    }
-
-    const coursesData: Course[] = await coursesResponse.json();
-    let curriculumsData: Curriculum[] = [];
-    let subjectsData: Subject[] = [];
-    
-    if (curriculumsResponse.ok) {
-      curriculumsData = await curriculumsResponse.json();
-    }
-
-    if (subjectsResponse && subjectsResponse.ok) {
-      subjectsData = await subjectsResponse.json();
-    }
-
-    // 🟢 Bước 2: Map chéo dữ liệu để đắp dữ liệu hoàn chỉnh cho từng Course
-    const mappedCourses = coursesData.map((course) => {
-      // 1. Tìm curriculum tương ứng để lấy đường dẫn file gốc
-      const matchingCurriculum = curriculumsData.find(
-        (curr) => curr.curriculum_id === course.curriculum_id
-      );
-
-      // 2. Lọc ra toàn bộ các chương học (subject) thuộc về khóa học này trong DB
-      const courseSubjects = subjectsData.filter(
-        (sub) => sub.course_id === course.course_id
-      );
-
-      return {
-        ...course,
-        // Đảm bảo không bị undefined lỗi type, chuẩn hóa instructor_id
-        instructor_id: course.instructor_id ?? null,
-        // Đắp đường dẫn file thực tế vào đây để client sử dụng
-        curriculum_file_path: matchingCurriculum ? matchingCurriculum.curriculum_file_path : null,
-        // Đổ mảng subject thật đã được lọc từ DB vào để hiển thị lên UI chương mục
-        subjects: courseSubjects
-      };
+    const response = await fetch(`${userBackendUrl}/courses/`, {
+      method: "GET",
+      headers: { "Authorization": `Bearer ${cleanToken}`, "Accept": "application/json" },
     });
 
-    return mappedCourses;
+    if (!response.ok) {
+      throw new Error(`Không thể lấy danh sách khóa học: ${response.status}`);
+    }
+    return await response.json();
   } catch (error: any) {
-    console.error("Lỗi xử lý kết hợp dữ liệu tại getCoursesAction:", error);
+    console.error("Lỗi getCoursesAction:", error);
     return [];
   }
 }
 
-/**
- * Thêm mới một chương học con (Subject) vào khóa học
- */
+export async function getSubjectsAction(token: string): Promise<Subject[]> {
+  const cleanToken = token.trim().replace(/^"|"$/g, "");
+  try {
+    const response = await fetch(`${userBackendUrl}/subjects/`, {
+      method: "GET",
+      headers: { "Authorization": `Bearer ${cleanToken}`, "Accept": "application/json" },
+    });
+
+    if (!response.ok) {
+      throw new Error(`Không thể lấy danh sách học phần: ${response.status}`);
+    }
+    return await response.json();
+  } catch (error: any) {
+    console.error("Lỗi getSubjectsAction:", error);
+    return [];
+  }
+}
+
 export async function createSubjectAction(payload: { course_id: string; title: string; description: string }, token: string) {
   const cleanToken = token.trim().replace(/^"|"$/g, "");
   try {
@@ -160,9 +110,6 @@ export async function createSubjectAction(payload: { course_id: string; title: s
   }
 }
 
-/**
- * Cập nhật thông tin chương học (Subject)
- */
 export async function updateSubjectAction(subjectId: string, payload: { title: string; description: string }, token: string) {
   const cleanToken = token.trim().replace(/^"|"$/g, "");
   try {
@@ -185,9 +132,6 @@ export async function updateSubjectAction(subjectId: string, payload: { title: s
   }
 }
 
-/**
- * Gỡ bỏ chương học (Subject) khỏi hệ thống
- */
 export async function deleteSubjectAction(subjectId: string, token: string) {
   const cleanToken = token.trim().replace(/^"|"$/g, "");
   try {
@@ -211,28 +155,132 @@ export async function deleteSubjectAction(subjectId: string, token: string) {
 
 
 
-// --- ACTIONS CHO TẦNG MODULE ---
-export async function getModulesBySubjectAction(subjectId: string, token: string) {
-  const cleanToken = token.trim().replace(/^"|"$/g, "");
+
+export async function getSyllabusAction(subjectId: string) {
   try {
-    // Backend nên có endpoint lấy module theo subject_id, hoặc lấy tất cả rồi frontend tự filter
-    const response = await fetch(`${process.env.NEXT_PUBLIC_COURSE_BACKEND_URL}/modules/?subject_id=${subjectId}`, {
+    const baseUrl = process.env.NEXT_PUBLIC_COURSE_BACKEND_URL || "http://localhost:8001";
+    const cleanBaseUrl = baseUrl.endsWith("/") ? baseUrl.slice(0, -1) : baseUrl;
+    const url = `${cleanBaseUrl}/syllabus/subject/${subjectId}`;
+
+    // TỰ ĐỘNG ĐỌC TOKEN TỪ COOKIE TRÊN SERVER NEXT.JS
+    const cookieStore = await cookies(); // Thêm await nếu dùng Next.js 15+
+    const token = cookieStore.get("token")?.value; 
+
+    console.log("📡 [NEXTJS FETCH] Gọi API Syllabus chính xác tại:", url);
+    console.log("🔑 [DEBUG] Trạng thái Token gửi đi:", token ? "CÓ TOKEN (Đang gửi)" : "TRỐNG (NULL)");
+
+    const res = await fetch(url, {
       method: "GET",
-      headers: { "Authorization": `Bearer ${cleanToken}`, "Accept": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        // Đính kèm Token dạng Bearer
+        ...(token ? { "Authorization": `Bearer ${token}` } : {})
+      }
     });
-    if (!response.ok) return [];
-    return await response.json();
+
+    if (res.status === 401) {
+      console.error("❌ API trả về lỗi 401: Token không hợp lệ, hết hạn, hoặc Backend giải mã lỗi!");
+      return null;
+    }
+
+    if (res.status === 404) {
+      console.log("ℹ️ Môn học này chưa có syllabus (404).");
+      return null;
+    }
+
+    if (!res.ok) {
+      console.error(`❌ Fetch Syllabus thất bại. Status: ${res.status}`);
+      return null;
+    }
+
+    return await res.json();
   } catch (error) {
-    return [];
+    console.error("❌ Lỗi kết nối API Syllabus:", error);
+    return null;
   }
 }
+
+
+
+
+export async function createSyllabusAction(payload: {
+  subject_id: string;
+  description: string;
+  syllabus_file_path?: string | null;
+  status_id?: string;
+}) {
+  try {
+    const baseUrl = process.env.NEXT_PUBLIC_COURSE_BACKEND_URL || "http://localhost:8001";
+    const url = `${baseUrl.replace(/\/$/, "")}/syllabus/`;
+
+    const cookieStore = await cookies();
+    const token = cookieStore.get("token")?.value;
+
+    // 1. Giải mã token tự động để lấy instructor_id (UUID)
+    let instructorId = null;
+    if (token) {
+      try {
+        const payloadBase64 = token.split(".")[1];
+        const decodedPayload = JSON.parse(atob(payloadBase64));
+        instructorId = decodedPayload.user_id || decodedPayload.sub; 
+      } catch (e) {
+        console.error("Không thể giải mã token:", e);
+      }
+    }
+
+    // 2. Chuẩn hóa payload khớp 100% với cấu trúc Model ở Backend
+    const finalPayload = {
+      subject_id: payload.subject_id,
+      description: payload.description || "Chưa có mô tả",
+      
+      // instructor_id bắt buộc phải có và đúng chuẩn UUID
+      instructor_id: instructorId, 
+      
+      // syllabus_file_path bắt buộc phải là string (không được null hay rỗng)
+      syllabus_file_path: payload.syllabus_file_path || "documents/syllabi/placeholder.pdf",
+      
+      // status_id bắt buộc theo model
+      status_id: payload.status_id || "SYLLABUS_DRAFT"
+    };
+
+    console.log("📤 [NEXTJS POST] Gửi dữ liệu chuẩn lên Backend:", finalPayload);
+
+    const res = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(token ? { "Authorization": `Bearer ${token}` } : {})
+      },
+      body: JSON.stringify(finalPayload)
+    });
+
+    const data = await res.json();
+    if (!res.ok) {
+      console.error("❌ Tạo Syllabus thất bại từ Backend:", data);
+      return { success: false, error: JSON.stringify(data.detail) || "Không thể tạo đề cương" };
+    }
+
+    return { success: true, data };
+  } catch (error) {
+    console.error("❌ Lỗi kết nối khi POST Syllabus:", error);
+    return { success: false, error: "Lỗi kết nối đến máy chủ." };
+  }
+}
+
+
+
+
+
 
 export async function createModuleAction(payload: { subject_id: string; title: string }, token: string) {
   const cleanToken = token.trim().replace(/^"|"$/g, "");
   try {
-    const response = await fetch(`${process.env.NEXT_PUBLIC_COURSE_BACKEND_URL}/modules/`, {
+    const response = await fetch(`${userBackendUrl}/modules/`, {
       method: "POST",
-      headers: { "Authorization": `Bearer ${cleanToken}`, "Content-Type": "application/json" },
+      headers: { 
+        "Authorization": `Bearer ${cleanToken}`, 
+        "Content-Type": "application/json" 
+      },
       body: JSON.stringify(payload),
     });
     return { success: response.ok, data: response.ok ? await response.json() : null };
@@ -241,11 +289,10 @@ export async function createModuleAction(payload: { subject_id: string; title: s
   }
 }
 
-// --- ACTIONS CHO TẦNG LESSON ---
 export async function getLessonsByModuleAction(moduleId: string, token: string) {
   const cleanToken = token.trim().replace(/^"|"$/g, "");
   try {
-    const response = await fetch(`${process.env.NEXT_PUBLIC_COURSE_BACKEND_URL}/lessons/?module_id=${moduleId}`, {
+    const response = await fetch(`${userBackendUrl}/lessons/?module_id=${moduleId}`, {
       method: "GET",
       headers: { "Authorization": `Bearer ${cleanToken}`, "Accept": "application/json" },
     });
@@ -259,7 +306,7 @@ export async function getLessonsByModuleAction(moduleId: string, token: string) 
 export async function createLessonAction(payload: { module_id: string; title: string; duration_minutes: number; video_url?: string; content_body?: string }, token: string) {
   const cleanToken = token.trim().replace(/^"|"$/g, "");
   try {
-    const response = await fetch(`${process.env.NEXT_PUBLIC_COURSE_BACKEND_URL}/lessons/`, {
+    const response = await fetch(`${userBackendUrl}/lessons/`, {
       method: "POST",
       headers: { "Authorization": `Bearer ${cleanToken}`, "Content-Type": "application/json" },
       body: JSON.stringify(payload),
@@ -269,3 +316,4 @@ export async function createLessonAction(payload: { module_id: string; title: st
     return { success: false, error: error.message };
   }
 }
+

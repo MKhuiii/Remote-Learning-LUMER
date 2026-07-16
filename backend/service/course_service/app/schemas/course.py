@@ -14,7 +14,6 @@ class CourseBase(BaseModel):
 # 🟢 Schema dùng khi TẠO khóa học
 class CourseCreate(CourseBase):
     curriculum_id: UUID
-    # Cho phép Optional để Router tự lấy ID từ token gán vào sau như logic của bạn
     instructor_id: Optional[UUID] = None  
     course_type: str
     status_id: str

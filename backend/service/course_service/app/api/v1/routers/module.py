@@ -13,7 +13,7 @@ router = APIRouter(prefix="/modules", tags=["modules"])
 def create_module(
     db: SessionDep,
     module_in: ModuleCreate,
-    current_user: dict = Depends(RoleChecker(["Admin", "Instructor"]))
+    current_user: dict = Depends(RoleChecker(["Admin", "Instructor", "Manager"]))
 ):
     return crud_module.create(db, module_in)
 
@@ -22,7 +22,7 @@ def create_module(
 def get_module(
     db: SessionDep,
     module_id: UUID,
-    current_user: dict = Depends(RoleChecker(["Admin", "Instructor", "Student"]))
+    current_user: dict = Depends(RoleChecker(["Admin", "Instructor", "Student", "Manager"]))
 ):
     module = crud_module.get_by_id(db, module_id)
     if not module:
@@ -35,7 +35,7 @@ def get_modules(
     db: SessionDep,
     skip: int = 0,
     limit: int = 10,
-    current_user: dict = Depends(RoleChecker(["Admin", "Instructor"]))
+    current_user: dict = Depends(RoleChecker(["Admin", "Instructor", "Manager"]))
 ):
     return crud_module.get_multi(db, skip=skip, limit=limit)
 
@@ -45,7 +45,7 @@ def update_module(
     db: SessionDep,
     module_id: UUID,
     module_in: ModuleUpdate,
-    current_user: dict = Depends(RoleChecker(["Admin", "Instructor"]))
+    current_user: dict = Depends(RoleChecker(["Admin", "Instructor", "Manager"]))
 ):
     db_obj = crud_module.get_by_id(db, module_id)
     if not db_obj:
@@ -57,7 +57,7 @@ def update_module(
 def delete_module(
     db: SessionDep,
     module_id: UUID,
-    current_user: dict = Depends(RoleChecker(["Admin"]))
+    current_user: dict = Depends(RoleChecker(["Admin", "Manager"]))
 ):
     db_obj = crud_module.delete(db, module_id)
     if not db_obj:

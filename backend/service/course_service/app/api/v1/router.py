@@ -5,6 +5,8 @@ from app.api.v1.routers.module import router as module_router
 from app.api.v1.routers.lesson import router as lesson_router
 from app.api.v1.routers.curriculum import router as curriculum_router
 from app.api.v1.routers.syllabus import router as syllabus_router
+from app.api.v1.routers.assignment import router as course_instructor_link
+
 router = APIRouter()
 
 router.include_router(course_router)
@@ -14,3 +16,4 @@ router.include_router(lesson_router)
 
 router.include_router(curriculum_router)
 router.include_router(syllabus_router)
+router.include_router(course_instructor_link)

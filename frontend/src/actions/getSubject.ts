@@ -70,3 +70,21 @@ export async function deleteSubject(subjectId: string) {
     throw new Error(error.message);
   }
 }
+
+export async function getSubjectsAction(): Promise<any[]> {
+  try {
+    const cleanToken = await getServerToken();
+    const res = await fetch(`${BACKEND_URL}/subjects/?limit=1000`, {
+      method: "GET",
+      headers: {
+        "Authorization": `Bearer ${cleanToken}`,
+        "Content-Type": "application/json",
+      },
+    });
+    if (!res.ok) throw new Error("Không thể lấy danh sách học phần");
+    return await res.json();
+  } catch (error) {
+    console.error("Lỗi lấy danh sách học phần:", error);
+    return [];
+  }
+}

@@ -67,7 +67,7 @@ export async function updateCourseAction(courseId: string, payload: any) {
   try {
     console.log("PAYLOAD TRƯỚC KHI BẮN SANG BACKEND API:", payload);
     const cleanToken = await getServerToken(); // 🟢 TỰ ĐỘNG LẤY TOKEN
-    const url = `${BACKEND_URL}/courses/${courseId}/`; 
+    const url = `${BACKEND_URL}/courses/${courseId}`; 
     
     console.log("🚀 Đang gửi dữ liệu cập nhật tới:", url);
     console.log("📦 Payload:", JSON.stringify(payload));

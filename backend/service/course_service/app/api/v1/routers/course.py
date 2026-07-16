@@ -10,22 +10,12 @@ from app.schemas.course import CourseCreate, CourseImageUploadResponse, CourseRe
 
 router = APIRouter(prefix="/courses", tags=["courses"])
 
-
 @router.post("/", response_model=CourseRead)
-def create_course(
-    db: SessionDep,
-    course_in: CourseCreate,
-    current_user: dict = Depends(RoleChecker(["Admin", "Instructor", "Manager"]))
-):
+def create_course(db: SessionDep, course_in: CourseCreate, current_user: dict = Depends(RoleChecker(["Admin", "Instructor", "Manager"]))):
     course_data = course_in.model_dump()
-    course_data["instructor_id"] = getattr(current_user, "id", None) or current_user.get("id")
-    
     user_id = getattr(current_user, "id", None) or current_user.get("id")
-    if not user_id:
-        user_id ="8192c47d-473b-474f-959a-a805ecd893fa"
-    course_in.instructor_id = user_id
-    return crud_course.create(db, course_in)
-
+    course_data["instructor_id"] = user_id
+    return crud_course.create(db, obj_in=course_data)
 
 @router.get("/{course_id}", response_model=CourseRead)
 def get_course(

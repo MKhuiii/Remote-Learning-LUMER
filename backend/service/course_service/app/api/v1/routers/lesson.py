@@ -13,7 +13,7 @@ router = APIRouter(prefix="/lessons", tags=["lessons"])
 def create_lesson(
     db: SessionDep,
     new_lesson: LessonCreate,
-    current_user: dict = Depends(RoleChecker(["Instructor", "Admin"]))
+    current_user: dict = Depends(RoleChecker(["Instructor", "Admin", "Manager"]))
 ):
     """
     API tạo bài học mới.
@@ -44,7 +44,7 @@ def create_lesson(
 def delete_lesson(
     db: SessionDep,
     lesson_id: UUID,
-    current_user: dict = Depends(RoleChecker(["Instructor", "Admin"]))
+    current_user: dict = Depends(RoleChecker(["Instructor", "Admin", "Manager"]))
 ):
     """
     API xóa bài học theo ID.

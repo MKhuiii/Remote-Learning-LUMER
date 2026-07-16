@@ -6,7 +6,7 @@ from app.api.v1.deps import SessionDep
 from app.core.security import RoleChecker
 from app.crud.syllabus import crud_syllabus
 from app.schemas.syllabus import SyllabusCreate, SyllabusUpdate, SyllabusRead
-
+from fastapi import Request
 router = APIRouter(prefix="/syllabus", tags=["syllabus"])
 
 # 🔵 1. API: Lấy thông tin đề cương theo ID Môn học
@@ -14,8 +14,21 @@ router = APIRouter(prefix="/syllabus", tags=["syllabus"])
 def get_syllabus_by_subject(
     subject_id: UUID,
     db: SessionDep,
-    current_user: dict = Depends(RoleChecker(["Admin", "Instructor", "Student"]))
+    request: Request, # <--- Thêm request ở đây để debug
+    current_user: dict = Depends(RoleChecker(["Admin", "Instructor", "Student", "Manager"]))
 ):
+    # --- ĐOẠN CODE IN DEBUG (BẠN THÊM VÀO ĐỂ CHECK) ---
+    print("================ DEBUG API CALL ================")
+    # 1. In ra các Header mà Next.js thực sự gửi lên Backend
+    print("🔌 Headers nhận được:")
+    for key, value in request.headers.items():
+        if key.lower() in ["authorization", "cookie"]:
+            print(f"   -> {key}: {value}")
+            
+    # 2. In ra thông tin User sau khi giải mã Token thành công
+    print("👤 Current User giải mã được:", current_user)
+    print("================================================")
+
     syllabus = crud_syllabus.get_by_subject(db=db, subject_id=subject_id)
     if not syllabus:
         raise HTTPException(
@@ -30,7 +43,7 @@ def get_syllabus_by_subject(
 def create_syllabus(
     payload: SyllabusCreate,
     db: SessionDep,
-    current_user: dict = Depends(RoleChecker(["Admin", "Instructor"]))
+    current_user: dict = Depends(RoleChecker(["Admin", "Instructor", "Manager"]))
 ):
     existing = crud_syllabus.get_by_subject(db=db, subject_id=payload.subject_id)
     if existing:
@@ -47,7 +60,7 @@ def update_syllabus(
     syllabus_id: UUID,
     payload: SyllabusUpdate,
     db: SessionDep,
-    current_user: dict = Depends(RoleChecker(["Admin", "Instructor"]))
+    current_user: dict = Depends(RoleChecker(["Admin", "Instructor", "Manager"]))
 ):
     db_obj = crud_syllabus.get(db=db, id=syllabus_id)
     if not db_obj:

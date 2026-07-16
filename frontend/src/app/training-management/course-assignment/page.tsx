@@ -6,6 +6,10 @@ import { Course, Module } from '@/types/course';
 import { getCoursesAction } from "@/actions/getCourse";  
 import { getCurriculums } from "@/actions/getCurriculum";
 import { getrInstructorList, User } from "@/actions/getUser"; // Import hàm lấy danh sách User thật từ file của bạn
+import { assignInstructorAction } from "@/actions/getAssignment"
+
+
+
 
 export default function CourseAssignment() {
     // ---- Các States quản lý dữ liệu ----
@@ -113,18 +117,43 @@ const fetchInitialData = async () => {
             )
         );
     };
+const handleSubmit = async () => {
+    // Nếu không có khóa học nào đang được chọn, dừng xử lý
+    if (!activeCourse) return;
 
-    const handleSubmit = async () => {
-        setIsLoading(true);
-        try {
-            // Logic xử lý gọi API cập nhật gán giảng viên lên backend của bạn ở đây...
-            alert(`Đã cập nhật cấu hình giảng viên thành công cho khóa học: ${activeCourse?.title}`);
-        } catch (error) {
-            console.error("Lỗi khi lưu dữ liệu:", error);
-        } finally {
-            setIsLoading(false);
+    const lecturerId = (activeCourse as any).assignedLecturerId;
+    
+    if (!lecturerId) {
+        alert("Vui lòng chọn một giảng viên trước khi xác nhận lưu.");
+        return;
+    }
+
+    setIsLoading(true);
+    try {
+        // Chuẩn bị payload đúng định dạng Interface CourseLink đã khai báo ở backend
+        const payload = {
+            course_id: activeCourse.course_id,
+            instructor_id: lecturerId
+        };
+
+        // Gọi Server Action để gửi dữ liệu lên FastAPI
+        const result = await assignInstructorAction(payload);
+
+        if (result.success) {
+            alert(`🎉 Đã phân công giảng viên thành công cho khóa học: ${activeCourse.title}`);
+            
+            // Tùy chọn: Tải lại dữ liệu mới nhất từ DB để đảm bảo đồng bộ hoàn hảo
+            // await fetchInitialData(); 
+        } else {
+            alert(`❌ Lỗi: ${result.error || "Không thể lưu phân công môn học."}`);
         }
-    };
+    } catch (error: any) {
+        console.error("Lỗi khi lưu dữ liệu:", error);
+        alert("Có lỗi bất ngờ xảy ra trong quá trình xử lý.");
+    } finally {
+        setIsLoading(false);
+    }
+};
 
 
 
@@ -137,7 +166,7 @@ const fetchInitialData = async () => {
                 {/* BANNER */}
                 <div className="bg-[#0066ff] text-white pt-10 pb-20 px-4 sm:px-8 relative">
                     <div className="max-w-7xl mx-auto space-y-4">
-                        <a href="#" className="inline-flex items-center text-xs font-semibold text-white/80 hover:text-white transition-colors">
+                        <a href="/training-management" className="inline-flex items-center text-xs font-semibold text-white/80 hover:text-white transition-colors">
                             ← Quay về Dashboard Phòng Đào Tạo
                         </a>
                         <div>
@@ -350,9 +379,12 @@ const fetchInitialData = async () => {
                                     <div className="flex items-center justify-end">
                                         <button
                                             onClick={handleSubmit}
-                                            className="px-8 py-3.5 bg-[#0066ff] hover:bg-[#0052cc] text-white text-xs font-bold rounded-xl shadow-md transition-all duration-200"
+                                            disabled={isLoading} // Ngăn click khi đang loading
+                                            className={`px-8 py-3.5 text-white text-xs font-bold rounded-xl shadow-md transition-all duration-200 ${
+                                                isLoading ? "bg-gray-400 cursor-not-allowed" : "bg-[#0066ff] hover:bg-[#0052cc]"
+                                            }`}
                                         >
-                                            Xác nhận & Lưu thay đổi
+                                            {isLoading ? "Đang xử lý..." : "Xác nhận & Lưu thay đổi"}
                                         </button>
                                     </div>
                                 </>

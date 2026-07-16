@@ -36,31 +36,6 @@ export default function TeacherDashboard() {
   return (
     <div className="min-h-screen bg-slate-100">
       <Navbar />
-        {
-            title: "Đề cương môn học",
-            desc: "Biên soạn mục tiêu, nội dung chi tiết và chuẩn đầu ra cho từng môn.",
-            route: "/instructor-management/course-outline",
-            icon: "📘",
-        },
-        {
-            title: "Quản lý môn học",
-            desc: "Tạo môn học, thiết lập các module (chương) và bài học chi tiết.",
-            route: "/instructor-management/course-content",
-            icon: "📁",
-        },
-        {
-            title: "Ngân hàng câu hỏi",
-            desc: "Kho lưu trữ câu hỏi dùng chung cho toàn bộ môn học để tạo đề thi.",
-            route: "/instructor-management/questions-bank",
-            icon: "🗂️",
-        },
-        {
-            title: "Quản lý bài thi",
-            desc: "Tạo và cấu hình các bài kiểm tra, bài thi cuối kỳ cho học viên.",
-            route: "/instructor-management/exam-manage",
-            icon: "📝",
-        },
-    ];
 
       {/* Header */}
       <section className="bg-gradient-to-r from-[#66CCFF] to-[#0066FF] text-white">
@@ -93,7 +68,7 @@ export default function TeacherDashboard() {
           Chức năng quản lý
         </h3>
 
-        {/* Đổi từ grid-cols-3 sang responsive grid linh hoạt hơn */}
+        {/* Responsive Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {features.map((item) => (
             <div
@@ -113,7 +88,7 @@ export default function TeacherDashboard() {
                 </p>
               </div>
 
-              {/* Thêm một mũi tên nhỏ góc dưới để tăng trải nghiệm bấm (UX) */}
+              {/* Mũi tên tăng trải nghiệm bấm */}
               <div className="mt-6 text-right">
                 <span className="text-[#0066FF] font-semibold text-sm inline-flex items-center gap-1 hover:underline">
                   Truy cập →
