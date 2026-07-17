@@ -12,6 +12,7 @@ import {
   Pencil,
   Trash2,
   ArrowRight,
+  X,
 } from "lucide-react";
 
 const subject = {
@@ -65,6 +66,49 @@ export default function SubjectDetailPage() {
   const subjectId = params.subject_id as string;
 
   const [tab, setTab] = useState<"module" | "quiz">("module");
+
+  // Module Form
+  const [showModuleForm, setShowModuleForm] = useState(false);
+
+  const [moduleTitle, setModuleTitle] = useState("");
+  const [moduleDescription, setModuleDescription] = useState("");
+
+  // Quiz Form
+  const [showQuizForm, setShowQuizForm] = useState(false);
+
+  const [quizTitle, setQuizTitle] = useState("");
+  const [quizDuration, setQuizDuration] = useState(30);
+  const [quizDescription, setQuizDescription] = useState("");
+
+  const handleCreateModule = () => {
+    console.log({
+      subjectId,
+      title: moduleTitle,
+      description: moduleDescription,
+    });
+
+    // gọi API sau
+
+    setModuleTitle("");
+    setModuleDescription("");
+    setShowModuleForm(false);
+  };
+
+  const handleCreateQuiz = () => {
+    console.log({
+      subjectId,
+      title: quizTitle,
+      duration: quizDuration,
+      description: quizDescription,
+    });
+
+    // gọi API sau
+
+    setQuizTitle("");
+    setQuizDuration(30);
+    setQuizDescription("");
+    setShowQuizForm(false);
+  };
 
   return (
     <div className="min-h-screen bg-slate-100">
@@ -188,7 +232,10 @@ export default function SubjectDetailPage() {
         {tab === "module" && (
           <>
             <div className="flex justify-end mb-6">
-              <button className="bg-[#0066FF] text-white rounded-xl px-5 py-3 flex items-center gap-2">
+              <button
+                onClick={() => setShowModuleForm(true)}
+                className="bg-[#0066FF] text-white rounded-xl px-5 py-3 flex items-center gap-2"
+              >
                 <Plus size={18} />
                 New Module
               </button>
@@ -252,7 +299,10 @@ export default function SubjectDetailPage() {
         {tab === "quiz" && (
           <>
             <div className="flex justify-end mb-6">
-              <button className="bg-[#0066FF] text-white rounded-xl px-5 py-3 flex items-center gap-2">
+              <button
+                onClick={() => setShowQuizForm(true)}
+                className="bg-[#0066FF] text-white rounded-xl px-5 py-3 flex items-center gap-2"
+              >
                 <Plus size={18} />
                 New Quiz
               </button>
@@ -286,6 +336,137 @@ export default function SubjectDetailPage() {
           </>
         )}
       </section>
+      {/* ================= CREATE MODULE ================= */}
+
+      {showModuleForm && (
+        <div className="fixed inset-0 bg-black/40 flex justify-center items-center z-50">
+          <div className="bg-white rounded-2xl w-full max-w-xl p-8 shadow-xl">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-2xl font-bold text-[#0066FF]">
+                Create New Module
+              </h2>
+
+              <button onClick={() => setShowModuleForm(false)}>
+                <X />
+              </button>
+            </div>
+
+            <div className="space-y-5">
+              <div>
+                <label className="block font-medium mb-2">Module Name</label>
+
+                <input
+                  type="text"
+                  value={moduleTitle}
+                  onChange={(e) => setModuleTitle(e.target.value)}
+                  placeholder="Introduction to Python"
+                  className="w-full border rounded-xl p-3 outline-none focus:ring-2 focus:ring-[#0066FF]"
+                />
+              </div>
+
+              <div>
+                <label className="block font-medium mb-2">Description</label>
+
+                <textarea
+                  rows={5}
+                  value={moduleDescription}
+                  onChange={(e) => setModuleDescription(e.target.value)}
+                  placeholder="Module description..."
+                  className="w-full border rounded-xl p-3 outline-none resize-none focus:ring-2 focus:ring-[#0066FF]"
+                />
+              </div>
+
+              <div className="flex justify-end gap-3 pt-3">
+                <button
+                  onClick={() => setShowModuleForm(false)}
+                  className="px-5 py-3 rounded-xl border"
+                >
+                  Cancel
+                </button>
+
+                <button
+                  onClick={handleCreateModule}
+                  className="bg-[#0066FF] text-white px-6 py-3 rounded-xl"
+                >
+                  Create Module
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* ================= CREATE QUIZ ================= */}
+
+      {showQuizForm && (
+        <div className="fixed inset-0 bg-black/40 flex justify-center items-center z-50">
+          <div className="bg-white rounded-2xl w-full max-w-xl p-8 shadow-xl">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-2xl font-bold text-[#0066FF]">
+                Create Subject Quiz
+              </h2>
+
+              <button onClick={() => setShowQuizForm(false)}>
+                <X />
+              </button>
+            </div>
+
+            <div className="space-y-5">
+              <div>
+                <label className="block font-medium mb-2">Quiz Name</label>
+
+                <input
+                  type="text"
+                  value={quizTitle}
+                  onChange={(e) => setQuizTitle(e.target.value)}
+                  placeholder="Midterm Exam"
+                  className="w-full border rounded-xl p-3 outline-none focus:ring-2 focus:ring-[#0066FF]"
+                />
+              </div>
+
+              <div>
+                <label className="block font-medium mb-2">
+                  Duration (minutes)
+                </label>
+
+                <input
+                  type="number"
+                  value={quizDuration}
+                  onChange={(e) => setQuizDuration(Number(e.target.value))}
+                  className="w-full border rounded-xl p-3 outline-none focus:ring-2 focus:ring-[#0066FF]"
+                />
+              </div>
+
+              <div>
+                <label className="block font-medium mb-2">Description</label>
+
+                <textarea
+                  rows={5}
+                  value={quizDescription}
+                  onChange={(e) => setQuizDescription(e.target.value)}
+                  placeholder="Quiz description..."
+                  className="w-full border rounded-xl p-3 outline-none resize-none focus:ring-2 focus:ring-[#0066FF]"
+                />
+              </div>
+
+              <div className="flex justify-end gap-3 pt-3">
+                <button
+                  onClick={() => setShowQuizForm(false)}
+                  className="px-5 py-3 rounded-xl border"
+                >
+                  Cancel
+                </button>
+
+                <button
+                  onClick={handleCreateQuiz}
+                  className="bg-[#0066FF] text-white px-6 py-3 rounded-xl"
+                >
+                  Create Quiz
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
