@@ -129,7 +129,7 @@ class CRUDCourseEnrollment(CRUDBase[CourseEnrollment, CourseEnrollmentCreate, Co
 
                         # 2.2. Gọi API lấy tên khóa học từ COURSE SERVICE
                         try:
-                            course_api_url = f"{settings.BACKEND_COURSE_URL.rstrip('/')}/get-course-name/{course_id}"
+                            course_api_url = f"{settings.BACKEND_COURSE_URL.rstrip('/')}/courses/title/{course_id}"
                             course_response = client.get(course_api_url)
                             if course_response.status_code == 200:
                                 # Tương tự, nếu API trả về chuỗi trực tiếp hoặc JSON
@@ -177,7 +177,7 @@ class CRUDCourseEnrollment(CRUDBase[CourseEnrollment, CourseEnrollmentCreate, Co
         # 3. Đếm số lượng chứng chỉ mà user đang sở hữu thông qua quan hệ Join 1-1
         certificate_stmt = (
             select(func.count(Certificate.certificate_id))
-            .join(CourseEnrollment, CourseEnrollment.enrollment_id == Certificate.certificate_id)
+            .join(CourseEnrollment, CourseEnrollment.enrollment_id == Certificate.enrollment_id)
             .where(CourseEnrollment.user_id == user_id)
         )
         
