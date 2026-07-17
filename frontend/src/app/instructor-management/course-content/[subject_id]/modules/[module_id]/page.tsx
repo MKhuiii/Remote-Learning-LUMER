@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Navbar from "@/components/Navbar";
+import { useParams } from "next/navigation";
 
 import ModuleHeader from "@/components/ModuleHeader";
 import ModuleInformation from "@/components/ModuleInformation";
@@ -13,6 +14,11 @@ import ModuleQuizList from "@/components/ModuleQuizList";
 import ModuleTabs from "@/components/ModuleTab";
 
 export default function ModulePage() {
+  const params = useParams();
+
+  const subjectId = params.subject_id as string;
+  const moduleId = params.module_id as string;
+
   const [tab, setTab] = useState<"lesson" | "quiz">("lesson");
 
   // Mock Data
@@ -83,7 +89,11 @@ export default function ModulePage() {
         <ModuleTabs activeTab={tab} setActiveTab={setTab} />
 
         {tab === "lesson" ? (
-          <LessonTimeline lessons={lessons} />
+          <LessonTimeline
+            lessons={lessons}
+            subjectId={subjectId}
+            moduleId={moduleId}
+          />
         ) : (
           <ModuleQuizList quizzes={quizzes} />
         )}

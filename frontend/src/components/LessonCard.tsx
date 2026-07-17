@@ -1,5 +1,5 @@
 "use client";
-
+import Link from "next/link";
 import {
   Clock3,
   Video,
@@ -20,9 +20,11 @@ interface Lesson {
 
 interface Props {
   lesson: Lesson;
+  subjectId: string;
+  moduleId: string;
 }
 
-export default function LessonCard({ lesson }: Props) {
+export default function LessonCard({ lesson, subjectId, moduleId }: Props) {
   return (
     <div className="bg-white rounded-2xl shadow hover:shadow-xl transition p-6">
       <div className="flex justify-between items-start">
@@ -73,10 +75,13 @@ export default function LessonCard({ lesson }: Props) {
       </div>
 
       <div className="flex justify-end mt-8">
-        <button className="flex items-center gap-2 text-[#0066FF] font-semibold hover:gap-3 transition-all">
+        <Link
+          href={`/instructor-management/course-content/${subjectId}/modules/${moduleId}/lessons/${lesson.lesson_id}`}
+          className="flex items-center gap-2 text-[#0066FF] font-semibold hover:gap-3 transition-all"
+        >
           Open Lesson
           <ArrowRight size={18} />
-        </button>
+        </Link>
       </div>
     </div>
   );

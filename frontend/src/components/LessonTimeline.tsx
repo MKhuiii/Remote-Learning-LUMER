@@ -15,9 +15,15 @@ interface Lesson {
 
 interface Props {
   lessons: Lesson[];
+  subjectId: string;
+  moduleId: string;
 }
 
-export default function LessonTimeline({ lessons }: Props) {
+export default function LessonTimeline({
+  lessons,
+  subjectId,
+  moduleId,
+}: Props) {
   return (
     <>
       <div className="flex justify-between items-center mb-8">
@@ -49,7 +55,11 @@ export default function LessonTimeline({ lessons }: Props) {
             <div key={lesson.lesson_id} className="relative pl-16">
               <div className="absolute left-3 top-10 w-6 h-6 rounded-full bg-[#0066FF] border-4 border-white shadow" />
 
-              <LessonCard lesson={lesson} />
+              <LessonCard
+                lesson={lesson}
+                subjectId={subjectId}
+                moduleId={moduleId}
+              />
             </div>
           ))}
         </div>
