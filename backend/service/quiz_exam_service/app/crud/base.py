@@ -18,7 +18,7 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType, IDType]):
         statement = select(self.model).offset(skip).limit(limit)
         return db.exec(statement).all()
     
-    def create(self, db:Session, obj_in: CreateSchemaType):
+    def create(self, db:Session, obj_in: CreateSchemaType) -> ModelType:
         # Chuyển đổi dữ liệu từ Pydantic sang Model của Database
         db_obj = self.model.model_validate(obj_in)
         db.add(db_obj)

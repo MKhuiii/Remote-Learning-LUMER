@@ -10,6 +10,7 @@ if TYPE_CHECKING:
     from app.models.rubric_criteria import RubricCriteria
     from app.models.peer_review_assignments import PeerReviewAssignment
     from app.models.quiz_question import QuizQuestion
+    from app.models.quiz_pool_rule import QuizPoolRule
 
 class Quiz(SQLModel, table=True):
     __tablename__ = "quiz"
@@ -33,3 +34,4 @@ class Quiz(SQLModel, table=True):
     submissions: List["QuizSubmission"] = Relationship(back_populates="quiz")
     rubric_criterias: List["RubricCriteria"] = Relationship(back_populates="quiz")
     peer_assignments: List["PeerReviewAssignment"] = Relationship(back_populates="quiz")
+    pool_rules: List["QuizPoolRule"] = Relationship(back_populates="quiz")

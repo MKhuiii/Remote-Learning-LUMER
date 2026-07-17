@@ -1,11 +1,11 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Query
 from uuid import UUID
 from typing import Optional
 
 from app.api.v1.deps import SessionDep
 from app.core.security import RoleChecker
 from app.crud.syllabus import crud_syllabus
-from app.schemas.syllabus import SyllabusCreate, SyllabusUpdate, SyllabusRead
+from app.schemas.syllabus import SyllabusCreate, SyllabusUpdate, SyllabusRead, CheckSyllabusInstructor
 from fastapi import Request
 router = APIRouter(prefix="/syllabus", tags=["syllabus"])
 
@@ -66,3 +66,14 @@ def update_syllabus(
     if not db_obj:
         raise HTTPException(status_code=404, detail="Không tìm thấy đề cương yêu cầu.")
     return crud_syllabus.update(db=db, db_obj=db_obj, obj_in=payload)
+
+@router.get("/check-instructor", response_model=bool)
+def is_subject_instructor(
+    db: SessionDep,
+    instructor_id: UUID = Query(...),
+    subject_id: UUID = Query(...)
+):
+    # Tự đóng gói thành object CheckSyllabusInstructor để truyền vào CRUD
+    query = CheckSyllabusInstructor(subject_id=subject_id, instructor_id=instructor_id)
+    return crud_syllabus.is_subject_instructor(db, query)
+    

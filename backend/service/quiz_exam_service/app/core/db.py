@@ -15,5 +15,7 @@ def init_db() -> None:
     import app.models.rubric_criteria
     import app.models.peer_review_assignments
     import app.models.peer_review_evaluations
-
+    import app.models.question_pool
+    import app.models.quiz_pool_rule
+    import app.models.question_pool_link
     SQLModel.metadata.create_all(engine)

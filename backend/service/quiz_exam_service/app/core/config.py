@@ -26,6 +26,7 @@ class Settings(BaseSettings):
     
     BACKEND_USER_URL: str
     BACKEND_QUIZ_EXAM_URL: str
+    BACKEND_COURSE_URL: str
     QUIZS_DB_URL: str
     SECRET_KEY: str
     ALGORITHM: str = "HS256"

@@ -25,3 +25,7 @@ class SyllabusRead(SyllabusBase):
 
     class Config:
         from_attributes = True
+
+class CheckSyllabusInstructor(BaseModel):
+    subject_id: UUID
+    instructor_id: UUID

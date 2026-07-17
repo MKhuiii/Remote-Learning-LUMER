@@ -3,7 +3,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 
 from app.api.v1.deps import SessionDep
-from app.core.security import RoleChecker
+from app.core.security import RoleChecker, get_current_user_role
 from app.crud.course import crud_course
 from app.crud.course_media import crud_course_media
 from app.schemas.course import CourseCreate, CourseImageUploadResponse, CourseRead, CourseUpdate, CourseLessonsResponse
@@ -34,7 +34,7 @@ def get_courses(
     db: SessionDep,
     skip: int = 0,
     limit: int = 10,
-    current_user: dict = Depends(RoleChecker(["Admin", "Instructor", "Manager"]))
+    current_user: dict = Depends(get_current_user_role)
 ):
     return crud_course.get_multi(db, skip=skip, limit=limit)
 
