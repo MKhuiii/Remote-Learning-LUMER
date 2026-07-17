@@ -23,7 +23,7 @@ def create_lesson(
     # 1. Nếu người dùng là Giảng viên (không phải Admin), cần kiểm tra quyền sở hữu khóa học
     if "Admin" not in current_user.get("roles", []):
         course_instructor = crud_module.get_course_owner(db, new_lesson.module_id)
-        
+        print(course_instructor)
         if course_instructor is None:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,

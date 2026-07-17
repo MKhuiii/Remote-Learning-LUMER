@@ -13,5 +13,7 @@ class CertificateUpdate(BaseModel):
     full_name: str | None = None
     course_name: str | None = None
 
-class CertificateName(BaseModel):
+class CertificateItem(BaseModel):
     course_name: str
+    created_at: datetime
+    

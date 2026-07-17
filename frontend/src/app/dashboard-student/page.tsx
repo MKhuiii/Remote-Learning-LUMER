@@ -4,6 +4,8 @@ import { useState, useEffect } from "react";
 import Navbar from "@/components/Navbar";
 import { fetchCurrentUser, fetchUserProfile, updateUserData, updateUserProfile } from "@/actions/getUser";
 import { fetchUserStatistics, fetchInprogressCourses, fetchCompletedCourses } from "@/actions/getEnrollment";
+import { fetchUserCertificates } from "@/actions/getCertificate";
+import { CertificateItem } from "@/types/certificate";
 import { UserDataInfo, ProfileInfo } from "@/types/user";
 import { GeneralUserEnrollmentInfo, CourseInProgress } from "@/types/enrollment";
 
@@ -13,13 +15,6 @@ const ROLE_TRANSLATIONS: Record<string, string> = {
   "Tester": "Người kiểm thử",
   "Instructor": "Giảng viên",
   "Manager": "Quản lý đào tạo"
-};
-
-const COMPLEMENTARY_MOCK_DATA = {
-  certificates: [
-    { title: "Java Core Certificate", date: "20/05/2026" },
-    { title: "ReactJS Certificate", date: "10/06/2026" },
-  ]
 };
 
 export default function DashboardPage() {
@@ -37,7 +32,9 @@ export default function DashboardPage() {
   const [learningCourses, setLearningCourses] = useState<CourseInProgress[]>([]);
   const [completedCourses, setCompletedCourses] = useState<CourseInProgress[]>([]);
 
-  // State quản lý chế độ chỉnh sửa & dữ liệu Form chung
+  // 2. State lưu danh sách chứng chỉ thật từ API
+  const [certificates, setCertificates] = useState<CertificateItem[]>([]);
+
   const [isEditing, setIsEditing] = useState<boolean>(false);
   const [submitting, setSubmitting] = useState<boolean>(false);
   const [submitSuccess, setSubmitSuccess] = useState<string | null>(null);
@@ -50,25 +47,26 @@ export default function DashboardPage() {
     avatar_url: ""
   });
 
-  // Tải toàn bộ dữ liệu (Bao gồm User profile, Thống kê, Khóa học đang học & Khóa học hoàn thành)
   async function loadAllData() {
     try {
       setLoading(true);
       setError(null);
 
-      // Chạy song song tất cả các request để tối ưu tốc độ phản hồi
+      // 3. Đưa fetchUserCertificates vào Promise.all để chạy song song tối ưu hóa hiệu năng
       const [
         userData,
         profileData,
         statsData,
         inprogressData,
-        completedData
+        completedData,
+        certificatesData
       ] = await Promise.all([
         fetchCurrentUser(),
         fetchUserProfile(),
         fetchUserStatistics(),
         fetchInprogressCourses(),
-        fetchCompletedCourses()
+        fetchCompletedCourses(),
+        fetchUserCertificates()
       ]);
 
       setUser(userData);
@@ -76,8 +74,8 @@ export default function DashboardPage() {
       setStatistics(statsData);
       setLearningCourses(inprogressData);
       setCompletedCourses(completedData);
+      setCertificates(certificatesData); // Cập nhật danh sách chứng chỉ thật
 
-      // Đổ dữ liệu hiện tại vào Form
       if (userData && profileData) {
         setFormData({
           username: userData.username || "",
@@ -100,7 +98,6 @@ export default function DashboardPage() {
     loadAllData();
   }, []);
 
-  // Lắng nghe sự thay đổi của các ô nhập liệu
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({
@@ -121,13 +118,11 @@ export default function DashboardPage() {
     setSubmitSuccess(null);
 
     try {
-      // 1. Chuẩn bị payload cập nhật User thông qua schema UserInfoUpdate
       const userPayload = {
         username: formData.username,
         birthdate: formData.birthdate || undefined,
       };
 
-      // 2. Chuẩn bị payload cập nhật Profile thông qua ProfileUpdate
       const profilePayload = {
         firstname: formData.firstname,
         lastname: formData.lastname,
@@ -135,8 +130,6 @@ export default function DashboardPage() {
         avatar_url: formData.avatar_url,
       };
 
-      // 3. Gọi các Server Actions song song
-      // Truyền user.user_id làm tham số đầu tiên của updateUserData giống như thiết kế mới của bạn
       const [userOk, profileOk] = await Promise.all([
         updateUserData(user.user_id, userPayload),
         updateUserProfile(profilePayload)
@@ -145,7 +138,7 @@ export default function DashboardPage() {
       if (userOk && profileOk) {
         setSubmitSuccess("Cập nhật thông tin hồ sơ thành công!");
         setIsEditing(false);
-        await loadAllData(); // Tải lại toàn bộ dữ liệu mới nhất
+        await loadAllData();
       } else {
         setError("Cập nhật thất bại. Vui lòng kiểm tra lại thông tin.");
       }
@@ -214,7 +207,7 @@ export default function DashboardPage() {
         </div>
       </section>
 
-      {/* Statistics - Hiển thị số liệu động từ API */}
+      {/* Statistics */}
       <section className="max-w-5xl mx-auto px-6 -mt-6">
         <div className="grid md:grid-cols-3 gap-4">
           <StatCard title={statistics.inprogress_courses.toString()} text="Khóa học đang học" />
@@ -248,7 +241,7 @@ export default function DashboardPage() {
         </div>
       </section>
 
-      {/* Content Area - Đã bỏ Sidebar và chuyển thành 1 cột trung tâm */}
+      {/* Content Area */}
       <section className="max-w-5xl mx-auto px-6 py-8">
         <div className="w-full">
 
@@ -291,14 +284,18 @@ export default function DashboardPage() {
             </div>
           )}
 
-          {/* TAB: CHỨNG CHỈ */}
+          {/* TAB: CHỨNG CHỈ (Thay bằng dữ liệu thật từ API) */}
           {activeTab === "certificate" && (
             <div className="bg-white rounded-2xl border border-slate-200 p-6">
               <h2 className="text-2xl font-bold text-slate-900 mb-6">Chứng chỉ đã đạt được</h2>
-              {COMPLEMENTARY_MOCK_DATA.certificates.length > 0 ? (
+              {certificates.length > 0 ? (
                 <div className="grid md:grid-cols-2 gap-4">
-                  {COMPLEMENTARY_MOCK_DATA.certificates.map((cert, index) => (
-                    <CertificateCard key={index} title={cert.title} date={cert.date} />
+                  {certificates.map((cert, index) => (
+                    <CertificateCard
+                      key={index}
+                      title={cert.course_name}
+                      date={formatDate(cert.created_at)}
+                    />
                   ))}
                 </div>
               ) : (
@@ -496,7 +493,7 @@ export default function DashboardPage() {
   );
 }
 
-// Các component phụ trợ giữ nguyên
+// Các sub-component phụ trợ
 function StatCard({ title, text }: { title: string; text: string }) {
   return (
     <div className="bg-white rounded-2xl border border-slate-200 p-6 text-center hover:shadow-md transition">
