@@ -230,13 +230,15 @@ def get_instructor_list(
     if not users:
             return []
     role_name = crud_role.get_name_by_id(session, query.role_id) or "Unknown"
-    display_status = crud_status.get_display_status(session, user.status_id)
+    # display_status = crud_status.get_display_status(session, user.status_id)
         
     user_info_list = []
     for user in users:
+        display_status = crud_status.get_display_status(session, user.status_id)
         user_data = user.model_dump()
-        user_data["role_name"] = role_name  # Gán thẳng role_name tìm được
-        user_data["status_id"] = display_status
+        user_data["role_name"] = role_name  
+        # user_data["status_id"] = display_status
+        user_data["display_status"] = display_status
         user_info_list.append(user_data)
 
     return user_info_list

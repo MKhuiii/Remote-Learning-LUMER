@@ -281,7 +281,7 @@ export async function getInforUser(userId: string): Promise<ActionResponseDetail
     }
 
     const data = await res.json();
-    return { success: true, data: data }; // Trả về object chứa toàn bộ dữ liệu phản hồi
+    return { success: true, data: data }; 
   } catch (error: any) {
     return { success: false, message: error.message || "Lỗi kết nối hệ thống" };
   }
@@ -293,11 +293,10 @@ export async function getInforUser(userId: string): Promise<ActionResponseDetail
 export async function getrInstructorList(
   page: number,
   limit: number,
-  roleId: number,     // Đổi thành bắt buộc
-  statusId: string    // Đổi thành bắt buộc
+  roleId: number,     
+  statusId: string   
 ): Promise<ActionResponseList> {
   try {
-    // Chặn nhanh từ Frontend nếu truyền nhầm dữ liệu trống rỗng
     if (roleId === undefined || !statusId) {
       return { success: false, message: "Thiếu bộ lọc Role hoặc Status để tìm kiếm!" };
     }
@@ -310,10 +309,7 @@ export async function getrInstructorList(
     if (!headers) {
       return { success: false, message: "Không tìm thấy Token đăng nhập trong Cookie!" };
     }
-
-    // Vì chắc chắn có dữ liệu nên bạn có thể nối chuỗi thẳng thắn luôn cho sạch code
     const url = `${userBackendUrl}/get-instructor-list?skip=${skip}&limit=${limit}&status_id=${statusId}&role_id=${roleId}`;
-
     const res = await fetch(url, {
       method: "GET",
       headers: headers,

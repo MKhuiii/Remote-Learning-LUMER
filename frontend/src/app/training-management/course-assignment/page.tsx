@@ -5,21 +5,14 @@ import Navbar from '@/components/Navbar';
 import { Course, Module } from '@/types/course'; 
 import { getCoursesAction } from "@/actions/getCourse";  
 import { getCurriculums } from "@/actions/getCurriculum";
-import { getrInstructorList, User } from "@/actions/getUser"; // Import hàm lấy danh sách User thật từ file của bạn
-import { assignInstructorAction } from "@/actions/getAssignment"
-
-
-
+import { getrInstructorList, User } from "@/actions/getUser"; 
+import { assignInstructorAction } from "@/actions/getAssignment";
 
 export default function CourseAssignment() {
-    // ---- Các States quản lý dữ liệu ----
     const [isLoading, setIsLoading] = useState<boolean>(false);
     const [courses, setCourses] = useState<Course[]>([]);
     const [curriculums, setCurriculums] = useState<any[]>([]);
-    
-    // State lưu danh sách giảng viên thật lấy từ cơ sở dữ liệu
     const [lecturers, setLecturers] = useState<User[]>([]);
-    
     const [selectedCourseId, setSelectedCourseId] = useState<string | null>(null);
     const [form, setForm] = useState({
         course_id: "",
@@ -29,51 +22,52 @@ export default function CourseAssignment() {
         curriculum_id: "", 
     });
 
-const fetchInitialData = async () => {
-    setIsLoading(true);
-    try {
-        const [coursesData, curriculumsData, usersResult] = await Promise.all([
-            getCoursesAction(), 
-            getCurriculums(),
-            getrInstructorList(1, 100, 5, "ACTIVE") 
-           
-        ]);
-        console.log(curriculumsData);
-        console.log(usersResult);
-        console.log(coursesData);
-        const validCourses: Course[] = coursesData || [];
-        const validCurriculums = curriculumsData || [];
-        
-        // Không cần dùng .filter() thủ công ở client nữa, Backend đã trả về chuẩn danh sách GV
-        if (usersResult.success && usersResult.list) {
-            setLecturers(usersResult.list);
-        }
+    const fetchInitialData = async () => {
+        setIsLoading(true);
+        try {
+            const [coursesData, curriculumsData, usersResult] = await Promise.all([
+                getCoursesAction(), 
+                getCurriculums(),
+                getrInstructorList(1, 100, 4, "ACTIVE")
+            ]);
+            
+            const validCourses: Course[] = coursesData || [];
+            const validCurriculums = curriculumsData || [];
+            
+            if (usersResult && usersResult.success && usersResult.list) {
+                setLecturers(usersResult.list);
+            } else if (Array.isArray(usersResult)) {
+                setLecturers(usersResult);
+            } else {
+                setLecturers([]);
+            }
 
-        const synchronizedData = validCourses.map((course: Course) => {
-            const targetCurriculum = validCurriculums.find((c: any) => {
-                const cId = c.curriculum_id || c.id;
-                const courseCId = course.curriculum_id;
-                return String(cId).toLowerCase() === String(courseCId).toLowerCase();
+            const synchronizedData = validCourses.map((course: Course) => {
+                const targetCurriculum = validCurriculums.find((c: any) => {
+                    const cId = c.curriculum_id || c.id;
+                    const courseCId = course.curriculum_id;
+                    return String(cId).toLowerCase() === String(courseCId).toLowerCase();
+                });
+                return { 
+                    ...course, 
+                    modules: targetCurriculum?.modules || course.modules || [],
+                    // Đồng bộ từ instructor_id nếu có sẵn từ database của bạn
+                    assignedLecturerId: (course as any).assignedLecturerId || (course as any).instructor_id || "" 
+                };
             });
-            return { 
-                ...course, 
-                modules: targetCurriculum?.modules || course.modules || [],
-                assignedLecturerId: (course as any).assignedLecturerId || "" 
-            };
-        });
 
-        setCourses(synchronizedData);
-        setCurriculums(validCurriculums);
-        
-        if (synchronizedData.length > 0) {
-            setSelectedCourseId(synchronizedData[0].course_id);
+            setCourses(synchronizedData);
+            setCurriculums(validCurriculums);
+            
+            if (synchronizedData.length > 0 && !selectedCourseId) {
+                setSelectedCourseId(synchronizedData[0].course_id);
+            }
+        } catch (error) {
+            console.error(error);
+        } finally {
+            setIsLoading(false);
         }
-    } catch (error) {
-        console.error("Lỗi khi tải dữ liệu tổng hợp:", error);
-    } finally {
-        setIsLoading(false);
-    }
-};
+    };
 
     useEffect(() => { 
         fetchInitialData();
@@ -93,7 +87,7 @@ const fetchInitialData = async () => {
         return map;
     }, [curriculums]);
 
-    // ---- Tính toán khóa học đang được chọn dựa theo `course_id` ----
+    // Lấy thông tin khóa học đang được chọn dựa trên selectedCourseId
     const activeCourse = useMemo(() => {
         return courses.find(c => c.course_id === selectedCourseId) || courses[0];
     }, [courses, selectedCourseId]);
@@ -104,52 +98,57 @@ const fetchInitialData = async () => {
         return lecturers.find(l => l.user_id === (activeCourse as any).assignedLecturerId);
     }, [activeCourse, lecturers]);
 
-    // ---- Thống kê số lượng ----
     const totalCourses = courses.length;
     const assignedCoursesCount = courses.filter(c => (c as any).assignedLecturerId && (c as any).assignedLecturerId !== "").length;
     const unassignedCoursesCount = totalCourses - assignedCoursesCount;
 
-    const handleAssignLecturer = (lecturerId: string) => {
-        if (!activeCourse) return;
-        setCourses((prevCourses) =>
-            prevCourses.map((course) =>
-                course.course_id === activeCourse.course_id ? { ...course, assignedLecturerId: lecturerId } as any : course
+    const handleAssignLecturer = (courseId: string, lecturerId: string) => {
+        // Cập nhật lại mảng tổng, do activeCourse sử dụng useMemo phụ thuộc vào state `courses`
+        // nên khi `courses` thay đổi, giao diện bên phải sẽ tự động re-render theo chính xác.
+        setCourses(prevCourses =>
+            prevCourses.map(course =>
+                course.course_id === courseId
+                    ? { ...course, assignedLecturerId: lecturerId }
+                    : course
             )
         );
     };
-const handleSubmit = async () => {
-    // Nếu không có khóa học nào đang được chọn, dừng xử lý
+
+    const handleSubmit = async () => {
     if (!activeCourse) return;
 
-    const lecturerId = (activeCourse as any).assignedLecturerId;
-    
-    if (!lecturerId) {
-        alert("Vui lòng chọn một giảng viên trước khi xác nhận lưu.");
-        return;
-    }
+    const lecturerId = (activeCourse as any)?.assignedLecturerId;
+    if (!lecturerId) return alert("Vui lòng chọn giảng viên.");
 
     setIsLoading(true);
+
     try {
-        // Chuẩn bị payload đúng định dạng Interface CourseLink đã khai báo ở backend
-        const payload = {
+        // 1. Kiểm tra nếu khóa học ĐÃ CÓ giảng viên từ trước
+        if ((activeCourse as any).instructor_id) {
+            // Thực hiện gọi API DELETE bản ghi cũ trước tại đây nếu có hàm xóa
+            // await deleteInstructorAction(activeCourse.course_id);
+        }
+
+        // 2. Gọi hàm gán mới sau khi đã dọn dẹp bản ghi cũ
+        const result = await assignInstructorAction({
             course_id: activeCourse.course_id,
             instructor_id: lecturerId
-        };
-
-        // Gọi Server Action để gửi dữ liệu lên FastAPI
-        const result = await assignInstructorAction(payload);
+        });
 
         if (result.success) {
-            alert(`🎉 Đã phân công giảng viên thành công cho khóa học: ${activeCourse.title}`);
-            
-            // Tùy chọn: Tải lại dữ liệu mới nhất từ DB để đảm bảo đồng bộ hoàn hảo
-            // await fetchInitialData(); 
+            alert("🎉 Thay đổi giảng viên thành công!");
+            setCourses(prevCourses =>
+                prevCourses.map(course =>
+                    course.course_id === activeCourse.course_id
+                        ? { ...course, instructor_id: lecturerId, assignedLecturerId: lecturerId }
+                        : course
+                )
+            );
         } else {
-            alert(`❌ Lỗi: ${result.error || "Không thể lưu phân công môn học."}`);
+            alert(`Lỗi từ database: ${result.error}`);
         }
     } catch (error: any) {
-        console.error("Lỗi khi lưu dữ liệu:", error);
-        alert("Có lỗi bất ngờ xảy ra trong quá trình xử lý.");
+        alert(`Lỗi: ${error.message}`);
     } finally {
         setIsLoading(false);
     }
@@ -157,13 +156,12 @@ const handleSubmit = async () => {
 
 
 
-    
+
     return (
         <>
             <Navbar />
             
             <div className="min-h-screen bg-[#f4f8fc] text-gray-800 antialiased pb-12">
-                {/* BANNER */}
                 <div className="bg-[#0066ff] text-white pt-10 pb-20 px-4 sm:px-8 relative">
                     <div className="max-w-7xl mx-auto space-y-4">
                         <a href="/training-management" className="inline-flex items-center text-xs font-semibold text-white/80 hover:text-white transition-colors">
@@ -179,7 +177,6 @@ const handleSubmit = async () => {
                 </div>
 
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 -mt-12 relative z-10 space-y-8">
-                    {/* KHỐI THẺ THỐNG KÊ */}
                     <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                         <div className="bg-white p-5 rounded-2xl shadow-md border border-[#e1ebf5] text-center flex flex-col justify-center items-center">
                             <span className="text-3xl font-extrabold text-[#0066ff]">{isLoading ? "..." : totalCourses}</span>
@@ -195,16 +192,14 @@ const handleSubmit = async () => {
                         </div>
                     </div>
 
-                    {/* BỐ CỤC CHÍNH */}
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
-                        {/* CỘT TRÁI: DANH SÁCH KHÓA HỌC */}
                         <div className="lg:col-span-1 space-y-3">
                             <div className="text-xs font-bold text-gray-500 uppercase tracking-wider px-1">
                                 Danh sách môn học ({totalCourses})
                             </div>
 
                             <div className="space-y-3 max-h-[600px] overflow-y-auto pr-1">
-                                {isLoading ? (
+                                {isLoading && courses.length === 0 ? (
                                     <div className="p-8 text-center bg-white rounded-2xl border border-gray-100 text-xs text-gray-400">
                                         Đang kết nối API hệ thống...
                                     </div>
@@ -256,11 +251,9 @@ const handleSubmit = async () => {
                             </div>
                         </div>
 
-                        {/* CỘT PHẢI: CHI TIẾT & CHỌN GIẢNG VIÊN */}
                         <div className="lg:col-span-2 space-y-6">
                             {activeCourse ? (
                                 <>
-                                    {/* Thông tin tổng quan */}
                                     <div className="bg-white p-6 sm:p-8 rounded-2xl border border-[#e1ebf5] shadow-sm space-y-5">
                                         <div className="border-b border-[#f4f8fc] pb-4">
                                             <span className="text-[10px] font-bold uppercase tracking-widest bg-[#e6f2ff] text-[#0066ff] px-3 py-1.5 rounded-lg">
@@ -292,7 +285,6 @@ const handleSubmit = async () => {
                                         </div>
                                     </div>
 
-                                    {/* Cấu trúc chương học */}
                                     <div className="bg-white p-6 sm:p-8 rounded-2xl border border-[#e1ebf5] shadow-sm">
                                         <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4">
                                             Khung chương trình đào tạo liên kết ({activeCourse.modules?.length || 0} Chương)
@@ -327,7 +319,6 @@ const handleSubmit = async () => {
                                         </div>
                                     </div>
 
-                                    {/* Panel Phân Công Giảng Viên Thật */}
                                     <div className="bg-white p-6 sm:p-8 rounded-2xl border border-[#e1ebf5] shadow-sm grid grid-cols-1 md:grid-cols-2 gap-6">
                                         <div className="space-y-4">
                                             <div>
@@ -341,7 +332,8 @@ const handleSubmit = async () => {
                                                 <label className="text-xs font-bold text-gray-500">Chọn giảng viên:</label>
                                                 <select
                                                     value={(activeCourse as any).assignedLecturerId || ""}
-                                                    onChange={(e) => handleAssignLecturer(e.target.value)}
+                                                    // ĐÃ FIX: Truyền chính xác ID khoá học hiện tại cùng với ID giảng viên mới chọn
+                                                    onChange={(e) => handleAssignLecturer(activeCourse.course_id, e.target.value)}
                                                     className="w-full text-xs bg-white border border-[#d1e2f3] rounded-xl p-3 focus:ring-2 focus:ring-[#0066ff]/20 focus:border-[#0066ff] text-gray-700 cursor-pointer shadow-sm outline-none"
                                                 >
                                                     <option value="">-- Chưa chỉ định giảng viên --</option>
@@ -375,11 +367,10 @@ const handleSubmit = async () => {
                                         </div>
                                     </div>
 
-                                    {/* Nút lưu thay đổi */}
                                     <div className="flex items-center justify-end">
                                         <button
                                             onClick={handleSubmit}
-                                            disabled={isLoading} // Ngăn click khi đang loading
+                                            disabled={isLoading}
                                             className={`px-8 py-3.5 text-white text-xs font-bold rounded-xl shadow-md transition-all duration-200 ${
                                                 isLoading ? "bg-gray-400 cursor-not-allowed" : "bg-[#0066ff] hover:bg-[#0052cc]"
                                             }`}

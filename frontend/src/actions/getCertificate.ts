@@ -21,11 +21,7 @@ async function getAuthHeaders() {
 export async function fetchUserCertificates(): Promise<CertificateItem[]> {
     try {
         const BACKEND_URL = process.env.NEXT_PUBLIC_PROGRESS_BACKEND_URL;
-
-        // 1. Gọi hàm lấy headers chuẩn hóa
         const headers = await getAuthHeaders();
-
-        // 2. Thực hiện gọi API với headers vừa lấy được
         const response = await fetch(`${BACKEND_URL}/certificate/get-list`, {
             method: "GET",
             // Nếu headers trả về null (do không có token), fallback về object rỗng

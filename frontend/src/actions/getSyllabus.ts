@@ -158,7 +158,8 @@ export async function deleteSubjectAction(subjectId: string, token: string) {
 
 export async function getSyllabusAction(subjectId: string) {
   try {
-    const baseUrl = process.env.NEXT_PUBLIC_COURSE_BACKEND_URL || "http://localhost:8001";
+    // const baseUrl = process.env.NEXT_PUBLIC_COURSE_BACKEND_URL || "http://localhost:8001";
+    const baseUrl = userBackendUrl || "";
     const cleanBaseUrl = baseUrl.endsWith("/") ? baseUrl.slice(0, -1) : baseUrl;
     const url = `${cleanBaseUrl}/syllabus/subject/${subjectId}`;
 
@@ -210,7 +211,7 @@ export async function createSyllabusAction(payload: {
   status_id?: string;
 }) {
   try {
-    const baseUrl = process.env.NEXT_PUBLIC_COURSE_BACKEND_URL || "http://localhost:8001";
+    const baseUrl = process.env.NEXT_PUBLIC_COURSE_BACKEND_URL || "";
     const url = `${baseUrl.replace(/\/$/, "")}/syllabus/`;
 
     const cookieStore = await cookies();
@@ -227,19 +228,13 @@ export async function createSyllabusAction(payload: {
         console.error("Không thể giải mã token:", e);
       }
     }
-
-    // 2. Chuẩn hóa payload khớp 100% với cấu trúc Model ở Backend
     const finalPayload = {
       subject_id: payload.subject_id,
       description: payload.description || "Chưa có mô tả",
-      
-      // instructor_id bắt buộc phải có và đúng chuẩn UUID
       instructor_id: instructorId, 
       
-      // syllabus_file_path bắt buộc phải là string (không được null hay rỗng)
       syllabus_file_path: payload.syllabus_file_path || "documents/syllabi/placeholder.pdf",
       
-      // status_id bắt buộc theo model
       status_id: payload.status_id || "SYLLABUS_DRAFT"
     };
 
@@ -266,8 +261,6 @@ export async function createSyllabusAction(payload: {
     return { success: false, error: "Lỗi kết nối đến máy chủ." };
   }
 }
-
-
 
 
 

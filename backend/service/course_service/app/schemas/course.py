@@ -35,7 +35,7 @@ class CourseRead(CourseBase):
     created_at: date
     status_id: str
     image_url: Optional[str] = None      # <-- Giữ từ bản của bạn bạn
-
+    instructor_id: Optional[UUID] = None
     # Cấu hình Pydantic v2 để đọc được dữ liệu từ SQLModel/SQLAlchemy object (.from_attributes)
     model_config = {
         "from_attributes": True

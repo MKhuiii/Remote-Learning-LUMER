@@ -27,7 +27,8 @@ class CurriculumRead(CurriculumBase):
     curriculum_id: UUID
     assigner_id: Optional[UUID] = None
     curriculum_file_path: Optional[str] = None
-
+    instructor_id: Optional[UUID] = None
+    
 class CurriculumFileUploadResponse(BaseModel):
     file_path: str
 

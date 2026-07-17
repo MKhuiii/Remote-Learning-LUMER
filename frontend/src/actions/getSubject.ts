@@ -22,7 +22,6 @@ export async function getSubjectsByCurriculum(curriculumId: string) {
         "Authorization": `Bearer ${token}`,
         "Content-Type": "application/json",
       },
-      // cache: "no-store" // Đảm bảo luôn lấy dữ liệu mới nhất không bị cache bài học cũ
     });
 
     if (!response.ok) throw new Error(`Lỗi Server (${response.status})`);

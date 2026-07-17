@@ -25,7 +25,7 @@ export interface Course {
   image_url: string | null;
   created_at?: string;
   status_id: string;
-
+  assigner_id?: string;
   modules?: Module[];
 }
 

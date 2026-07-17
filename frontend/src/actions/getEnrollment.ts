@@ -3,7 +3,6 @@
 import { GeneralUserEnrollmentInfo, CourseInProgress } from "@/types/enrollment";
 import { cookies } from "next/headers";
 
-// Sửa hàm lấy headers bảo mật, trả về định dạng Record<string, string> chuẩn xác
 async function getAuthHeaders(): Promise<Record<string, string> | null> {
     const cookieStore = cookies();
     const resolvedCookies = typeof (cookieStore as any).then === "function"
@@ -25,10 +24,8 @@ async function getAuthHeaders(): Promise<Record<string, string> | null> {
 export async function fetchUserStatistics(): Promise<GeneralUserEnrollmentInfo> {
     const headers = await getAuthHeaders();
 
-    // 🌟 SỬA: Chặn request từ server nếu không tìm thấy token đăng nhập
     if (!headers) {
         console.warn("fetchUserStatistics: Không tìm thấy token, hủy request.");
-        // Trả về dữ liệu trống mặc định thay vì crash app
         return { inprogress_courses: 0, completed_courses: 0, certificate: 0 };
     }
 
@@ -52,8 +49,6 @@ export async function fetchInprogressCourses(): Promise<CourseInProgress[]> {
         console.warn("fetchInprogressCourses: Không tìm thấy token, hủy request.");
         return [];
     }
-
-    // Backend route: /history/{is_completed} -> Đang học tương ứng với false
     const res = await fetch(`${process.env.NEXT_PUBLIC_PROGRESS_BACKEND_URL}/course_enrollment/history/false`, {
         headers: headers,
         cache: "no-store",

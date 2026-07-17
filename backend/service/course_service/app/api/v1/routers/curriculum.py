@@ -4,6 +4,9 @@ import uuid
 from fastapi import APIRouter, File, UploadFile, HTTPException, status, Depends
 from uuid import UUID
 
+
+from app.models.course_instructor_link import CourseInstructorLink
+from app.models.course import Course
 from app.api.v1.deps import SessionDep
 from app.core.security import RoleChecker
 from app.crud.curriculum import crud_curriculum
@@ -40,13 +43,26 @@ def create_curriculum(
 
 # 🔵 3. Lấy toàn bộ danh sách Curriculum
 @router.get("/", response_model=list[CurriculumRead])
-def get_curriculums(
-    db: SessionDep,
-    skip: int = 0,
-    limit: int = 100,
-    current_user: dict = Depends(RoleChecker(["Admin", "Instructor", "Student", "Manager"]))
-):
-    return crud_curriculum.get_multi(db=db, skip=skip, limit=limit)
+def get_curriculums(db: SessionDep, skip: int = 0, limit: int = 10):
+    curriculums = crud_curriculum.get_multi(db, skip=skip, limit=limit)
+    
+    results = []
+    for curr in curriculums:
+        course = db.query(Course).filter(Course.curriculum_id == curr.curriculum_id).first()
+        curr_data = curr.model_dump() # hoặc curr.dict() tùy phiên bản pydantic bạn đang dùng
+        if course:
+            link = db.query(CourseInstructorLink).filter(CourseInstructorLink.course_id == course.course_id).first()
+            if link:
+                curr_data["instructor_id"] = link.instructor_id
+            else:
+                curr_data["instructor_id"] = None
+        else:
+            curr_data["instructor_id"] = None
+            
+        results.append(curr_data)
+
+    return results
+
 
 
 # 🔵 4. Lấy chi tiết Curriculum theo ID
