@@ -1,6 +1,7 @@
 from pydantic import BaseModel
 from uuid import UUID
-from app.models.enum import QuizPlacementType
+from app.models.enum import QuizPlacementType, QuizType
+from datetime import date
 
 class QuizCreate(BaseModel):
     title: str
@@ -8,6 +9,7 @@ class QuizCreate(BaseModel):
     duration_minutes: int
     passsing_score: float
     max_attempts: int
+    quiz_type: QuizType
     placement_type: QuizPlacementType
     target_lesson_id: UUID | None = None
 
@@ -20,3 +22,13 @@ class QuizUpdate(BaseModel):
     placement_type: QuizPlacementType | None = None
     target_lesson_id: UUID | None = None
     is_active: bool | None = None
+
+class QuizItem(BaseModel):
+    title: str 
+    description: str 
+    duration_minutes: int 
+    passsing_score: float 
+    max_attempts: int 
+    placement_type: QuizPlacementType 
+    is_active: bool 
+    created_at: date

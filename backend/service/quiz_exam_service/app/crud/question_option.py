@@ -27,5 +27,10 @@ class CRUDQuestionOption(CRUDBase[QuestionOption, QuestionOptionCreate, Question
             QuestionOption.option_id == option_id
         )
         return db.exec(statement).first()
+    def get_options_by_question(self, db: Session, question_id: UUID) -> list[QuestionOption]:
+        statement = select(QuestionOption).where(
+            QuestionOption.question_id == question_id
+        )
+        return db.exec(statement).all()
 crud_question_option = CRUDQuestionOption(QuestionOption)
 

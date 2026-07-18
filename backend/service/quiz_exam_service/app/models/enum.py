@@ -18,3 +18,7 @@ class ReviewStatus(str, Enum):
     PENDING = "PENDING"       # Được giao nhưng chưa chấm
     COMPLETED = "COMPLETED"   # Đã chấm xong
     SKIPPED = "SKIPPED"       # Bị bỏ qua (nếu hết hạn hoặc lý do đặc biệt)
+
+class QuizType(str, Enum):
+    RANDOM_QUESTION = "RANDOM_QUESTION" # Đề thi bốc ngẫu nhiên câu hỏi từ pool
+    FIXED_QUESTION = "FIXED_QUESTION" # Đề thi có câu hỏi cố định

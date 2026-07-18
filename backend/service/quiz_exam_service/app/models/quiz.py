@@ -3,7 +3,7 @@ from uuid import UUID
 from datetime import date
 from typing import Optional, List, TYPE_CHECKING
 from sqlmodel import Field, SQLModel, Relationship
-from app.models.enum import QuizPlacementType
+from app.models.enum import QuizPlacementType, QuizType
 
 if TYPE_CHECKING:
     from app.models.quiz_submission import QuizSubmission
@@ -16,22 +16,25 @@ class Quiz(SQLModel, table=True):
     __tablename__ = "quiz"
 
     quiz_id: UUID = Field(default_factory=uuid.uuid4, primary_key=True, index=True)
-    title: str = Field(nullable=False, max_length=255)       # Tiêu đề cấu hình của đề thi
-    description: Optional[str] = Field(default=None)         # Nội dung hướng dẫn làm bài thi tổng quan
+    subject_id: UUID = Field(nullable=False, index=True)
+    title: str = Field(nullable=False, max_length=255)
+    description: Optional[str] = Field(default=None)
+    duration_minutes: int = Field(default=15, nullable=False)
+    passing_score: float = Field(default=5.0, nullable=False)
+    max_attempts: int = Field(default=3, nullable=False)
     
-    duration_minutes: int = Field(default=15, nullable=False) # Thời gian giới hạn làm bài tính bằng phút
-    passing_score: float = Field(default=5.0, nullable=False) # Điểm số tối thiểu để hệ thống ghi nhận trạng thái đạt
-    max_attempts: int = Field(default=3, nullable=False)      # Số lượt làm bài tối đa cho phép đối với học viên
+    # Loại đề thi (RANDOM_QUESTION hoặc FIXED_QUESTION)
+    quiz_type: QuizType = Field(default=QuizType.FIXED_QUESTION, nullable=False)
     
-    placement_type: QuizPlacementType = Field(default=QuizPlacementType.STANDALONE_LESSON) # Vị trí hiển thị đề thi
-    target_lesson_id: Optional[UUID] = Field(default=None, index=True) # Định danh bài học chứa đề thi từ Course Service
-    
-    is_active: bool = Field(default=True, nullable=False)    # Trạng thái kích hoạt cho phép hiển thị đề thi
-    created_at: date = Field(default_factory=date.today)    # Ngày khởi tạo cấu hình đề thi
+    placement_type: QuizPlacementType = Field(default=QuizPlacementType.STANDALONE_LESSON)
+    target_lesson_id: Optional[UUID] = Field(default=None, index=True)
+    is_active: bool = Field(default=True, nullable=False)
+    created_at: date = Field(default_factory=date.today)
 
     # Quan hệ nội bộ phân hệ
-    quiz_questions: List["QuizQuestion"] = Relationship(back_populates="quiz")
+    quiz_questions: List["QuizQuestion"] = Relationship(back_populates="quiz") # FIXED_QUESTION
+    pool_rules: List["QuizPoolRule"] = Relationship(back_populates="quiz")     # RANDOM_QUESTION
+    
     submissions: List["QuizSubmission"] = Relationship(back_populates="quiz")
     rubric_criterias: List["RubricCriteria"] = Relationship(back_populates="quiz")
     peer_assignments: List["PeerReviewAssignment"] = Relationship(back_populates="quiz")
-    pool_rules: List["QuizPoolRule"] = Relationship(back_populates="quiz")

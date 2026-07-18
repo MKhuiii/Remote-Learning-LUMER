@@ -74,3 +74,10 @@ def delete_lesson(
     
     # 204 NO CONTENT không trả về dữ liệu ở Body
     return None
+
+@router.get("/is-existed/{lesson_id}")
+def is_existed(
+    db: SessionDep,
+    lesson_id: UUID
+):
+    return crud_lesson.get_by_id(db, lesson_id) is not None
