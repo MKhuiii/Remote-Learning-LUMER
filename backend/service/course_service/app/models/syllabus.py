@@ -3,6 +3,7 @@ from typing import Optional, TYPE_CHECKING
 from uuid import UUID
 from app.models.enum import SyllabusStatus
 import uuid
+from sqlalchemy import Enum
 
 if TYPE_CHECKING:
     from app.models.subject import Subject
@@ -18,9 +19,8 @@ class Syllabus(SQLModel, table=True):
     description: Optional[str] = Field(default=None, max_length=255)
     syllabus_file_path: str = Field(nullable=False)
     status_id: SyllabusStatus = Field(
-        foreign_key="status_catalog.status_id", 
-        nullable=False,
-        max_length=50
+        sa_type=Enum(SyllabusStatus),
+        nullable=False
     )
     # Quan hệ
     # Một đề cương môn học chỉ thuộc về 1 môn học

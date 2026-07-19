@@ -4,6 +4,7 @@ from uuid import UUID
 import uuid
 from app.models.enum import CourseType
 from app.models.enum import CurriculumStatus
+from sqlalchemy import Enum
 
 if TYPE_CHECKING:
     from app.models.course import Course
@@ -26,9 +27,8 @@ class Curriculum(SQLModel, table=True):
     curriculum_file_path: Optional[str] = Field(default=None, nullable=True)
     certificate_name: str = Field(nullable=False, max_length=255)
     status_id: CurriculumStatus = Field(
-        foreign_key="status_catalog.status_id", 
-        nullable=False,
-        max_length=50
+        sa_type=Enum(CurriculumStatus),
+        nullable=False
     )
 
     # Quan hệ

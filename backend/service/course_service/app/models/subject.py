@@ -3,6 +3,7 @@ from typing import Optional, TYPE_CHECKING, List
 from uuid import UUID
 from app.models.enum import SubjectStatus
 import uuid
+from sqlalchemy import Enum
 
 if TYPE_CHECKING:
     from app.models.course import Course
@@ -22,9 +23,8 @@ class Subject(SQLModel, table=True):
     title: str = Field(nullable=False, max_length=255)
     order_index: int = Field(default=1, nullable=False)
     status_id: SubjectStatus = Field(
-        foreign_key="status_catalog.status_id", 
-        nullable=False,
-        max_length=50
+        sa_type=Enum(SubjectStatus),
+        nullable=False
     )
 
     # Quan hệ

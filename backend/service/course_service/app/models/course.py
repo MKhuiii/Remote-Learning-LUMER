@@ -6,6 +6,7 @@ from app.models.enum import CourseStatus
 from uuid import UUID
 from datetime import date
 import uuid
+from sqlalchemy import Enum
 
 if TYPE_CHECKING:
     from app.models.tag import Tag
@@ -33,10 +34,9 @@ class Course(SQLModel, table=True):
     description: Optional[str] = Field(default=None)
     price: int = Field(default=0)
     created_at: date = Field(default_factory=date.today)
-    status_id:CourseStatus = Field(
-        foreign_key="status_catalog.status_id", 
-        nullable=False,
-        max_length=50
+    status_id: CourseStatus = Field(
+        sa_type=Enum(CourseStatus),
+        nullable=False
     )
     total_lessons: int = Field(default=0, nullable=False)
 
