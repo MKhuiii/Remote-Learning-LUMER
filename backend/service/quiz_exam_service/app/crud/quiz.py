@@ -1,4 +1,4 @@
-from sqlmodel import Session, select
+from sqlmodel import Session, select, func
 from app.crud.base import CRUDBase
 from app.models.quiz import Quiz
 from app.schemas.quiz import QuizCreate, QuizUpdate, QuizItem
@@ -15,4 +15,14 @@ class CRUDQuiz(CRUDBase[Quiz, QuizCreate, QuizUpdate, UUID]):
             Quiz.subject_id == subject_id
         )
         return db.exec(statement).all()
+    def get_subject_id(self, db: Session, quiz_id: UUID) -> UUID:
+        statement = select(Quiz.subject_id).where(
+            Quiz.quiz_id == quiz_id
+        )
+        return db.exec(statement).first()
+    def get_total_quiz_by_subject(self, db: Session, subject_id: UUID) -> int:
+        statement = select(func.count(Quiz.quiz_id)).where(
+            Quiz.subject_id == subject_id
+        )
+        return db.exec(statement).first() or 0
 crud_quiz = CRUDQuiz(Quiz)

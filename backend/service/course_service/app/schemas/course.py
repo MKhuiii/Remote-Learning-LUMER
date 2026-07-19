@@ -53,3 +53,4 @@ class LessonOrderInfo(BaseModel):
 class CourseLessonsResponse(BaseModel):
     course_id: UUID
     lessons: List[LessonOrderInfo]
+

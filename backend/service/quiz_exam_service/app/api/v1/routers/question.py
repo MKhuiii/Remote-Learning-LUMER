@@ -3,7 +3,8 @@ from typing import List, Optional
 from app.api.v1.deps import SessionDep
 from app.crud.question import crud_question
 from app.crud.question_option import crud_question_option
-from app.core.security import get_current_user_role
+from app.crud.quiz import crud_quiz
+from app.core.security import get_current_user_role, call_check_instructor_service
 from app.core.config import settings
 from app.schemas.question import QuestionCreate, QuestionType, QuestionItem, QuestionUpdate
 from app.schemas.question_option import QuestionOptionCreate, QuestionOptionAutoCreate
@@ -14,31 +15,6 @@ import httpx
 router = APIRouter(prefix="/questions", tags=["questions"])
 
 
-def call_check_instructor_service(instructor_id: UUID, subject_id: UUID) -> bool:
-    # URL của Course Service (Thay đổi host/port cho đúng với môi trường của bạn)
-    COURSE_SERVICE_URL = settings.BACKEND_COURSE_URL
-    
-    # Chuẩn bị Query Parameters đúng định dạng mà Course Service yêu cầu
-    params = {
-        "instructor_id": str(instructor_id),
-        "subject_id": str(subject_id)
-    }
-    
-    try:
-        with httpx.Client() as client:
-            response = client.get(f"{COURSE_SERVICE_URL}/syllabus/check-instructor", params=params, timeout=5.0)
-            
-            if response.status_code == 200:
-                return response.json()  # Trả về True hoặc False từ Course Service
-                
-            return False
-    except httpx.RequestError as exc:
-        print(f"Lỗi kết nối liên dịch vụ (Course Service): {exc}")
-        # Nếu service kia sập, an toàn nhất là chặn lại và báo lỗi hệ thống
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Hệ thống xác thực môn học đang bận, vui lòng thử lại sau."
-        )
 @router.get("/get-list/{subject_id}", response_model=List[QuestionItem])
 def get_questions_list(
     db: SessionDep,
@@ -56,7 +32,7 @@ def get_questions_list(
             detail="Bạn không phải giảng viên phụ trách môn học này để xem ngân hàng câu hỏi."
         )
 
-    questions = crud_question.get_by_subject_id(db, subject_id=subject_id)
+    questions = crud_question.get_multi_by_subject_id(db, subject_id=subject_id)
     return questions
 
 @router.post("/")

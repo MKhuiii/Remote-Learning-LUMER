@@ -5,7 +5,7 @@ from app.models.question import Question
 from app.schemas.question import QuestionCreate, QuestionUpdate
 
 class CRUDQuestion(CRUDBase[Question, QuestionCreate, QuestionUpdate, UUID]):
-    def get_by_subject_id(self, db: Session, subject_id: UUID):
+    def get_multi_by_subject_id(self, db: Session, subject_id: UUID):
         statement = select(Question).where(
             Question.subject_id == subject_id
         )
@@ -22,4 +22,9 @@ class CRUDQuestion(CRUDBase[Question, QuestionCreate, QuestionUpdate, UUID]):
         db.commit()
         
         return result.rowcount > 0
+    def get_subject_id(self, db: Session, question_id: UUID) -> UUID:
+        statement = select(Question.subject_id).where(
+            Question.question_id == question_id
+        )
+        return db.exec(statement).first()
 crud_question = CRUDQuestion(Question)

@@ -7,7 +7,7 @@ class QuestionOptionCreate(BaseModel):
     is_correct: bool
 
 class QuestionOptionUpdate(BaseModel):
-    option_id: UUID 
+    option_id: UUID
     option_text: str | None = None
     is_correct: bool | None = None
 

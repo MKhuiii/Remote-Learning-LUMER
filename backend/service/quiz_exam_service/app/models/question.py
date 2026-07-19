@@ -15,7 +15,7 @@ class Question(SQLModel, table=True):
     __tablename__ = "question"
 
     question_id: UUID = Field(default_factory=uuid.uuid4, primary_key=True, index=True)
-    subject_id: UUID = Field(nullable=False, index=True)
+    subject_id: UUID = Field(nullable=False)
     question_title: str = Field(nullable=False)
     question_type: QuestionType = Field(nullable=False)
     body_content: str = Field(nullable=True)

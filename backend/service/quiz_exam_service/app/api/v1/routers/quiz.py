@@ -131,3 +131,10 @@ def add_pool_rules(db: SessionDep, quiz_id: UUID, obj_in: list[QuizPoolRuleCreat
     db.commit()
     
     return {"status": "success", "message": "Đã thiết lập cấu hình luật bốc câu hỏi từ ngân hàng câu hỏi"}
+
+@router.get("/get-total-quizzes/{subject_id}")
+def get_total_quizzes(
+    db: SessionDep,
+    subject_id: UUID
+):
+    return crud_quiz.get_total_quiz_by_subject(db, subject_id)

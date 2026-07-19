@@ -1,10 +1,12 @@
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, status
 from uuid import UUID
 
 from app.api.v1.deps import SessionDep
-from app.core.security import RoleChecker
-from app.schemas.subject import SubjectCreate, SubjectUpdate, SubjectRead
+from app.core.security import RoleChecker, get_current_user_role
+from app.models.enum import SubjectStatus
+from app.schemas.subject import SubjectCreate, SubjectUpdate, SubjectRead, InstructorStatictisSubject
 from app.crud.subject import crud_subject
+from app.crud.module import crud_module
 
 router = APIRouter(prefix="/subjects", tags=["subjects"])
 
@@ -63,3 +65,28 @@ def delete_subject(
     if not db_obj:
         raise HTTPException(status_code=404, detail="Subject not found")
     return {"msg": "Subject deleted successfully"}
+
+@router.get("/instructor/statistic", response_model=InstructorStatictisSubject)
+def instructor_statistic(
+    db: SessionDep,
+    current_user: dict = Depends(get_current_user_role)
+):
+    if current_user["role_name"] != "Instructor":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Bạn không phải là giảng viên"
+        )
+        
+    instructor_id = current_user["user_id"]
+    total_subjects = crud_subject.total_subject_by_instructor(db, instructor_id)
+    total_active_subject = crud_subject.get_total_instructor_subject_by_status(db, instructor_id, SubjectStatus.SUBJECT_ACTIVE)
+    total_developing_subject = crud_subject.get_total_instructor_subject_by_status(db, instructor_id, SubjectStatus.SUBJECT_DEVELOPING)
+    total_modules = crud_module.get_total_module_by_instructor(db, instructor_id)
+
+    statictis = InstructorStatictisSubject(
+        total_subjects=total_subjects,
+        total_modules=total_modules,
+        total_active_subject=total_active_subject,
+        total_developing_subject=total_developing_subject
+    )
+    return statictis

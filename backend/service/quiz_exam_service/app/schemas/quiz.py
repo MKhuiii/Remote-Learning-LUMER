@@ -6,6 +6,7 @@ from datetime import date
 class QuizCreate(BaseModel):
     title: str
     description: str
+    subject_id: UUID
     duration_minutes: int
     passsing_score: float
     max_attempts: int

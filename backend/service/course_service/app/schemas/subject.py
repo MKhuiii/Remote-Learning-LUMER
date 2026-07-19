@@ -16,3 +16,9 @@ class SubjectUpdate(BaseModel):
 class SubjectRead(SubjectBase):
     subject_id: UUID
     course_id: UUID
+
+class InstructorStatictisSubject(BaseModel):
+    total_subjects: int
+    total_modules: int
+    total_active_subject: int
+    total_developing_subject: int
