@@ -2,6 +2,7 @@ from sqlmodel import Field, SQLModel, Relationship
 from typing import Optional, List, TYPE_CHECKING
 from app.models.curriculum import CourseType
 from app.models.course_tag_link import CourseTagLink
+from app.models.enum import CourseStatus
 from uuid import UUID
 from datetime import date
 import uuid
@@ -32,7 +33,7 @@ class Course(SQLModel, table=True):
     description: Optional[str] = Field(default=None)
     price: int = Field(default=0)
     created_at: date = Field(default_factory=date.today)
-    status_id:str = Field(
+    status_id:CourseStatus = Field(
         foreign_key="status_catalog.status_id", 
         nullable=False,
         max_length=50

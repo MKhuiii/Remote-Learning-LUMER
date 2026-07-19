@@ -1,6 +1,7 @@
 from sqlmodel import Field, SQLModel, Relationship
 from typing import Optional, TYPE_CHECKING
 from uuid import UUID
+from app.models.enum import SyllabusStatus
 import uuid
 
 if TYPE_CHECKING:
@@ -16,7 +17,7 @@ class Syllabus(SQLModel, table=True):
     instructor_id: UUID = Field(nullable=False)
     description: Optional[str] = Field(default=None, max_length=255)
     syllabus_file_path: str = Field(nullable=False)
-    status_id: str = Field(
+    status_id: SyllabusStatus = Field(
         foreign_key="status_catalog.status_id", 
         nullable=False,
         max_length=50

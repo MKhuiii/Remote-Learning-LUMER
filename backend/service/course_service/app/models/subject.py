@@ -1,6 +1,7 @@
 from sqlmodel import Field, SQLModel, Relationship
 from typing import Optional, TYPE_CHECKING, List
 from uuid import UUID
+from app.models.enum import SubjectStatus
 import uuid
 
 if TYPE_CHECKING:
@@ -20,6 +21,11 @@ class Subject(SQLModel, table=True):
     course_id: UUID = Field(foreign_key="course.course_id", nullable=False)
     title: str = Field(nullable=False, max_length=255)
     order_index: int = Field(default=1, nullable=False)
+    status_id: SubjectStatus = Field(
+        foreign_key="status_catalog.status_id", 
+        nullable=False,
+        max_length=50
+    )
 
     # Quan hệ
     # Một môn học thuộc về một khóa học
