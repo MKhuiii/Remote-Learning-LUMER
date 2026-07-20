@@ -2,8 +2,8 @@ from sqlmodel import Field, SQLModel, Relationship
 from typing import Optional, TYPE_CHECKING
 from uuid import UUID
 import uuid
-from app.models.enum import CourseType
-from app.models.enum import CurriculumStatus
+from app.schemas.enums import CourseType
+from app.schemas.enums import CurriculumStatus
 from sqlalchemy import Enum, String
 if TYPE_CHECKING:
     from app.models.course import Course

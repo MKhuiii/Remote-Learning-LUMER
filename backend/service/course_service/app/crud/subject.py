@@ -4,7 +4,7 @@ from app.models.syllabus import Syllabus
 from app.models.module import Module
 from app.models.lesson import Lesson
 from app.schemas.subject import SubjectCreate, SubjectUpdate
-from app.models.enum import SubjectStatus
+from app.schemas.enums import SubjectStatus
 from uuid import UUID
 from sqlmodel import Session, select, func, join
 

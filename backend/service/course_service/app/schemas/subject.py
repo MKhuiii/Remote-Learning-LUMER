@@ -7,6 +7,7 @@ class SubjectBase(BaseModel):
     order_index: int = 1
 
 class SubjectCreate(SubjectBase):
+    description: str
     course_id: UUID
 
 class SubjectUpdate(BaseModel):

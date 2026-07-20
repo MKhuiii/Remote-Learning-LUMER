@@ -1,7 +1,7 @@
 from sqlmodel import Field, SQLModel, Relationship
 from typing import Optional, TYPE_CHECKING, List
 from uuid import UUID
-from app.models.enum import SubjectStatus
+from app.schemas.enums import SubjectStatus
 import uuid
 from sqlalchemy import Enum
 

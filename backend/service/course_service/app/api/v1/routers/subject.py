@@ -3,7 +3,7 @@ from uuid import UUID
 
 from app.api.v1.deps import SessionDep
 from app.core.security import RoleChecker, get_current_user_role
-from app.models.enum import SubjectStatus
+from app.schemas.enums import SubjectStatus
 from app.schemas.subject import SubjectCreate, SubjectUpdate, SubjectRead, InstructorStatictisSubject, GeneralInfoInstructorSubject
 from app.crud.subject import crud_subject
 from app.crud.module import crud_module
@@ -15,9 +15,15 @@ router = APIRouter(prefix="/subjects", tags=["subjects"])
 def create_subject(
     db: SessionDep,
     subject_in: SubjectCreate,
-    current_user: dict = Depends(RoleChecker(["Admin", "Instructor", "Manager"]))
+    current_user: dict = Depends(get_current_user_role)
 ):
-    return crud_subject.create(db, subject_in)
+    instructor_id = current_user["user_id"]
+    if current_user["role_name"] != "Instructor":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Bạn không phải là giảng viên"
+        )
+    
 
 # 🔵 Lấy Subject theo ID (mọi role đều có thể xem)
 @router.get("/{subject_id}", response_model=SubjectRead)
@@ -112,5 +118,9 @@ def get_subject_general_info_instructor(
     result = GeneralInfoInstructorSubject(
         subject_id=subject_id,
         title=subject.title,
-        description=subject
+        description=subject.description,
+        status_id=subject.status_id,
+        total_modules=total_modules,
+        total_lessons=total_lessons
     )
+    return result
