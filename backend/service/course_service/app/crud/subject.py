@@ -1,6 +1,8 @@
 from app.crud.base import CRUDBase
 from app.models.subject import Subject
 from app.models.syllabus import Syllabus
+from app.models.module import Module
+from app.models.lesson import Lesson
 from app.schemas.subject import SubjectCreate, SubjectUpdate
 from app.models.enum import SubjectStatus
 from uuid import UUID
@@ -34,4 +36,16 @@ class CRUDSubject(CRUDBase[Subject, SubjectCreate, SubjectUpdate, UUID]):
         )
         return db.exec(statement).first() or 0
     
+    def get_total_lessons(self, db: Session, subject_id: UUID) -> int:
+        statement = (
+            select(func.count(Lesson.lesson_id))
+            .select_from(Lesson)
+            .join(Module, Lesson.module_id == Module.module_id)
+            .where(Module.subject_id == subject_id)
+        )
+        
+        result = db.exec(statement).scalar()
+        
+        return result or 0
+        
 crud_subject = CRUDSubject(Subject)

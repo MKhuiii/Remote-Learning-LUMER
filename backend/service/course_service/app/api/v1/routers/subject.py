@@ -4,7 +4,7 @@ from uuid import UUID
 from app.api.v1.deps import SessionDep
 from app.core.security import RoleChecker, get_current_user_role
 from app.models.enum import SubjectStatus
-from app.schemas.subject import SubjectCreate, SubjectUpdate, SubjectRead, InstructorStatictisSubject
+from app.schemas.subject import SubjectCreate, SubjectUpdate, SubjectRead, InstructorStatictisSubject, GeneralInfoInstructorSubject
 from app.crud.subject import crud_subject
 from app.crud.module import crud_module
 
@@ -90,3 +90,27 @@ def instructor_statistic(
         total_developing_subject=total_developing_subject
     )
     return statictis
+
+@router.get("/instructor-general-info/{subject_id}", response_model=GeneralInfoInstructorSubject)
+def get_subject_general_info_instructor(
+    db: SessionDep,
+    subject_id: UUID,
+    current_user: dict = Depends(get_current_user_role)
+):
+    instructor_id = current_user["user_id"]
+    role_name = current_user["role_name"]
+
+    if current_user["role_name"] != "Instructor":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Bạn không phải là giảng viên"
+        )
+    total_modules = crud_module.get_total_module_by_subject(db, subject_id)
+    total_lessons = crud_subject.get_total_lessons(db, subject_id)
+    subject = crud_subject.get_by_id(db, subject_id)
+
+    result = GeneralInfoInstructorSubject(
+        subject_id=subject_id,
+        title=subject.title,
+        description=subject
+    )
