@@ -3,7 +3,7 @@ from app.models.subject import Subject
 from app.models.syllabus import Syllabus
 from app.models.module import Module
 from app.models.lesson import Lesson
-from app.schemas.subject import SubjectCreate, SubjectUpdate
+from app.schemas.subject import SubjectCreate, SubjectUpdate, GeneralInfoInstructorSubject
 from app.schemas.enums import SubjectStatus
 from uuid import UUID
 from sqlmodel import Session, select, func, join
@@ -47,5 +47,13 @@ class CRUDSubject(CRUDBase[Subject, SubjectCreate, SubjectUpdate, UUID]):
         result = db.exec(statement).scalar()
         
         return result or 0
-        
+    
+    def get_instructor_subject_list(self, db: Session, instructor_id: UUID) -> list[Subject]:
+        statement = (
+            select(Subject)
+            .join(Syllabus, Syllabus.subject_id == Subject.subject_id)
+            .where(Syllabus.instructor_id == instructor_id)
+        )
+        return db.exec(statement).all()
+    
 crud_subject = CRUDSubject(Subject)

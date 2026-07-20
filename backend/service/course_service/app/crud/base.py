@@ -1,4 +1,4 @@
-from typing import Generic, TypeVar
+from typing import Generic, TypeVar, Union
 from sqlmodel import Session, select
 from pydantic import BaseModel
 
@@ -18,9 +18,19 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType, IDType]):
         statement = select(self.model).offset(skip).limit(limit)
         return db.exec(statement).all()
     
-    def create(self, db:Session, obj_in: CreateSchemaType):
-        # Chuyển đổi dữ liệu từ Pydantic sang Model của Database
-        db_obj = self.model.model_validate(obj_in)
+    def create(self, db: Session, obj_in: Union[CreateSchemaType, ModelType, dict]) -> ModelType:
+        # 1. Trường hợp obj_in ĐÃ LÀ instance của Database Model (ví dụ: Subject(...))
+        if isinstance(obj_in, self.model):
+            db_obj = obj_in
+
+        # 2. Trường hợp obj_in là Dictionary
+        elif isinstance(obj_in, dict):
+            db_obj = self.model(**obj_in)
+
+        # 3. Trường hợp obj_in là Pydantic / SQLModel Schema (ví dụ: SubjectCreate)
+        else:
+            db_obj = self.model(**obj_in.model_dump())
+
         db.add(db_obj)
         db.commit()
         db.refresh(db_obj)

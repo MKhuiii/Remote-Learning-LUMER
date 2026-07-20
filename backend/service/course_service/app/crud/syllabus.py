@@ -15,4 +15,5 @@ class CRUDSyllabus(CRUDBase[Syllabus, SyllabusCreate, SyllabusUpdate, UUID]):
             Syllabus.subject_id == check_query.subject_id
         )
         return db.exec(statement).first() is not None
+    
 crud_syllabus = CRUDSyllabus(Syllabus)

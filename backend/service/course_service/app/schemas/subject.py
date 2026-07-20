@@ -5,14 +5,16 @@ from typing import Optional
 class SubjectBase(BaseModel):
     title: str
     order_index: int = 1
+    description: str
+
 
 class SubjectCreate(SubjectBase):
-    description: str
     course_id: UUID
 
 class SubjectUpdate(BaseModel):
     title: Optional[str] = None
     order_index: Optional[int] = None
+    description: str = None
 
 class SubjectRead(SubjectBase):
     subject_id: UUID
