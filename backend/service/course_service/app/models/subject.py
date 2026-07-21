@@ -1,7 +1,7 @@
 from sqlmodel import Field, SQLModel, Relationship
 from typing import Optional, TYPE_CHECKING, List
 from uuid import UUID
-from app.models.enum import SubjectStatus
+from app.schemas.enums import SubjectStatus
 import uuid
 from sqlalchemy import Enum
 
@@ -21,6 +21,7 @@ class Subject(SQLModel, table=True):
     )
     course_id: UUID = Field(foreign_key="course.course_id", nullable=False)
     title: str = Field(nullable=False, max_length=255)
+    description: str = Field(nullable=False)
     order_index: int = Field(default=1, nullable=False)
     status_id: SubjectStatus = Field(
         sa_type=Enum(SubjectStatus),

@@ -121,3 +121,6 @@ def get_course_total_lessons(db: SessionDep, course_id: UUID):
     if not crud_course.exists(db, course_id=course_id):
         raise HTTPException(status_code=404, detail="Khóa học không tồn tại.")
     return crud_course.get_total_lessons(db, course_id=course_id)
+
+
+

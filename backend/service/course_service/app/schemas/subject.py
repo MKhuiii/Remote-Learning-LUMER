@@ -5,6 +5,8 @@ from typing import Optional
 class SubjectBase(BaseModel):
     title: str
     order_index: int = 1
+    description: str
+
 
 class SubjectCreate(SubjectBase):
     course_id: UUID
@@ -12,6 +14,7 @@ class SubjectCreate(SubjectBase):
 class SubjectUpdate(BaseModel):
     title: Optional[str] = None
     order_index: Optional[int] = None
+    description: str = None
 
 class SubjectRead(SubjectBase):
     subject_id: UUID
@@ -22,3 +25,11 @@ class InstructorStatictisSubject(BaseModel):
     total_modules: int
     total_active_subject: int
     total_developing_subject: int
+
+class GeneralInfoInstructorSubject(BaseModel):
+    subject_id: UUID
+    title: str
+    description: str
+    status_id: str
+    total_modules: int
+    total_lessons: int

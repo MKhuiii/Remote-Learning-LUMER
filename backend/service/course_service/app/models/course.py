@@ -2,7 +2,7 @@ from sqlmodel import Field, SQLModel, Relationship
 from typing import Optional, List, TYPE_CHECKING
 from app.models.curriculum import CourseType
 from app.models.course_tag_link import CourseTagLink
-from app.models.enum import CourseStatus
+from app.schemas.enums import CourseStatus
 from uuid import UUID
 from datetime import date
 import uuid

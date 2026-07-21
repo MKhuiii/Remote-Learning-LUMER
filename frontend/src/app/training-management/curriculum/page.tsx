@@ -69,7 +69,7 @@ const getFullAssetUrl = (url: string | null): string => {
   if (!url) return "";
   if (url.startsWith("http://") || url.startsWith("https://")) return url;
   const cleanUrl = url.startsWith("/") ? url : `/${url}`;
-  return `http://localhost:8001${cleanUrl}`; 
+  return `http://127.0.0.1${cleanUrl}`;
 };
 
 interface FormDataState {

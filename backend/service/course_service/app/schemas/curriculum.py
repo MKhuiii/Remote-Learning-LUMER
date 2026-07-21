@@ -1,6 +1,8 @@
 from pydantic import BaseModel
 from uuid import UUID
 from typing import Optional
+from app.schemas.enums import CurriculumStatus, CourseType
+
 
 # Cấu trúc chung cho Curriculum
 class CurriculumBase(BaseModel):
@@ -10,7 +12,7 @@ class CurriculumBase(BaseModel):
     course_finished_months: int
     certificate_name: Optional[str] = None
     
-    status_id: Optional[str] = "CURRICULUM_DRAFT"
+    status_id: Optional[CurriculumStatus] = CurriculumStatus.CURRICULUM_DRAFT
 
 # Schema dùng để nhận data TẠO MỚI (Từ payload gửi lên)
 class CurriculumCreate(CurriculumBase):
