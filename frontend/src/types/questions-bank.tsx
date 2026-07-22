@@ -1,45 +1,20 @@
-export interface DapAnTracNghiem {
-  id: string;
-  noiDung: string;
+// Enum lấy từ TYPE questiontype trong CSDL
+export type QuestionTypeEnum = "MULTIPLE_CHOICE" | "ESSAY";
+
+// Bảng question_option
+export interface QuestionOption {
+  option_id: string; // uuid
+  question_id: string; // uuid
+  option_text: string;
+  is_correct: boolean;
 }
 
-export interface CauHoi {
-  id: string;
-  noiDung: string;
-
-  module: string;
-
-  loaiCauHoi: "Trắc nghiệm" | "Tự luận";
-
-  mucDo: "Dễ" | "Trung bình" | "Khó";
-
-  chuDe: string[];
-
-  ngayTao: string;
-
-  cacDapAn?: DapAnTracNghiem[];
-
-  dapAnDungId?: string;
-
-  huongDanTuLuan?: string;
-}
-
-export interface SubjectInfo {
-  id: string;
-
-  code: string;
-
-  title: string;
-
-  description: string;
-
-  instructor: string;
-
-  image: string;
-
-  totalModules: number;
-
-  totalQuestions: number;
-
-  status: "Active" | "Inactive";
+// Bảng question
+export interface Question {
+  question_id: string; // uuid
+  subject_id: string; // uuid (liên kết với courses_db)
+  question_type: QuestionTypeEnum;
+  content: string; // HTML từ RichTextEditor
+  max_points: number; // Điểm tối đa
+  options?: QuestionOption[]; // Danh sách đáp án nếu là MULTIPLE_CHOICE
 }

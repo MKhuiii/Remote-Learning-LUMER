@@ -1,293 +1,141 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { X } from "lucide-react";
+import { useState, useEffect } from "react";
+import dynamic from "next/dynamic";
+import { Question, QuestionTypeEnum } from "@/types/questions-bank";
 
-import BasicInformation from "./form/BasicInformation";
-import TopicInput from "./form/TopicInput";
-import MultipleChoiceEditor from "./editors/MultipleChoiceEditor";
-import EssayEditor from "./editors/EssayEditor";
+const RichTextEditor = dynamic(
+  () => import("@/components/editors/RichTextEditor"),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="h-40 rounded-xl border bg-slate-50 animate-pulse p-4">
+        Đang tải trình soạn thảo...
+      </div>
+    ),
+  },
+);
 
-import { CauHoi, DapAnTracNghiem } from "@/types/questions-bank";
-
-interface Props {
+interface AddQuestionModalProps {
   open: boolean;
-
+  subjectId: string;
   onClose: () => void;
-
-  onSave: (question: CauHoi) => void;
-
-  modules: string[];
-
-  editQuestion?: CauHoi;
+  onSave: (question: Question) => void;
+  editQuestion?: Question;
 }
 
 export default function AddQuestionModal({
   open,
+  subjectId,
   onClose,
   onSave,
-  modules,
   editQuestion,
-}: Props) {
-  const [question, setQuestion] = useState("");
-
-  const [module, setModule] = useState(modules[0] || "Module 1");
-
-  const [type, setType] = useState<"Trắc nghiệm" | "Tự luận">("Trắc nghiệm");
-
-  const [difficulty, setDifficulty] = useState<"Dễ" | "Trung bình" | "Khó">(
-    "Dễ",
-  );
-
-  const [topics, setTopics] = useState<string[]>([]);
-
-  const [topicInput, setTopicInput] = useState("");
-
-  const [answers, setAnswers] = useState<DapAnTracNghiem[]>([
-    {
-      id: "A",
-      noiDung: "",
-    },
-    {
-      id: "B",
-      noiDung: "",
-    },
-  ]);
-
-  const [correctAnswer, setCorrectAnswer] = useState("A");
-
-  const [guideline, setGuideline] = useState("");
-
-  const resetForm = () => {
-    setQuestion("");
-
-    setModule(modules[0] || "Module 1");
-
-    setType("Trắc nghiệm");
-
-    setDifficulty("Dễ");
-
-    setTopics([]);
-
-    setTopicInput("");
-
-    setAnswers([
-      {
-        id: "A",
-        noiDung: "",
-      },
-      {
-        id: "B",
-        noiDung: "",
-      },
-    ]);
-
-    setCorrectAnswer("A");
-
-    setGuideline("");
-  };
+}: AddQuestionModalProps) {
+  const [content, setContent] = useState("");
+  const [questionType, setQuestionType] =
+    useState<QuestionTypeEnum>("MULTIPLE_CHOICE");
+  const [maxPoints, setMaxPoints] = useState<number>(1.0);
 
   useEffect(() => {
-    if (!open) return;
-
-    if (!editQuestion) {
-      resetForm();
-
-      return;
+    if (editQuestion) {
+      setContent(editQuestion.content);
+      setQuestionType(editQuestion.question_type);
+      setMaxPoints(editQuestion.max_points);
+    } else {
+      setContent("");
+      setQuestionType("MULTIPLE_CHOICE");
+      setMaxPoints(1.0);
     }
-
-    setQuestion(editQuestion.noiDung);
-
-    setModule(editQuestion.module);
-
-    setType(editQuestion.loaiCauHoi);
-
-    setDifficulty(editQuestion.mucDo);
-
-    setTopics(editQuestion.chuDe);
-
-    setGuideline(editQuestion.huongDanTuLuan || "");
-
-    setAnswers(
-      editQuestion.cacDapAn || [
-        {
-          id: "A",
-          noiDung: "",
-        },
-        {
-          id: "B",
-          noiDung: "",
-        },
-      ],
-    );
-
-    setCorrectAnswer(editQuestion.dapAnDungId || "A");
-  }, [open, editQuestion]);
-
-  const handleSave = () => {
-    if (question.trim() === "") {
-      alert("Vui lòng nhập nội dung câu hỏi.");
-
-      return;
-    }
-
-    if (topics.length === 0) {
-      alert("Vui lòng thêm ít nhất một chủ đề.");
-
-      return;
-    }
-
-    if (type === "Trắc nghiệm") {
-      if (answers.length < 2) {
-        alert("Câu hỏi phải có ít nhất 2 đáp án.");
-
-        return;
-      }
-
-      const hasEmpty = answers.some((a) => a.noiDung.trim() === "");
-
-      if (hasEmpty) {
-        alert("Không được để trống nội dung đáp án.");
-
-        return;
-      }
-    }
-
-    const newQuestion: CauHoi = {
-      id: editQuestion?.id ?? `CH${Date.now()}`,
-
-      noiDung: question,
-
-      module,
-
-      loaiCauHoi: type,
-
-      mucDo: difficulty,
-
-      chuDe: topics,
-
-      ngayTao: editQuestion?.ngayTao ?? new Date().toLocaleDateString(),
-
-      cacDapAn: type === "Trắc nghiệm" ? answers : undefined,
-
-      dapAnDungId: type === "Trắc nghiệm" ? correctAnswer : undefined,
-
-      huongDanTuLuan: type === "Tự luận" ? guideline : undefined,
-    };
-
-    onSave(newQuestion);
-
-    onClose();
-
-    resetForm();
-  };
+  }, [editQuestion, open]);
 
   if (!open) return null;
 
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!content.trim()) return alert("Vui lòng nhập nội dung câu hỏi!");
+
+    const payload: Question = {
+      question_id: editQuestion
+        ? editQuestion.question_id
+        : crypto.randomUUID(),
+      subject_id: subjectId,
+      question_type: questionType,
+      content: content, // HTML string từ CKEditor
+      max_points: maxPoints,
+    };
+
+    onSave(payload);
+    onClose();
+  };
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-      <div className="w-full max-w-5xl max-h-[95vh] overflow-hidden rounded-3xl bg-white shadow-2xl">
-        {/* Header */}
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
+      <div className="w-full max-w-3xl rounded-2xl bg-white p-6 shadow-xl max-h-[90vh] overflow-y-auto">
+        <h2 className="text-xl font-bold text-slate-800 mb-4">
+          {editQuestion ? "Cập nhật câu hỏi" : "Thêm câu hỏi mới"}
+        </h2>
 
-        <div className="flex items-center justify-between border-b border-slate-200 px-8 py-6">
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {/* CKEditor cho Nội dung câu hỏi */}
           <div>
-            <h2 className="text-2xl font-bold text-slate-900">
-              {editQuestion ? "Chỉnh sửa câu hỏi" : "Thêm câu hỏi mới"}
-            </h2>
-
-            <p className="mt-1 text-sm text-slate-500">
-              Điền đầy đủ thông tin bên dưới.
-            </p>
+            <label className="block text-sm font-semibold text-slate-700 mb-2">
+              Nội dung câu hỏi
+            </label>
+            <RichTextEditor value={content} onChange={setContent} />
           </div>
 
-          <button
-            onClick={() => {
-              onClose();
+          <div className="grid grid-cols-2 gap-4">
+            {/* Loại câu hỏi (khớp ENUM DB) */}
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">
+                Loại câu hỏi
+              </label>
+              <select
+                value={questionType}
+                onChange={(e) =>
+                  setQuestionType(e.target.value as QuestionTypeEnum)
+                }
+                className="w-full rounded-lg border border-slate-300 p-2.5"
+              >
+                <option value="MULTIPLE_CHOICE">
+                  Trắc nghiệm (MULTIPLE_CHOICE)
+                </option>
+                <option value="ESSAY">Tự luận (ESSAY)</option>
+              </select>
+            </div>
 
-              resetForm();
-            }}
-            className="rounded-xl p-2 hover:bg-slate-100"
-          >
-            <X size={22} />
-          </button>
-        </div>
-
-        {/* Body */}
-
-        <div className="overflow-y-auto max-h-[75vh] px-8 py-8 space-y-8">
-          {/* Basic Information */}
-
-          <section className="rounded-2xl border border-slate-200 p-6">
-            <h3 className="mb-5 text-lg font-bold text-slate-800">
-              Thông tin cơ bản
-            </h3>
-
-            <BasicInformation
-              question={question}
-              setQuestion={setQuestion}
-              module={module}
-              setModule={setModule}
-              type={type}
-              setType={setType}
-              difficulty={difficulty}
-              setDifficulty={setDifficulty}
-              modules={modules}
-            />
-          </section>
-
-          {/* Topic */}
-
-          <section className="rounded-2xl border border-slate-200 p-6">
-            <h3 className="mb-5 text-lg font-bold text-slate-800">Chủ đề</h3>
-
-            <TopicInput
-              topics={topics}
-              setTopics={setTopics}
-              input={topicInput}
-              setInput={setTopicInput}
-            />
-          </section>
-
-          {/* Question Editor */}
-
-          <section className="rounded-2xl border border-slate-200 p-6">
-            <h3 className="mb-5 text-lg font-bold text-slate-800">
-              Nội dung câu hỏi
-            </h3>
-
-            {type === "Trắc nghiệm" ? (
-              <MultipleChoiceEditor
-                answers={answers}
-                setAnswers={setAnswers}
-                correctAnswer={correctAnswer}
-                setCorrectAnswer={setCorrectAnswer}
+            {/* Điểm tối đa (max_points) */}
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">
+                Điểm tối đa
+              </label>
+              <input
+                type="number"
+                step="0.5"
+                value={maxPoints}
+                onChange={(e) => setMaxPoints(parseFloat(e.target.value) || 0)}
+                className="w-full rounded-lg border border-slate-300 p-2.5"
               />
-            ) : (
-              <EssayEditor guideline={guideline} setGuideline={setGuideline} />
-            )}
-          </section>
-        </div>
+            </div>
+          </div>
 
-        {/* Footer */}
-
-        <div className="flex items-center justify-end gap-4 border-t border-slate-200 px-8 py-5 bg-slate-50">
-          <button
-            onClick={() => {
-              onClose();
-              resetForm();
-            }}
-            className="rounded-xl border border-slate-300 bg-white px-6 py-2.5 font-semibold text-slate-700 transition hover:bg-slate-100"
-          >
-            Hủy
-          </button>
-
-          <button
-            onClick={handleSave}
-            className="rounded-xl bg-[#0066FF] px-6 py-2.5 font-semibold text-white transition hover:bg-blue-700"
-          >
-            {editQuestion ? "Lưu thay đổi" : "Thêm câu hỏi"}
-          </button>
-        </div>
+          {/* Action buttons */}
+          <div className="flex justify-end gap-3 pt-4 border-t">
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-xl px-4 py-2 text-slate-600 hover:bg-slate-100"
+            >
+              Hủy
+            </button>
+            <button
+              type="submit"
+              className="rounded-xl bg-blue-600 px-5 py-2 text-white font-semibold hover:bg-blue-700"
+            >
+              Lưu câu hỏi
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   );
