@@ -38,3 +38,34 @@ export interface CurriculumCreatePayload {
   status_id: string;
   curriculum_file_path: string;
 }
+
+export enum CourseType {
+  SHORT_TERM = "SHORT_TERM",
+  LONG_TERM = "LONG_TERM",
+}
+
+export interface GeneralCourseInfo {
+  course_id: string;
+  title: string;
+  description?: string | null;
+  price: number;
+  course_type: CourseType;
+  tags: string[];
+}
+
+export interface CourseSearchPaginatedResponse {
+  items: GeneralCourseInfo[];
+  total: number;
+  page: number;
+  size: number;
+  total_pages: number;
+}
+
+export interface CourseSearchParams {
+  q?: string;
+  tag_id?: string;
+  course_type?: CourseType;
+  max_price?: number;
+  page?: number;
+  size?: number;
+}

@@ -1,14 +1,51 @@
 from uuid import UUID
-
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
-
+import math
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status, Query
+from typing import Optional
 from app.api.v1.deps import SessionDep
+from app.schemas.course import CourseSearchPaginatedResponse
+from app.schemas.enums import CourseType
 from app.core.security import RoleChecker, get_current_user_role
 from app.crud.course import crud_course
 from app.crud.course_media import crud_course_media
 from app.schemas.course import CourseCreate, CourseImageUploadResponse, CourseRead, CourseUpdate, CourseLessonsResponse
 
 router = APIRouter(prefix="/courses", tags=["courses"])
+
+@router.get(
+    "/search",
+    response_model=CourseSearchPaginatedResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Tìm kiếm & Lọc danh sách khóa học"
+)
+def search_courses(
+    db: SessionDep,
+    q: Optional[str] = Query(None, description="Từ khóa tìm kiếm (Tiêu đề hoặc Mô tả)"),
+    tag_id: Optional[UUID] = Query(None, description="Lọc theo ID của Tag"),
+    course_type: Optional[CourseType] = Query(None, description="Lọc theo Loại khóa học"),
+    max_price: Optional[int] = Query(None, ge=0, description="Lọc khóa học có giá nhỏ hơn hoặc bằng"),
+    page: int = Query(1, ge=1, description="Trang hiện tại (Mặc định: 1)"),
+    size: int = Query(10, ge=1, le=100, description="Số lượng mục trên 1 trang (Mặc định: 10)"),
+):
+    items, total = crud_course.search_courses(
+        db=db,
+        q=q,
+        tag_id=tag_id,
+        course_type=course_type,
+        max_price=max_price,
+        page=page,
+        size=size
+    )
+
+    total_pages = math.ceil(total / size) if total > 0 else 0
+
+    return CourseSearchPaginatedResponse(
+        items=items,
+        total=total,
+        page=page,
+        size=size,
+        total_pages=total_pages
+    )
 
 @router.post("/", response_model=CourseRead)
 def create_course(db: SessionDep, course_in: CourseCreate, current_user: dict = Depends(RoleChecker(["Admin", "Instructor", "Manager"]))):
@@ -121,6 +158,4 @@ def get_course_total_lessons(db: SessionDep, course_id: UUID):
     if not crud_course.exists(db, course_id=course_id):
         raise HTTPException(status_code=404, detail="Khóa học không tồn tại.")
     return crud_course.get_total_lessons(db, course_id=course_id)
-
-
 
