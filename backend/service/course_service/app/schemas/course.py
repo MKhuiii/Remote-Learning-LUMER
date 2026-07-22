@@ -1,6 +1,7 @@
 from datetime import date
 from typing import Optional, List
 from uuid import UUID
+from app.schemas.enums import CourseType
 from pydantic import BaseModel
 
 
@@ -25,16 +26,16 @@ class CourseUpdate(BaseModel):
     description: Optional[str] = None
     price: Optional[int] = None
     status_id: Optional[str] = None
-    total_lessons: Optional[int] = None  # <-- Thêm từ bản của bạn
+    total_lessons: Optional[int] = None  
 
 
 # 🔵 Schema dùng khi TRẢ VỀ dữ liệu (Read API)
 class CourseRead(CourseBase):
     course_id: UUID
-    curriculum_id: UUID                  # <-- Giữ từ bản của bạn bạn
+    curriculum_id: UUID                 
     created_at: date
     status_id: str
-    image_url: Optional[str] = None      # <-- Giữ từ bản của bạn bạn
+    image_url: Optional[str] = None     
     instructor_id: Optional[UUID] = None
     # Cấu hình Pydantic v2 để đọc được dữ liệu từ SQLModel/SQLAlchemy object (.from_attributes)
     model_config = {
@@ -53,4 +54,8 @@ class LessonOrderInfo(BaseModel):
 class CourseLessonsResponse(BaseModel):
     course_id: UUID
     lessons: List[LessonOrderInfo]
+
+class GeneralCourseInfo(CourseBase):
+    course_id: UUID
+    course_type: CourseType = CourseType.SHORT_TERM
 

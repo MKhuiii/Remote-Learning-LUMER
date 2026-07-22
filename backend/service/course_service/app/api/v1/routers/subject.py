@@ -1,6 +1,6 @@
-from fastapi import APIRouter, HTTPException, Depends, status
+from fastapi import APIRouter, HTTPException, Depends, status, Query
 from uuid import UUID
-from typing import List
+from typing import List, Optional
 from app.api.v1.deps import SessionDep
 from app.core.security import RoleChecker, get_current_user_role
 from app.schemas.enums import SubjectStatus
@@ -17,17 +17,19 @@ router = APIRouter(prefix="/subjects", tags=["subjects"])
 @router.get("/instructor-general-info", response_model=List[GeneralInfoInstructorSubject])
 def get_subject_general_info_instructor(
     db: SessionDep,
+    search: Optional[str] = Query(None, description="Từ khóa tìm kiếm tên hoặc mô tả môn học"), 
     current_user: dict = Depends(get_current_user_role)
 ):
     instructor_id = current_user["user_id"]
-    role_name = current_user["role_name"]
 
     if current_user["role_name"] != "Instructor":
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Bạn không phải là giảng viên"
         )
-    subjects = crud_subject.get_instructor_subject_list(db, instructor_id)
+
+    subjects = crud_subject.get_instructor_subject_list(db, instructor_id, search=search)
+    
     response_data = []
     for subject in subjects:
         subject_dict = subject.model_dump() 
