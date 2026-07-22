@@ -4,6 +4,7 @@ import { cookies } from 'next/headers'
 
 const userBackendUrl = process.env.NEXT_PUBLIC_COURSE_BACKEND_URL;
 
+// --- TYPES ---
 export interface Subject {
   subject_id: string;
   course_id: string;
@@ -25,39 +26,23 @@ export interface Course {
   subjects: Subject[];                 
 }
 
-export interface Curriculum {
-  curriculum_id: string;
-  title?: string;
-  description?: string;                
-  curriculum_file_path?: string | null;
-  status_id?: string;
+// --- HELPER: LẤY TOKEN TỪ COOKIES ---
+async function getTokenFromCookie(): Promise<string> {
+  const cookieStore = await cookies();
+  const rawToken = cookieStore.get("token")?.value || "";
+  return rawToken.trim().replace(/^"|"$/g, "");
 }
 
-export interface CourseModule {
-  module_id: string;
-  subject_id: string;
-  title: string;
-  order_index?: number;
-  lessons?: CourseLesson[]; 
-}
-
-export interface CourseLesson {
-  lesson_id: string;
-  module_id: string;
-  title: string;
-  video_url?: string;
-  content_body?: string;
-  duration_minutes?: number;
-  order_index?: number;
-  is_optional?: boolean;
-}
-
-export async function getCoursesAction(token: string): Promise<Course[]> {
-  const cleanToken = token.trim().replace(/^"|"$/g, "");
+// 1. Khóa học (Không cần truyền token từ client)
+export async function getCoursesAction(): Promise<Course[]> {
   try {
+    const token = await getTokenFromCookie();
     const response = await fetch(`${userBackendUrl}/courses/`, {
       method: "GET",
-      headers: { "Authorization": `Bearer ${cleanToken}`, "Accept": "application/json" },
+      headers: { 
+        "Authorization": `Bearer ${token}`, 
+        "Accept": "application/json" 
+      },
     });
 
     if (!response.ok) {
@@ -70,12 +55,36 @@ export async function getCoursesAction(token: string): Promise<Course[]> {
   }
 }
 
-export async function getSubjectsAction(token: string): Promise<Subject[]> {
-  const cleanToken = token.trim().replace(/^"|"$/g, "");
+// 2. Lấy danh sách Môn học theo Course ID (Bổ sung cho Client)
+export async function getSubjectsByCourseAction(courseId: string): Promise<Subject[]> {
   try {
+    const token = await getTokenFromCookie();
+    const response = await fetch(`${userBackendUrl}/subjects/course/${courseId}`, {
+      method: "GET",
+      headers: { 
+        "Authorization": `Bearer ${token}`, 
+        "Accept": "application/json" 
+      },
+    });
+
+    if (!response.ok) return [];
+    return await response.json();
+  } catch (error) {
+    console.error("Lỗi getSubjectsByCourseAction:", error);
+    return [];
+  }
+}
+
+// 3. Lấy tất cả Môn học
+export async function getSubjectsAction(): Promise<Subject[]> {
+  try {
+    const token = await getTokenFromCookie();
     const response = await fetch(`${userBackendUrl}/subjects/`, {
       method: "GET",
-      headers: { "Authorization": `Bearer ${cleanToken}`, "Accept": "application/json" },
+      headers: { 
+        "Authorization": `Bearer ${token}`, 
+        "Accept": "application/json" 
+      },
     });
 
     if (!response.ok) {
@@ -88,112 +97,47 @@ export async function getSubjectsAction(token: string): Promise<Subject[]> {
   }
 }
 
-export async function createSubjectAction(payload: { course_id: string; title: string; description: string }, token: string) {
-  const cleanToken = token.trim().replace(/^"|"$/g, "");
+// 4. Tạo Môn học
+export async function createSubjectAction(payload: { course_id: string; title: string; description: string; order_index?: number }) {
   try {
+    const token = await getTokenFromCookie();
     const response = await fetch(`${userBackendUrl}/subjects/`, {
       method: "POST",
       headers: {
-        "Authorization": `Bearer ${cleanToken}`,
+        "Authorization": `Bearer ${token}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify(payload),
     });
 
+    const data = await response.json();
     if (!response.ok) {
-      const errData = await response.json().catch(() => ({}));
-      return { success: false, error: errData.detail || "Không thể tạo chương học" };
+      throw new Error(data.detail || "Không thể tạo môn học");
     }
-    return { success: true, data: await response.json() };
+    return data;
   } catch (error: any) {
-    return { success: false, error: error.message };
+    throw new Error(error.message || "Lỗi tạo môn học");
   }
 }
 
-export async function updateSubjectAction(subjectId: string, payload: { title: string; description: string }, token: string) {
-  const cleanToken = token.trim().replace(/^"|"$/g, "");
+// 5. Lấy Đề cương (Syllabus) - Đã khớp tên getSyllabusBySubjectAction
+export async function getSyllabusBySubjectAction(subjectId: string) {
   try {
-    const response = await fetch(`${userBackendUrl}/subjects/${subjectId}`, {
-      method: "PUT",
-      headers: {
-        "Authorization": `Bearer ${cleanToken}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(payload),
-    });
-
-    if (!response.ok) {
-      const errData = await response.json().catch(() => ({}));
-      return { success: false, error: errData.detail || "Không thể cập nhật chương học" };
-    }
-    return { success: true, data: await response.json() };
-  } catch (error: any) {
-    return { success: false, error: error.message };
-  }
-}
-
-export async function deleteSubjectAction(subjectId: string, token: string) {
-  const cleanToken = token.trim().replace(/^"|"$/g, "");
-  try {
-    const response = await fetch(`${userBackendUrl}/subjects/${subjectId}`, {
-      method: "DELETE",
-      headers: {
-        "Authorization": `Bearer ${cleanToken}`,
-        "Content-Type": "application/json",
-      },
-    });
-
-    if (!response.ok) {
-      const errData = await response.json().catch(() => ({}));
-      return { success: false, error: errData.detail || "Không thể xóa chương học" };
-    }
-    return { success: true };
-  } catch (error: any) {
-    return { success: false, error: error.message };
-  }
-}
-
-
-
-
-export async function getSyllabusAction(subjectId: string) {
-  try {
-    // const baseUrl = process.env.NEXT_PUBLIC_COURSE_BACKEND_URL || "http://localhost:8001";
     const baseUrl = userBackendUrl || "";
     const cleanBaseUrl = baseUrl.endsWith("/") ? baseUrl.slice(0, -1) : baseUrl;
     const url = `${cleanBaseUrl}/syllabus/subject/${subjectId}`;
 
-    // TỰ ĐỘNG ĐỌC TOKEN TỪ COOKIE TRÊN SERVER NEXT.JS
-    const cookieStore = await cookies(); // Thêm await nếu dùng Next.js 15+
-    const token = cookieStore.get("token")?.value; 
-
-    console.log("📡 [NEXTJS FETCH] Gọi API Syllabus chính xác tại:", url);
-    console.log("🔑 [DEBUG] Trạng thái Token gửi đi:", token ? "CÓ TOKEN (Đang gửi)" : "TRỐNG (NULL)");
+    const token = await getTokenFromCookie();
 
     const res = await fetch(url, {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
-        // Đính kèm Token dạng Bearer
         ...(token ? { "Authorization": `Bearer ${token}` } : {})
       }
     });
 
-    if (res.status === 401) {
-      console.error("❌ API trả về lỗi 401: Token không hợp lệ, hết hạn, hoặc Backend giải mã lỗi!");
-      return null;
-    }
-
-    if (res.status === 404) {
-      console.log("ℹ️ Môn học này chưa có syllabus (404).");
-      return null;
-    }
-
-    if (!res.ok) {
-      console.error(`❌ Fetch Syllabus thất bại. Status: ${res.status}`);
-      return null;
-    }
-
+    if (!res.ok) return null;
     return await res.json();
   } catch (error) {
     console.error("❌ Lỗi kết nối API Syllabus:", error);
@@ -201,9 +145,8 @@ export async function getSyllabusAction(subjectId: string) {
   }
 }
 
-
-
-
+// 6. Tạo Đề cương (Syllabus)
+// 6. Tạo Đề cương (Syllabus)
 export async function createSyllabusAction(payload: {
   subject_id: string;
   description: string;
@@ -211,34 +154,33 @@ export async function createSyllabusAction(payload: {
   status_id?: string;
 }) {
   try {
-    const baseUrl = process.env.NEXT_PUBLIC_COURSE_BACKEND_URL || "";
+    const baseUrl = userBackendUrl || "";
     const url = `${baseUrl.replace(/\/$/, "")}/syllabus/`;
 
-    const cookieStore = await cookies();
-    const token = cookieStore.get("token")?.value;
+    const token = await getTokenFromCookie();
 
-    // 1. Giải mã token tự động để lấy instructor_id (UUID)
     let instructorId = null;
     if (token) {
       try {
         const payloadBase64 = token.split(".")[1];
-        const decodedPayload = JSON.parse(atob(payloadBase64));
+        const base64 = payloadBase64.replace(/-/g, '+').replace(/_/g, '/');
+        const decodedPayload = JSON.parse(Buffer.from(base64, 'base64').toString('utf-8'));
         instructorId = decodedPayload.user_id || decodedPayload.sub; 
       } catch (e) {
         console.error("Không thể giải mã token:", e);
       }
     }
+
     const finalPayload = {
       subject_id: payload.subject_id,
       description: payload.description || "Chưa có mô tả",
       instructor_id: instructorId, 
       
+      // ✅ FIX TẠI ĐÂY: Nếu không có file truyền vào, gán đường dẫn file mặc định
       syllabus_file_path: payload.syllabus_file_path || "documents/syllabi/placeholder.pdf",
       
       status_id: payload.status_id || "SYLLABUS_DRAFT"
     };
-
-    console.log("📤 [NEXTJS POST] Gửi dữ liệu chuẩn lên Backend:", finalPayload);
 
     const res = await fetch(url, {
       method: "POST",
@@ -251,62 +193,35 @@ export async function createSyllabusAction(payload: {
 
     const data = await res.json();
     if (!res.ok) {
-      console.error("❌ Tạo Syllabus thất bại từ Backend:", data);
-      return { success: false, error: JSON.stringify(data.detail) || "Không thể tạo đề cương" };
+      throw new Error(typeof data.detail === "string" ? data.detail : "Không thể tạo đề cương");
     }
 
-    return { success: true, data };
-  } catch (error) {
-    console.error("❌ Lỗi kết nối khi POST Syllabus:", error);
-    return { success: false, error: "Lỗi kết nối đến máy chủ." };
-  }
-}
-
-
-
-
-export async function createModuleAction(payload: { subject_id: string; title: string }, token: string) {
-  const cleanToken = token.trim().replace(/^"|"$/g, "");
-  try {
-    const response = await fetch(`${userBackendUrl}/modules/`, {
-      method: "POST",
-      headers: { 
-        "Authorization": `Bearer ${cleanToken}`, 
-        "Content-Type": "application/json" 
-      },
-      body: JSON.stringify(payload),
-    });
-    return { success: response.ok, data: response.ok ? await response.json() : null };
+    return data;
   } catch (error: any) {
-    return { success: false, error: error.message };
+    throw new Error(error.message || "Lỗi kết nối đến máy chủ.");
   }
 }
 
-export async function getLessonsByModuleAction(moduleId: string, token: string) {
-  const cleanToken = token.trim().replace(/^"|"$/g, "");
-  try {
-    const response = await fetch(`${userBackendUrl}/lessons/?module_id=${moduleId}`, {
-      method: "GET",
-      headers: { "Authorization": `Bearer ${cleanToken}`, "Accept": "application/json" },
-    });
-    if (!response.ok) return [];
-    return await response.json();
-  } catch (error) {
-    return [];
-  }
-}
+export async function uploadFileAction(formData: FormData) {
+  const userBackendUrl = process.env.NEXT_PUBLIC_COURSE_BACKEND_URL || "http://localhost:8000";
+  const cookieStore = await cookies();
+  const token = cookieStore.get("token")?.value?.replace(/^"|"$/g, "") || "";
 
-export async function createLessonAction(payload: { module_id: string; title: string; duration_minutes: number; video_url?: string; content_body?: string }, token: string) {
-  const cleanToken = token.trim().replace(/^"|"$/g, "");
-  try {
-    const response = await fetch(`${userBackendUrl}/lessons/`, {
-      method: "POST",
-      headers: { "Authorization": `Bearer ${cleanToken}`, "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
-    return { success: response.ok, data: response.ok ? await response.json() : null };
-  } catch (error: any) {
-    return { success: false, error: error.message };
-  }
-}
+  const endpoint = `${userBackendUrl.replace(/\/$/, "")}/syllabus/upload`;
 
+  const res = await fetch(endpoint, {
+    method: "POST",
+    headers: {
+      ...(token ? { "Authorization": `Bearer ${token}` } : {})
+    },
+    body: formData,
+  });
+
+  const data = await res.json();
+
+  if (!res.ok) {
+    throw new Error(data.detail || `Lỗi khi upload file (${res.status})`);
+  }
+
+  return data; // Trả về { status: "success", file_path: "documents/syllabi/..." }
+}

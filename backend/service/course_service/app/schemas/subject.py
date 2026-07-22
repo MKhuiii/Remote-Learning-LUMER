@@ -16,9 +16,9 @@ class SubjectUpdate(BaseModel):
     order_index: Optional[int] = None
     description: str = None
 
-class SubjectRead(SubjectBase):
-    subject_id: UUID
-    course_id: UUID
+# class SubjectRead(SubjectBase):
+#     subject_id: UUID
+#     course_id: UUID
 
 class InstructorStatictisSubject(BaseModel):
     total_subjects: int
@@ -33,3 +33,16 @@ class GeneralInfoInstructorSubject(BaseModel):
     status_id: str
     total_modules: int
     total_lessons: int
+
+class SubjectRead(BaseModel):
+    subject_id: UUID
+    course_id: UUID
+    title: str
+    description: Optional[str] = None
+    order_index: int
+    status_id: str
+    file_url: Optional[str] = None 
+
+
+    class Config:
+        from_attributes = True

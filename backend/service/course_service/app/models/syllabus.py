@@ -19,7 +19,11 @@ class Syllabus(SQLModel, table=True):
     description: Optional[str] = Field(default=None, max_length=255)
     syllabus_file_path: str = Field(nullable=False)
     status_id: SyllabusStatus = Field(
-        sa_type=Enum(SyllabusStatus),
+        sa_type=Enum(
+            SyllabusStatus,
+            name="syllabusstatus",
+            values_callable=lambda x: [e.value for e in x]
+        ),
         nullable=False
     )
     # Quan hệ

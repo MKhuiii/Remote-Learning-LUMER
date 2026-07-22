@@ -77,4 +77,6 @@ class CRUDSubject(CRUDBase[Subject, SubjectCreate, SubjectUpdate, UUID]):
 
         return db.exec(statement).all()
     
+
+
 crud_subject = CRUDSubject(Subject)

@@ -47,7 +47,6 @@ def create_subject(
     subject_in: SubjectCreate,
     current_user: dict = Depends(RoleChecker(["Manager"]))
 ):
-    # 1. Kiểm tra course tồn tại
     course = crud_course.get_by_id(db, subject_in.course_id)
     if not course:
         raise HTTPException(
@@ -55,19 +54,17 @@ def create_subject(
             detail=f"Không tìm thấy khóa học với ID: {subject_in.course_id}"
         )
 
-    # 2. Khai báo dictionary từ Pydantic model
     subject_dict = subject_in.model_dump()
 
-    # 3. Khởi tạo trực tiếp SQLModel Object
+    # 🟢 Khởi tạo db_subject đúng cú pháp Python
     db_subject = Subject(
-        course_id=subject_in.course_id,  
+        course_id=subject_in.course_id,
         title=subject_dict["title"],
         description=subject_dict["description"],
         order_index=subject_dict["order_index"],
-        status_id=SubjectStatus.SUBJECT_DEVELOPING
+        status_id=SubjectStatus.DEVELOPING.value
     )
 
-    # 4. Lưu vào DB
     return crud_subject.create(db, db_subject)
 
 # 🔵 Lấy Subject theo ID (mọi role đều có thể xem)
@@ -142,3 +139,10 @@ def instructor_statistic(
     )
     return statictis
 
+@router.get("/course/{course_id}", response_model=List[SubjectRead])
+def get_subjects_by_course(
+    course_id: UUID,
+    db: SessionDep,
+    current_user: dict = Depends(RoleChecker(["Manager", "Instructor", "Student"]))
+):
+    return crud_subject.get_by_course(db, course_id=course_id)
