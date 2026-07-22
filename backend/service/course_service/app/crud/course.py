@@ -4,7 +4,7 @@ from app.models.lesson import Lesson
 from app.models.subject import Subject
 from app.models.module import Module
 from app.models.course_tag_link import CourseTagLink
-from app.schemas.enums import CourseType
+from app.schemas.enums import CourseType, CourseStatus
 from typing import Optional, List, Tuple
 from app.schemas.course import GeneralCourseInfo
 from app.schemas.course import CourseCreate, CourseUpdate
@@ -130,4 +130,39 @@ class CRUDCourse(CRUDBase[Course, CourseCreate, CourseUpdate, UUID]):
         ]
 
         return items, total
+    def get_by_ids(self, db: Session, course_ids: List[UUID]) -> List[Course]:
+        if not course_ids:
+            return []
+            
+        statement = (
+            select(Course)
+            .where(
+                Course.course_id.in_(course_ids),
+                Course.status_id == CourseStatus.COURSE_ONGOING
+            )
+            # Eager load mối quan hệ tags để tránh N+1 Query
+            .options(selectinload(Course.tags))
+        )
+        return db.exec(statement).all()
+
+    def get_featured_fallback(self, db: Session, limit: int = 5) -> List[Course]:
+        statement = (
+            select(Course)
+            .where(Course.status_id == CourseStatus.COURSE_ONGOING)
+            .options(selectinload(Course.tags))
+            .limit(limit)
+        )
+        return db.exec(statement).all()
+
+    def get_featured_fallback_exclude(self, db: Session, exclude_ids: List[UUID], limit: int = 5) -> List[Course]:
+        statement = (
+            select(Course)
+            .where(
+                Course.status_id == CourseStatus.COURSE_ONGOING,
+                Course.course_id.not_in(exclude_ids)
+            )
+            .options(selectinload(Course.tags))
+            .limit(limit)
+        )
+        return db.exec(statement).all()
 crud_course = CRUDCourse(Course)

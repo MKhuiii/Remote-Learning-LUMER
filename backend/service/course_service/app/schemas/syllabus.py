@@ -1,14 +1,14 @@
 from pydantic import BaseModel
 from uuid import UUID
 from typing import Optional
-
+from app.schemas.enums import SyllabusStatus
 class SyllabusBase(BaseModel):
     subject_id: UUID
     assigner_id: Optional[UUID] = None        
     instructor_id: Optional[UUID] = None      
     description: Optional[str] = None
     syllabus_file_path: Optional[str] = ""    
-    status_id: Optional[str] = "SYLLABUS_DRAFT" 
+    status_id: Optional[str] = SyllabusStatus.SYLLABUS_DRAFT.value
 
 class SyllabusCreate(SyllabusBase):
     pass

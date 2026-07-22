@@ -47,10 +47,12 @@ export enum CourseType {
 export interface GeneralCourseInfo {
   course_id: string;
   title: string;
-  description?: string | null;
+  description: string;
   price: number;
-  course_type: CourseType;
-  tags: string[];
+  course_type?: string;   // "LONG" | "SHORT"
+  is_long_term?: boolean;
+  enrollment_count?: number;
+  tags: string[];         // Mảng tên tag ["Python", "FastAPI"]
 }
 
 export interface CourseSearchPaginatedResponse {
@@ -68,4 +70,9 @@ export interface CourseSearchParams {
   max_price?: number;
   page?: number;
   size?: number;
+}
+
+export interface FeaturedCoursesResponse {
+  success: boolean;
+  data: GeneralCourseInfo[];
 }

@@ -1,7 +1,7 @@
 from uuid import UUID
 import math
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status, Query
-from typing import Optional
+from typing import Optional, Any, Dict, List
 from app.api.v1.deps import SessionDep
 from app.schemas.course import CourseSearchPaginatedResponse
 from app.schemas.enums import CourseType
@@ -9,8 +9,86 @@ from app.core.security import RoleChecker, get_current_user_role
 from app.crud.course import crud_course
 from app.crud.course_media import crud_course_media
 from app.schemas.course import CourseCreate, CourseImageUploadResponse, CourseRead, CourseUpdate, CourseLessonsResponse
+from app.core.config import settings
+import httpx
 
 router = APIRouter(prefix="/courses", tags=["courses"])
+
+PROGRESS_SERVICE_URL = settings.BACKEND_LEARNING_PROGRESS_URL
+
+def format_course_response(course_obj: Any, enrollment_count: int = 0) -> Dict[str, Any]:
+    """Helper format dữ liệu khóa học chuẩn định dạng cho Frontend Landing Page"""
+    
+    # Xử lý an toàn cho mảng tags
+    tags_list = []
+    if hasattr(course_obj, "tags") and course_obj.tags:
+        tags_list = [
+            tag.tag_name if hasattr(tag, "tag_name") else str(tag)
+            for tag in course_obj.tags
+        ]
+
+    # Kiểm tra loại khóa học Dài hạn / Ngắn hạn
+    course_type_str = str(getattr(course_obj, "course_type", "")).upper()
+    is_long_term = (
+        getattr(course_obj, "is_long_term", False)
+        or "LONG" in course_type_str
+    )
+
+    return {
+        "course_id": str(course_obj.course_id),
+        "title": course_obj.title,
+        "description": course_obj.description or "",
+        "price": course_obj.price or 0,
+        "course_type": course_obj.course_type,
+        "is_long_term": is_long_term,
+        "enrollment_count": enrollment_count,
+        "tags": tags_list,
+    }
+
+
+@router.get("/featured")
+async def get_featured_courses(db: SessionDep):
+    top_enrolled: List[Dict[str, Any]] = []
+
+    # 1. Gọi API nội bộ sang Progress/Enrollment Service
+    async with httpx.AsyncClient(timeout=3.0) as client:
+        try:
+            url = f"{PROGRESS_SERVICE_URL}/course_enrollment/internal/top-enrolled-courses"
+            response = await client.get(url)
+            if response.status_code == 200:
+                top_enrolled = response.json().get("data", [])
+        except Exception as e:
+            print(f"[WARNING] Cannot reach Enrollment Service: {e}")
+
+    # Map lưu lượt đăng ký theo course_id
+    enrollment_map = {item["course_id"]: item["enrollment_count"] for item in top_enrolled}
+    course_ids = [UUID(cid) for cid in enrollment_map.keys() if cid]
+
+    # 2. Lấy danh sách Course thực sự tồn tại trong DB theo IDs
+    db_courses = crud_course.get_by_ids(db, course_ids=course_ids)
+    courses_dict = {str(c.course_id): c for c in db_courses}
+
+    result = []
+    
+    # 3. Ghép đúng khóa học tìm được với enrollment_count tương ứng
+    for item in top_enrolled:
+        cid = item["course_id"]
+        if cid in courses_dict:
+            c = courses_dict[cid]
+            result.append(format_course_response(c, item["enrollment_count"]))
+
+    # 4. BỔ SUNG FALLBACK: Nếu tìm không đủ 5 khóa học (do ID lệch giữa 2 DB hoặc chưa có nhiều đăng ký)
+    if len(result) < 5:
+        existing_ids = {UUID(c["course_id"]) for c in result}
+        
+        # Lấy thêm các khóa học chưa có trong result để bù cho đủ 5
+        additional_courses = crud_course.get_featured_fallback_exclude(
+            db, exclude_ids=list(existing_ids), limit=5 - len(result)
+        )
+        for c in additional_courses:
+            result.append(format_course_response(c, 0))
+
+    return {"success": True, "data": result}
 
 @router.get(
     "/search",

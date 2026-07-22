@@ -216,4 +216,12 @@ def get_user_statistics(
     stats = crud_course_enrollment.get_general_statistics(db, user_id=user_id)
     
     return stats
+
+@router.get("/internal/top-enrolled-courses")
+def get_top_enrolled_courses(session: SessionDep):
+    """
+    Internal API dành cho các Service khác gọi sang để lấy Top 5 course_id đăng ký nhiều nhất
+    """
+    data = crud_course_enrollment.get_top_5_course_ids(session)
+    return {"success": True, "data": data}
     
