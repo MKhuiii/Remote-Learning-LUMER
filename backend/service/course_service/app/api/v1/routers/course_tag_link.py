@@ -87,10 +87,10 @@ def get_tag_list(
     return tag_list
 
 # Lấy danh sách môn học có tag
-@router.get("/get-course-list/{tag_id}", response_model=List[GeneralCourseInfo])
+@router.get("/get-course-list", response_model=List[GeneralCourseInfo])
 def get_course_list(
     db: SessionDep,
-    tag_id: UUID,
+    tag_id: Optional[UUID] = Query(None, description="ID của Tag cần lọc, để trống nếu muốn lấy tất cả khóa học"),
 ):
-    course_list = crud_course_tag_link.get_multi_by_tag_id(db, tag_id)
+    course_list = crud_course_tag_link.get_multi_by_tag_id(db, tag_id=tag_id)
     return course_list

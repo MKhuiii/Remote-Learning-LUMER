@@ -3,9 +3,14 @@ from app.models.course import Course
 from app.models.lesson import Lesson
 from app.models.subject import Subject
 from app.models.module import Module
+from app.models.course_tag_link import CourseTagLink
+from app.schemas.enums import CourseType
+from typing import Optional, List, Tuple
+from app.schemas.course import GeneralCourseInfo
 from app.schemas.course import CourseCreate, CourseUpdate
 from uuid import UUID
-from sqlmodel import Session, select
+from sqlmodel import Session, select, func, or_
+from sqlalchemy.orm import selectinload
 
 class CRUDCourse(CRUDBase[Course, CourseCreate, CourseUpdate, UUID]):
     def get_by_instructor(self, db: Session, instructor_id: UUID) -> list[Course]:
@@ -52,4 +57,77 @@ class CRUDCourse(CRUDBase[Course, CourseCreate, CourseUpdate, UUID]):
             Course.course_id == course_id
         )
         return db.exec(statement).first()
+    def search_courses(
+        self,
+        db: Session,
+        q: Optional[str] = None,
+        tag_id: Optional[UUID] = None,
+        course_type: Optional[CourseType] = None,
+        max_price: Optional[int] = None,
+        page: int = 1,
+        size: int = 10,
+    ) -> Tuple[List[GeneralCourseInfo], int]:
+        """
+        Tìm kiếm khóa học theo nhiều tiêu chí & phân trang.
+        Trả về Tuple: (Danh sách khóa học đã format, Tổng số kết quả)
+        """
+        # 1. Câu truy vấn cơ sở
+        statement = select(Course).options(selectinload(Course.tags))
+        
+        # 2. Xây dựng danh sách điều kiện lọc (Filters)
+        filters = []
+
+        # Lọc theo Từ khóa (Tìm kiếm trong tiêu đề hoặc mô tả)
+        if q:
+            search_pattern = f"%{q.strip()}%"
+            filters.append(
+                or_(
+                    Course.title.ilike(search_pattern),
+                    Course.description.ilike(search_pattern)
+                )
+            )
+
+        # Lọc theo Tag ID
+        if tag_id:
+            statement = statement.join(
+                CourseTagLink, Course.course_id == CourseTagLink.course_id
+            )
+            filters.append(CourseTagLink.tag_id == tag_id)
+
+        # Lọc theo Loại khóa học (Ngắn hạn / Dài hạn)
+        if course_type:
+            filters.append(Course.course_type == course_type)
+
+        # Lọc theo Giá tối đa
+        if max_price is not None:
+            filters.append(Course.price <= max_price)
+
+        # Áp dụng các điều kiện lọc nếu có
+        if filters:
+            statement = statement.where(*filters)
+
+        # 3. Đếm tổng số kết quả phù hợp (Trục đếm Total)
+        count_statement = select(func.count()).select_from(statement.subquery())
+        total = db.exec(count_statement).one()
+
+        # 4. Áp dụng Phân trang (Pagination)
+        offset = (page - 1) * size
+        statement = statement.offset(offset).limit(size)
+
+        # 5. Thực thi Query & Map kết quả
+        courses = db.exec(statement).all()
+
+        items = [
+            GeneralCourseInfo(
+                course_id=course.course_id,
+                title=course.title,
+                description=course.description,
+                price=course.price,
+                course_type=course.course_type,
+                tags=[tag.tag_name for tag in course.tags]
+            )
+            for course in courses
+        ]
+
+        return items, total
 crud_course = CRUDCourse(Course)

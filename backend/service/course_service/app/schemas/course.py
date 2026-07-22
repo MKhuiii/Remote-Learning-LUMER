@@ -58,4 +58,11 @@ class CourseLessonsResponse(BaseModel):
 class GeneralCourseInfo(CourseBase):
     course_id: UUID
     course_type: CourseType = CourseType.SHORT_TERM
+    tags: List[str]
 
+class CourseSearchPaginatedResponse(BaseModel):
+    items: List[GeneralCourseInfo]
+    total: int
+    page: int
+    size: int
+    total_pages: int

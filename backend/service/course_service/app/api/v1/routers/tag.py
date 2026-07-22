@@ -3,7 +3,7 @@ from uuid import UUID
 from typing import Optional, List, Annotated
 from app.api.v1.deps import SessionDep
 from app.core.security import RoleChecker, get_current_user_role
-from app.schemas.tag import TagCreate, TagItem, TagListQuery, TagUpdate
+from app.schemas.tag import TagCreate, TagItem, TagListQuery, TagUpdate, TagName
 from app.crud.tag import crud_tag
 
 router = APIRouter(prefix="/tags", tags=["tags"])
@@ -71,3 +71,9 @@ def update_tag(
         "status": "succcess",
         "message": f"Đã cập nhật tag có id {updated_tag.tag_id} thành công!"
     }
+
+@router.get("/top-5", response_model=List[TagName])
+def top_5_tag(
+    db: SessionDep,
+):
+    return crud_tag.get_top_tags(db, limit=5)
