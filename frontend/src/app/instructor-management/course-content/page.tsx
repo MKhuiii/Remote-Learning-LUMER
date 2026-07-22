@@ -94,7 +94,7 @@ export default function CourseContentPage() {
       {/* Header Banner */}
       <section className="bg-gradient-to-r from-[#66CCFF] to-[#0066FF] text-white">
         <div className="max-w-7xl mx-auto px-6 py-14">
-          <h1 className="text-4xl font-bold">Course Content</h1>
+          <h1 className="text-4xl font-bold">Quản lý Môn học</h1>
           <p className="mt-3 text-blue-100 text-lg max-w-3xl">
             Quản lý toàn bộ nội dung các môn học được phân công giảng dạy. Chọn
             một môn học để quản lý cấu trúc các Module, Lesson và Đề cương chi tiết.
