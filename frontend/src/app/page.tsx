@@ -1,11 +1,33 @@
 'use client';
-import { mockCourses } from '@/data/data';
-import Navbar from '@/components/Navbar';
+
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import Navbar from '@/components/Navbar';
+import { getFeaturedCourses } from '@/actions/getCourse';
+import { GeneralCourseInfo } from '@/types/course';
 
 export default function LandingPage() {
-  // Lấy tối đa 5 khóa học
-  const topCourses = mockCourses.slice(0, 5);
+  const [topCourses, setTopCourses] = useState<GeneralCourseInfo[]>([]);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+
+  // Gọi API lấy Top 5 khóa học nổi bật
+  useEffect(() => {
+    const fetchCourses = async () => {
+      setIsLoading(true);
+      try {
+        const courses = await getFeaturedCourses();
+        setTopCourses(courses.slice(0, 5));
+      } catch (error) {
+        console.error('Lỗi khi tải Top 5 khóa học:', error);
+        setTopCourses([]);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchCourses();
+  }, []);
+
   const featuredCourse = topCourses[0];
   const remainingCourses = topCourses.slice(1, 5);
 
@@ -45,7 +67,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* 2. STATS SECTION (Tối giản hoàn toàn) */}
+      {/* 2. STATS SECTION */}
       <section className="border-b border-slate-200 bg-slate-100/50 py-8">
         <div className="max-w-5xl mx-auto px-6 grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
           <div>
@@ -67,7 +89,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* 3. COURSES SECTION (Tối đa 5 khóa) */}
+      {/* 3. COURSES SECTION (Top 5 từ API) */}
       <section id="courses" className="max-w-5xl mx-auto px-6 py-16 space-y-8">
         <div className="flex flex-col md:flex-row md:items-end justify-between border-b border-slate-200 pb-4 gap-2">
           <div>
@@ -77,63 +99,109 @@ export default function LandingPage() {
           <p className="text-xs text-slate-500">Chương trình đào tạo được cập nhật mới nhất</p>
         </div>
 
-        <div className="space-y-6">
-          {/* Khóa 1: Featured Card (Nổi bật nhất) */}
-          {featuredCourse && (
-            <div className="bg-white border-2 border-blue-600 rounded-xl p-6 sm:p-8 flex flex-col md:flex-row justify-between items-start md:items-center gap-6 shadow-xs">
-              <div className="space-y-3 max-w-2xl">
-                <div className="flex items-center gap-2">
-                  <span className="bg-blue-600 text-white text-[10px] font-bold px-2 py-0.5 rounded uppercase">
-                    Nổi bật
-                  </span>
-                  <span className="text-xs font-semibold text-slate-500 uppercase">
-                    {featuredCourse.category}
-                  </span>
-                </div>
-                <h3 className="text-xl font-extrabold text-slate-900">{featuredCourse.title}</h3>
-                <p className="text-xs text-slate-600 leading-relaxed">{featuredCourse.description}</p>
-                <p className="text-xs font-medium text-slate-500">Giảng viên: <span className="text-slate-800 font-semibold">{featuredCourse.instructor}</span></p>
-              </div>
-
-              <div className="w-full md:w-auto shrink-0">
-                <Link
-                  href={`/course-preview/${featuredCourse.id}`}
-                  className="block text-center bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs px-6 py-3 rounded-lg transition"
-                >
-                  Xem chi tiết
-                </Link>
-              </div>
+        {/* Trạng thái Loading Skeleton */}
+        {isLoading ? (
+          <div className="space-y-6">
+            <div className="bg-white border border-slate-200 rounded-xl p-8 animate-pulse h-48" />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {[1, 2, 3, 4].map((n) => (
+                <div key={n} className="bg-white border border-slate-200 rounded-xl p-6 animate-pulse h-36" />
+              ))}
             </div>
-          )}
-
-          {/* 4 Khóa học còn lại (Grid 2x2) */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {remainingCourses.map((course) => (
-              <div
-                key={course.id}
-                className="bg-white border border-slate-200 rounded-xl p-6 flex flex-col justify-between hover:border-slate-300 transition"
-              >
-                <div className="space-y-3">
-                  <span className="bg-slate-100 text-slate-700 text-[10px] font-bold px-2 py-0.5 rounded uppercase inline-block">
-                    {course.category}
-                  </span>
-                  <h3 className="text-base font-bold text-slate-900 line-clamp-1">{course.title}</h3>
-                  <p className="text-xs text-slate-500 line-clamp-2 leading-relaxed">{course.description}</p>
+          </div>
+        ) : topCourses.length > 0 ? (
+          <div className="space-y-6">
+            {/* Khóa 1: Featured Card (Khóa hot nhất) */}
+            {featuredCourse && (
+              <div className="bg-white border-2 border-blue-600 rounded-xl p-6 sm:p-8 flex flex-col md:flex-row justify-between items-start md:items-center gap-6 shadow-xs">
+                <div className="space-y-3 max-w-2xl">
+                  <div className="flex items-center gap-2">
+                    <span className="bg-blue-600 text-white text-[10px] font-bold px-2 py-0.5 rounded uppercase">
+                      Nổi bật
+                    </span>
+                    <span className="text-xs font-bold text-purple-600 bg-purple-50 px-2 py-0.5 rounded uppercase">
+                      {featuredCourse.is_long_term ? 'Dài hạn' : 'Ngắn hạn'}
+                    </span>
+                    {featuredCourse.enrollment_count !== undefined && (
+                      <span className="text-xs font-medium text-slate-500">
+                        🔥 {featuredCourse.enrollment_count} lượt đăng ký
+                      </span>
+                    )}
+                  </div>
+                  <h3 className="text-xl font-extrabold text-slate-900">{featuredCourse.title}</h3>
+                  <p className="text-xs text-slate-600 leading-relaxed line-clamp-2">
+                    {featuredCourse.description || 'Chưa có mô tả cho khóa học này.'}
+                  </p>
+                  <div className="flex items-center gap-2 pt-1">
+                    {featuredCourse.tags?.map((tag, idx) => (
+                      <span key={idx} className="bg-slate-100 text-slate-600 text-[10px] font-semibold px-2 py-0.5 rounded">
+                        #{tag}
+                      </span>
+                    ))}
+                  </div>
                 </div>
 
-                <div className="mt-6 pt-4 border-t border-slate-100 flex items-center justify-between text-xs">
-                  <span className="text-slate-500 text-[11px]">GV: {course.instructor}</span>
+                <div className="w-full md:w-auto shrink-0 flex flex-col items-end gap-3">
+                  <p className="text-sm font-extrabold text-blue-600">
+                    {featuredCourse.price === 0 ? 'Miễn phí' : `${featuredCourse.price.toLocaleString('vi-VN')} VNĐ`}
+                  </p>
                   <Link
-                    href={`/course-preview/${course.id}`}
-                    className="text-blue-600 hover:text-blue-800 font-bold"
+                    href={`/course-preview/${featuredCourse.course_id}`}
+                    className="w-full sm:w-auto text-center bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs px-6 py-3 rounded-lg transition"
                   >
-                    Xem khóa học →
+                    Xem chi tiết
                   </Link>
                 </div>
               </div>
-            ))}
+            )}
+
+            {/* 4 Khóa học còn lại (Grid 2x2) */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {remainingCourses.map((course) => (
+                <div
+                  key={course.course_id}
+                  className="bg-white border border-slate-200 rounded-xl p-6 flex flex-col justify-between hover:border-slate-300 transition"
+                >
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="bg-slate-100 text-slate-700 text-[10px] font-bold px-2 py-0.5 rounded uppercase inline-block">
+                        {course.is_long_term ? 'Dài hạn' : 'Ngắn hạn'}
+                      </span>
+                      <span className="text-xs font-bold text-blue-600">
+                        {course.price === 0 ? 'Miễn phí' : `${course.price.toLocaleString('vi-VN')} đ`}
+                      </span>
+                    </div>
+
+                    <h3 className="text-base font-bold text-slate-900 line-clamp-1">{course.title}</h3>
+                    <p className="text-xs text-slate-500 line-clamp-2 leading-relaxed">
+                      {course.description || 'Chưa có mô tả.'}
+                    </p>
+                  </div>
+
+                  <div className="mt-6 pt-4 border-t border-slate-100 flex items-center justify-between text-xs">
+                    <div className="flex gap-1 overflow-hidden">
+                      {course.tags?.slice(0, 2).map((tag, idx) => (
+                        <span key={idx} className="text-[10px] text-slate-400 font-medium">
+                          #{tag}
+                        </span>
+                      ))}
+                    </div>
+                    <Link
+                      href={`/course-preview/${course.course_id}`}
+                      className="text-blue-600 hover:text-blue-800 font-bold shrink-0"
+                    >
+                      Xem khóa học →
+                    </Link>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
-        </div>
+        ) : (
+          <div className="bg-white border border-dashed border-slate-200 rounded-xl p-8 text-center text-xs text-slate-500">
+            Hiện chưa có khóa học nổi bật nào.
+          </div>
+        )}
       </section>
 
       {/* 4. FOOTER CALL TO ACTION */}

@@ -1,5 +1,6 @@
 from app.crud.base import CRUDBase
 from uuid import UUID
+from typing import Dict, List, Any
 from sqlmodel import Session, select, func
 from app.models.course_enrollment import CourseEnrollment
 from app.models.certificate import Certificate
@@ -192,5 +193,25 @@ class CRUDCourseEnrollment(CRUDBase[CourseEnrollment, CourseEnrollmentCreate, Co
             "completed_courses": completed_courses,
             "certificate": certificate_count
         }
+
+    def get_top_5_course_ids(self, db: Session) -> List[Dict[str, Any]]:
+        # Query gom nhóm theo course_id và đếm số lượng enrollment
+        statement = (
+            select(
+                CourseEnrollment.course_id,
+                func.count(CourseEnrollment.enrollment_id).label("enrollment_count")
+            )
+            .group_by(CourseEnrollment.course_id)
+            .order_by(func.count(CourseEnrollment.enrollment_id).desc())
+            .limit(5)
+        )
+        
+        results = db.exec(statement).all()
+        
+        # Trả về danh sách dict dạng [{"course_id": UUID, "enrollment_count": int}]
+        return [
+            {"course_id": str(row.course_id), "enrollment_count": row.enrollment_count}
+            for row in results
+        ]
 
 crud_course_enrollment = CRUDCourseEnrollment(CourseEnrollment)

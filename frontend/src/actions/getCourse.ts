@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { cookies } from "next/headers";
 import { Course } from "@/types/course";
-import { GeneralCourseInfo, CourseType, CourseSearchParams, CourseSearchPaginatedResponse } from "@/types/course";
+import { GeneralCourseInfo, CourseType, CourseSearchParams, CourseSearchPaginatedResponse, FeaturedCoursesResponse } from "@/types/course";
 
 // const BACKEND_URL = process.env.NEXT_PUBLIC_COURSE_BACKEND_URL || "http://localhost:8001";
 const BACKEND_URL = process.env.NEXT_PUBLIC_COURSE_BACKEND_URL;
@@ -259,5 +259,29 @@ export async function searchCourses(
       size: 10,
       total_pages: 0,
     };
+  }
+}
+
+export async function getFeaturedCourses(): Promise<GeneralCourseInfo[]> {
+  try {
+    const res = await fetch(`${BACKEND_URL}/courses/featured`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      // Cache dữ liệu 5 phút (300s) để tối ưu hiệu năng Landing Page
+      next: { revalidate: 30 },
+    });
+
+    if (!res.ok) {
+      console.error("Lỗi khi gọi API Featured Courses:", res.statusText);
+      return [];
+    }
+
+    const result: FeaturedCoursesResponse = await res.json();
+    return result.data || [];
+  } catch (error) {
+    console.error("Lỗi kết nối tới Course Service:", error);
+    return [];
   }
 }
