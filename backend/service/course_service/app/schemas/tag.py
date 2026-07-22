@@ -19,3 +19,7 @@ class TagItem(BaseModel):
 class TagListQuery(BaseModel):
     skip: int = 0
     limit: int = 10
+
+class TagName(BaseModel):
+    tag_id: UUID
+    tag_name: str
