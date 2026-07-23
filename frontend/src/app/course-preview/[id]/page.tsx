@@ -32,21 +32,46 @@ function CoursePreviewContent() {
   const handleRegister = async () => {
     setSubmitting(true);
 
-    // Gọi trực tiếp Server Action (Action tự động lấy cookie token)
-    const result = await enrollCourseAction(id);
+    try {
+      // Bọc try/catch để đảm bảo không bị đứng giao diện nếu Action throw error
+      const result = await enrollCourseAction(id);
 
-    setSubmitting(false);
+      if (result && result.success) {
+        alert(`Đăng ký thành công khóa học: ${course?.title}!`);
+        router.replace('/home');
+      } else {
+        const msg = result?.message || "Đăng ký không thành công.";
 
-    if (result.success) {
-      alert(`Đăng ký thành công khóa học: ${course?.title}!`);
-      router.replace('/home');
-    } else {
-      // Nếu không có token/cookie, thông báo từ getServerToken sẽ bắt lỗi và gợi ý đăng nhập
-      alert(result.message);
+        // Chuẩn hóa chuỗi để so sánh linh hoạt hơn
+        const lowerMsg = msg.toLowerCase();
 
-      if (result.message?.includes("Vui lòng đăng nhập lại")) {
-        router.push('/login?mode=login');
+        const isAlreadyEnrolled =
+          lowerMsg.includes("đã đăng ký") ||
+          lowerMsg.includes("already enrolled") ||
+          lowerMsg.includes("người dùng đã đăng ký");
+
+        if (isAlreadyEnrolled) {
+          alert("Bạn đã đăng ký khóa học này rồi! Hệ thống sẽ chuyển bạn tới trang học.");
+          setTimeout(() => {
+            router.replace('/home');
+          }, 100);
+          return;
+        }
+
+        if (lowerMsg.includes("vui lòng đăng nhập")) {
+          alert(msg);
+          router.push('/login?mode=login');
+          return;
+        }
+
+        // Hiện alert cho các trường hợp còn lại
+        alert(msg);
       }
+    } catch (err: any) {
+      console.error("Lỗi khi xử lý đăng ký:", err);
+      alert(err?.message || "Có lỗi xảy ra khi kết nối tới máy chủ.");
+    } finally {
+      setSubmitting(false);
     }
   };
 

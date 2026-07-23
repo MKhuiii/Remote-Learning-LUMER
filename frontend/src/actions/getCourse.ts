@@ -305,38 +305,58 @@ export async function fetchCoursePreview(courseId: string): Promise<CoursePrevie
   }
 }
 
-export async function enrollCourseAction(courseId: string): Promise<{ success: boolean; message?: string; data?: CourseEnrollmentResponse }> {
+export async function enrollCourseAction(courseId: string) {
   try {
-    const token = await getServerToken();
+    let token: string | null = null;
 
-    // SỬA ĐƯỜNG DẪN: Đổi /enrollments/ thành /course_enrollment/ theo đúng APIRouter prefix ở backend
-    const response = await fetch(`${LEARNING_PROGRESS_URL}/course_enrollment/`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`,
-      },
-      body: JSON.stringify({ course_id: courseId }),
-    });
+    try {
+      token = await getServerToken();
+    } catch (tokenErr) {
+      console.error("[enrollCourseAction] Token retrieval error:", tokenErr);
+    }
 
-    const resData = await response.json();
-
-    if (!response.ok) {
+    if (!token) {
       return {
         success: false,
-        message: resData.detail || 'Đăng ký khóa học thất bại.',
+        message: "Vui lòng đăng nhập để thực hiện thao tác này.",
+      };
+    }
+
+    const response = await fetch(`${LEARNING_PROGRESS_URL}/course_enrollment/`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ course_id: courseId }),
+      // Tránh cướp cache
+      cache: "no-store",
+    });
+
+    const data = await response.json().catch(() => null);
+
+    if (!response.ok) {
+      // Đọc kĩ thuộc tính detail từ FastAPI trả về
+      const errorMessage =
+        (typeof data?.detail === "string" ? data.detail : null) ||
+        data?.message ||
+        "Đăng ký khóa học thất bại.";
+
+      return {
+        success: false,
+        message: errorMessage,
       };
     }
 
     return {
       success: true,
-      data: resData,
+      data,
     };
   } catch (error: any) {
-    console.error('Failed to enroll course:', error);
+    console.error("[enrollCourseAction] Exception:", error);
     return {
       success: false,
-      message: error.message || 'Lỗi hệ thống. Vui lòng thử lại sau!',
+      message: error?.message || "Lỗi kết nối máy chủ, vui lòng thử lại sau.",
     };
   }
 }
