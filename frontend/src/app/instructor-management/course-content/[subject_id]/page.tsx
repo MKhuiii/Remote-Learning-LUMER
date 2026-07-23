@@ -1,469 +1,269 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter, useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import Navbar from "@/components/Navbar";
 import {
   ArrowLeft,
   BookOpen,
-  FolderKanban,
-  FileQuestion,
+  FileText,
+  Layers,
   Plus,
-  Pencil,
+  CheckCircle,
+  Download,
+  Upload,
   Trash2,
+  Edit3,
   ArrowRight,
-  X,
+  HelpCircle,
+  FileQuestion,
 } from "lucide-react";
 
-const subject = {
-  id: "sub001",
-  title: "Python Programming",
-  description: "Learn Python from basic to advanced through hands-on projects.",
-  course: "Python Fullstack Developer",
-  status: "Published",
-};
-
-const modules = [
+const MOCK_MODULES = [
   {
-    id: "m1",
-    title: "Introduction",
-    lessons: 3,
-    quizzes: 1,
+    module_id: "mod-101",
+    title: "Chương 1: Tổng quan về FastAPI & Microservices",
+    description: "Cơ bản về RESTful API, Routing, Dependency Injection.",
+    total_lessons: 5,
+    order: 1,
   },
   {
-    id: "m2",
-    title: "Variables",
-    lessons: 4,
-    quizzes: 1,
-  },
-  {
-    id: "m3",
-    title: "Functions",
-    lessons: 5,
-    quizzes: 0,
+    module_id: "mod-102",
+    title: "Chương 2: Xác thực JWT & Phân quyền RBAC",
+    description: "Xây dựng Middleware xác thực Token và phân quyền Giảng viên.",
+    total_lessons: 4,
+    order: 2,
   },
 ];
 
-const subjectQuiz = [
-  {
-    id: "q1",
-    title: "Final Exam",
-    questions: 30,
-    duration: 60,
-  },
-  {
-    id: "q2",
-    title: "Midterm Test",
-    questions: 20,
-    duration: 30,
-  },
-];
-
-export default function SubjectDetailPage() {
-  const router = useRouter();
+export default function SubjectPage() {
   const params = useParams();
+  const router = useRouter();
+  const subjectId = (params.subject_id as string) || "";
 
-  const subjectId = params.subject_id as string;
+  const [modules, setModules] = useState(MOCK_MODULES);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [newTitle, setNewTitle] = useState("");
+  const [newDesc, setNewDesc] = useState("");
 
-  const [tab, setTab] = useState<"module" | "quiz">("module");
+  const handleCreateModule = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newTitle.trim()) return;
 
-  // Module Form
-  const [showModuleForm, setShowModuleForm] = useState(false);
+    const newMod = {
+      module_id: `mod-${Date.now()}`,
+      title: newTitle,
+      description: newDesc,
+      total_lessons: 0,
+      order: modules.length + 1,
+    };
 
-  const [moduleTitle, setModuleTitle] = useState("");
-  const [moduleDescription, setModuleDescription] = useState("");
-
-  // Quiz Form
-  const [showQuizForm, setShowQuizForm] = useState(false);
-
-  const [quizTitle, setQuizTitle] = useState("");
-  const [quizDuration, setQuizDuration] = useState(30);
-  const [quizDescription, setQuizDescription] = useState("");
-
-  const handleCreateModule = () => {
-    console.log({
-      subjectId,
-      title: moduleTitle,
-      description: moduleDescription,
-    });
-
-    // gọi API sau
-
-    setModuleTitle("");
-    setModuleDescription("");
-    setShowModuleForm(false);
-  };
-
-  const handleCreateQuiz = () => {
-    console.log({
-      subjectId,
-      title: quizTitle,
-      duration: quizDuration,
-      description: quizDescription,
-    });
-
-    // gọi API sau
-
-    setQuizTitle("");
-    setQuizDuration(30);
-    setQuizDescription("");
-    setShowQuizForm(false);
+    setModules([...modules, newMod]);
+    setNewTitle("");
+    setNewDesc("");
+    setShowCreateModal(false);
   };
 
   return (
-    <div className="min-h-screen bg-slate-100">
+    <div className="min-h-screen bg-slate-50 text-slate-900 pb-16">
       <Navbar />
 
-      {/* Header */}
-
-      <section className="bg-gradient-to-r from-[#66CCFF] to-[#0066FF] text-white">
-        <div className="max-w-7xl mx-auto px-6 py-12">
+      <main className="max-w-7xl mx-auto px-6 py-8 space-y-8">
+        {/* Navigation & Banner */}
+        <div className="space-y-4">
           <button
-            onClick={() => router.back()}
-            className="flex items-center gap-2 text-blue-100 hover:text-white"
+            onClick={() => router.push("/instructor-management/course-content")}
+            className="inline-flex items-center gap-2 text-sm font-semibold text-slate-600 hover:text-blue-600 transition"
           >
             <ArrowLeft size={18} />
-            Course Content
+            Quay lại danh sách môn học
           </button>
 
-          <h1 className="text-4xl font-bold mt-5">{subject.title}</h1>
-
-          <p className="text-blue-100 mt-3 text-lg">
-            Thuộc khóa học: {subject.course}
-          </p>
-
-          <p className="text-blue-100 mt-2">
-            Quản lý Module, Lesson và Quiz của môn học này.
-          </p>
-        </div>
-      </section>
-
-      <section className="max-w-7xl mx-auto px-6 py-10">
-        {/* Statistics */}
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <div className="bg-white rounded-2xl shadow p-6">
-            <FolderKanban className="text-[#0066FF]" size={34} />
-
-            <p className="mt-3 text-slate-500">Modules</p>
-
-            <h2 className="text-3xl font-bold text-[#0066FF]">
-              {modules.length}
-            </h2>
-          </div>
-
-          <div className="bg-white rounded-2xl shadow p-6">
-            <BookOpen className="text-[#0066FF]" size={34} />
-
-            <p className="mt-3 text-slate-500">Lessons</p>
-
-            <h2 className="text-3xl font-bold text-[#0066FF]">
-              {modules.reduce((s, m) => s + m.lessons, 0)}
-            </h2>
-          </div>
-
-          <div className="bg-white rounded-2xl shadow p-6">
-            <FileQuestion className="text-[#0066FF]" size={34} />
-
-            <p className="mt-3 text-slate-500">Subject Quiz</p>
-
-            <h2 className="text-3xl font-bold text-[#0066FF]">
-              {subjectQuiz.length}
-            </h2>
-          </div>
-        </div>
-
-        {/* Subject Information */}
-
-        <div className="bg-white rounded-2xl shadow p-6 mb-8">
-          <h2 className="text-xl font-bold text-[#0066FF] mb-5">
-            Subject Information
-          </h2>
-
-          <div className="grid md:grid-cols-2 gap-6">
+          <div className="bg-white p-6 sm:p-8 rounded-xl border border-slate-200 shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
             <div>
-              <p className="text-slate-500">Subject</p>
-              <h3 className="font-semibold">{subject.title}</h3>
+              <div className="flex items-center gap-3">
+                <span className="text-xs font-bold uppercase tracking-wider px-2.5 py-1 rounded-full bg-blue-50 text-blue-600 border border-blue-100">
+                  Mã môn: {subjectId}
+                </span>
+                <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-100/80 text-emerald-700 border border-emerald-200">
+                  Đang hoạt động
+                </span>
+              </div>
+              <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 mt-2">
+                Quản Lý Nội Dung Môn Học
+              </h1>
             </div>
 
-            <div>
-              <p className="text-slate-500">Course</p>
-              <h3 className="font-semibold">{subject.course}</h3>
-            </div>
-
-            <div>
-              <p className="text-slate-500">Status</p>
-              <span className="bg-green-100 text-green-700 rounded-full px-3 py-1 text-sm">
-                {subject.status}
-              </span>
-            </div>
-
-            <div className="md:col-span-2">
-              <p className="text-slate-500">Description</p>
-              <p>{subject.description}</p>
-            </div>
-          </div>
-        </div>
-
-        {/* Tabs */}
-
-        <div className="flex gap-4 mb-8">
-          <button
-            onClick={() => setTab("module")}
-            className={`px-6 py-3 rounded-xl font-semibold ${
-              tab === "module" ? "bg-[#0066FF] text-white" : "bg-white"
-            }`}
-          >
-            Modules
-          </button>
-
-          <button
-            onClick={() => setTab("quiz")}
-            className={`px-6 py-3 rounded-xl font-semibold ${
-              tab === "quiz" ? "bg-[#0066FF] text-white" : "bg-white"
-            }`}
-          >
-            Subject Quiz
-          </button>
-        </div>
-
-        {/* Module */}
-
-        {tab === "module" && (
-          <>
-            <div className="flex justify-end mb-6">
+            <div className="flex items-center gap-3">
               <button
-                onClick={() => setShowModuleForm(true)}
-                className="bg-[#0066FF] text-white rounded-xl px-5 py-3 flex items-center gap-2"
+                onClick={() =>
+                  router.push(
+                    `/instructor-management/course-content/${subjectId}/quizzes`,
+                  )
+                }
+                className="inline-flex items-center gap-2 bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 px-4 py-2.5 rounded-xl text-sm font-semibold transition shadow-sm"
+              >
+                <HelpCircle size={18} className="text-blue-600" />
+                Quản lý Quiz
+              </button>
+              <button
+                onClick={() => setShowCreateModal(true)}
+                className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-xl text-sm font-semibold transition shadow-sm"
               >
                 <Plus size={18} />
-                New Module
+                Tạo Module Mới
               </button>
-            </div>
-
-            <div className="space-y-5">
-              {modules.map((module, index) => (
-                <div
-                  key={module.id}
-                  className="bg-white rounded-2xl shadow p-6 hover:shadow-xl transition"
-                >
-                  <div className="flex justify-between">
-                    <div>
-                      <span className="text-sm text-[#0066FF] font-semibold">
-                        Module {(index + 1).toString().padStart(2, "0")}
-                      </span>
-
-                      <h2 className="text-2xl font-bold mt-2">
-                        {module.title}
-                      </h2>
-                    </div>
-
-                    <div className="flex gap-3">
-                      <button>
-                        <Pencil className="text-blue-600" />
-                      </button>
-
-                      <button>
-                        <Trash2 className="text-red-500" />
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="flex gap-8 mt-6 text-slate-600">
-                    <span>{module.lessons} Lessons</span>
-
-                    <span>{module.quizzes} Quiz</span>
-                  </div>
-
-                  <div className="flex justify-end mt-6">
-                    <button
-                      onClick={() =>
-                        router.push(
-                          `/instructor-management/course-content/${subjectId}/modules/${module.id}`,
-                        )
-                      }
-                      className="flex items-center gap-2 text-[#0066FF] font-semibold hover:text-blue-700 transition"
-                    >
-                      Open Module
-                      <ArrowRight size={18} />
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </>
-        )}
-
-        {/* Subject Quiz */}
-
-        {tab === "quiz" && (
-          <>
-            <div className="flex justify-end mb-6">
-              <button
-                onClick={() => setShowQuizForm(true)}
-                className="bg-[#0066FF] text-white rounded-xl px-5 py-3 flex items-center gap-2"
-              >
-                <Plus size={18} />
-                New Quiz
-              </button>
-            </div>
-
-            <div className="space-y-5">
-              {subjectQuiz.map((quiz) => (
-                <div key={quiz.id} className="bg-white rounded-2xl shadow p-6">
-                  <div className="flex justify-between">
-                    <div>
-                      <h2 className="text-2xl font-bold">{quiz.title}</h2>
-
-                      <p className="text-slate-500 mt-2">
-                        {quiz.questions} Questions • {quiz.duration} Minutes
-                      </p>
-                    </div>
-
-                    <div className="flex gap-3">
-                      <button>
-                        <Pencil className="text-blue-600" />
-                      </button>
-
-                      <button>
-                        <Trash2 className="text-red-500" />
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </>
-        )}
-      </section>
-      {/* ================= CREATE MODULE ================= */}
-
-      {showModuleForm && (
-        <div className="fixed inset-0 bg-black/40 flex justify-center items-center z-50">
-          <div className="bg-white rounded-2xl w-full max-w-xl p-8 shadow-xl">
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-2xl font-bold text-[#0066FF]">
-                Create New Module
-              </h2>
-
-              <button onClick={() => setShowModuleForm(false)}>
-                <X />
-              </button>
-            </div>
-
-            <div className="space-y-5">
-              <div>
-                <label className="block font-medium mb-2">Module Name</label>
-
-                <input
-                  type="text"
-                  value={moduleTitle}
-                  onChange={(e) => setModuleTitle(e.target.value)}
-                  placeholder="Introduction to Python"
-                  className="w-full border rounded-xl p-3 outline-none focus:ring-2 focus:ring-[#0066FF]"
-                />
-              </div>
-
-              <div>
-                <label className="block font-medium mb-2">Description</label>
-
-                <textarea
-                  rows={5}
-                  value={moduleDescription}
-                  onChange={(e) => setModuleDescription(e.target.value)}
-                  placeholder="Module description..."
-                  className="w-full border rounded-xl p-3 outline-none resize-none focus:ring-2 focus:ring-[#0066FF]"
-                />
-              </div>
-
-              <div className="flex justify-end gap-3 pt-3">
-                <button
-                  onClick={() => setShowModuleForm(false)}
-                  className="px-5 py-3 rounded-xl border"
-                >
-                  Cancel
-                </button>
-
-                <button
-                  onClick={handleCreateModule}
-                  className="bg-[#0066FF] text-white px-6 py-3 rounded-xl"
-                >
-                  Create Module
-                </button>
-              </div>
             </div>
           </div>
         </div>
-      )}
-      {/* ================= CREATE QUIZ ================= */}
 
-      {showQuizForm && (
-        <div className="fixed inset-0 bg-black/40 flex justify-center items-center z-50">
-          <div className="bg-white rounded-2xl w-full max-w-xl p-8 shadow-xl">
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-2xl font-bold text-[#0066FF]">
-                Create Subject Quiz
+        {/* Khối Đề Cương Môn Học */}
+        <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm space-y-4">
+          <div className="flex justify-between items-center border-b border-slate-100 pb-4">
+            <div className="flex items-center gap-2">
+              <BookOpen className="text-blue-600" size={20} />
+              <h2 className="text-lg font-bold text-slate-900">
+                Đề Cương Chi Tiết (Syllabus)
               </h2>
+            </div>
+            <span className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+              <CheckCircle size={14} /> Đã phê duyệt
+            </span>
+          </div>
 
-              <button onClick={() => setShowQuizForm(false)}>
-                <X />
-              </button>
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-slate-50 p-4 rounded-xl border border-slate-200">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 bg-white rounded-lg border border-slate-200 text-blue-600">
+                <FileText size={22} />
+              </div>
+              <div>
+                <p className="text-sm font-bold text-slate-800">
+                  De_cuong_mon_hoc_{subjectId}.pdf
+                </p>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Cập nhật lần cuối: 2026-03-20
+                </p>
+              </div>
             </div>
 
-            <div className="space-y-5">
-              <div>
-                <label className="block font-medium mb-2">Quiz Name</label>
+            <div className="flex items-center gap-2 w-full sm:w-auto">
+              <button className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-lg bg-white border border-slate-200 text-slate-700 hover:bg-slate-100 text-xs font-semibold transition">
+                <Download size={15} />
+                Tải về
+              </button>
+              <button className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 text-xs font-semibold transition">
+                <Upload size={15} />
+                Cập nhật File
+              </button>
+            </div>
+          </div>
+        </div>
 
-                <input
-                  type="text"
-                  value={quizTitle}
-                  onChange={(e) => setQuizTitle(e.target.value)}
-                  placeholder="Midterm Exam"
-                  className="w-full border rounded-xl p-3 outline-none focus:ring-2 focus:ring-[#0066FF]"
-                />
+        {/* Danh sách Modules */}
+        <div className="space-y-4">
+          <div className="flex justify-between items-center">
+            <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2">
+              <Layers className="text-indigo-600" size={22} />
+              Danh Sách Module ({modules.length})
+            </h2>
+          </div>
+
+          <div className="grid grid-cols-1 gap-4">
+            {modules.map((mod) => (
+              <div
+                key={mod.module_id}
+                className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm hover:border-slate-300 transition flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4"
+              >
+                <div className="space-y-1 max-w-3xl">
+                  <span className="text-xs font-bold uppercase tracking-wider text-blue-600">
+                    Module #{mod.order}
+                  </span>
+                  <h3 className="text-lg font-bold text-slate-800">
+                    {mod.title}
+                  </h3>
+                  <p className="text-slate-500 text-sm line-clamp-2">
+                    {mod.description || "Chưa có mô tả cho module này."}
+                  </p>
+                  <div className="flex items-center gap-4 pt-2 text-xs text-slate-500 font-medium">
+                    <span className="flex items-center gap-1">
+                      <FileQuestion size={15} className="text-indigo-500" />
+                      {mod.total_lessons} Bài học
+                    </span>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 w-full sm:w-auto justify-end border-t sm:border-t-0 pt-3 sm:pt-0 border-slate-100">
+                  <button className="p-2 text-slate-400 hover:text-blue-600 rounded-lg hover:bg-slate-50 transition">
+                    <Edit3 size={18} />
+                  </button>
+                  <button className="p-2 text-slate-400 hover:text-rose-600 rounded-lg hover:bg-slate-50 transition">
+                    <Trash2 size={18} />
+                  </button>
+                  <button
+                    onClick={() =>
+                      router.push(
+                        `/instructor-management/course-content/${subjectId}/modules/${mod.module_id}`,
+                      )
+                    }
+                    className="inline-flex items-center gap-1.5 bg-slate-900 hover:bg-slate-800 text-white px-4 py-2 rounded-lg text-xs font-semibold transition"
+                  >
+                    Vào Module & Tạo Lesson
+                    <ArrowRight size={14} />
+                  </button>
+                </div>
               </div>
+            ))}
+          </div>
+        </div>
+      </main>
 
+      {/* Modal Tạo Module Mới */}
+      {showCreateModal && (
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-xl max-w-md w-full p-6 shadow-xl space-y-4">
+            <h3 className="text-lg font-bold text-slate-900">Tạo Module Mới</h3>
+            <form onSubmit={handleCreateModule} className="space-y-4">
               <div>
-                <label className="block font-medium mb-2">
-                  Duration (minutes)
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  Tên Module
                 </label>
-
                 <input
-                  type="number"
-                  value={quizDuration}
-                  onChange={(e) => setQuizDuration(Number(e.target.value))}
-                  className="w-full border rounded-xl p-3 outline-none focus:ring-2 focus:ring-[#0066FF]"
+                  type="text"
+                  required
+                  placeholder="Ví dụ: Chương 1: Giới thiệu..."
+                  value={newTitle}
+                  onChange={(e) => setNewTitle(e.target.value)}
+                  className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-blue-500"
                 />
               </div>
-
               <div>
-                <label className="block font-medium mb-2">Description</label>
-
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  Mô tả ngắn
+                </label>
                 <textarea
-                  rows={5}
-                  value={quizDescription}
-                  onChange={(e) => setQuizDescription(e.target.value)}
-                  placeholder="Quiz description..."
-                  className="w-full border rounded-xl p-3 outline-none resize-none focus:ring-2 focus:ring-[#0066FF]"
+                  rows={3}
+                  placeholder="Nội dung chính của module..."
+                  value={newDesc}
+                  onChange={(e) => setNewDesc(e.target.value)}
+                  className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-blue-500"
                 />
               </div>
-
-              <div className="flex justify-end gap-3 pt-3">
+              <div className="flex justify-end gap-2 pt-2">
                 <button
-                  onClick={() => setShowQuizForm(false)}
-                  className="px-5 py-3 rounded-xl border"
+                  type="button"
+                  onClick={() => setShowCreateModal(false)}
+                  className="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-lg transition"
                 >
-                  Cancel
+                  Hủy
                 </button>
-
                 <button
-                  onClick={handleCreateQuiz}
-                  className="bg-[#0066FF] text-white px-6 py-3 rounded-xl"
+                  type="submit"
+                  className="px-4 py-2 text-xs font-semibold bg-blue-600 text-white hover:bg-blue-700 rounded-lg transition"
                 >
-                  Create Quiz
+                  Tạo Module
                 </button>
               </div>
-            </div>
+            </form>
           </div>
         </div>
       )}

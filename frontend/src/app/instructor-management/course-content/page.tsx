@@ -19,29 +19,31 @@ import {
   Loader2,
   X,
   HelpCircle,
+  Layers,
+  Info,
 } from "lucide-react";
 
 const getStatusBadge = (statusId: string) => {
   switch (statusId) {
     case "SUBJECT_ACTIVE":
       return {
-        text: "Sẵn sàng giảng dạy",
-        className: "bg-emerald-100 text-emerald-700 border border-emerald-200",
+        text: "Đang giảng dạy",
+        className: "bg-emerald-100/80 text-emerald-700 border-emerald-200",
       };
     case "SUBJECT_DEVELOPING":
       return {
-        text: "Đang xây dựng",
-        className: "bg-amber-100 text-amber-700 border border-amber-200",
+        text: "Đang biên soạn",
+        className: "bg-amber-100/80 text-amber-700 border-amber-200",
       };
     case "SUBJECT_SUSPENDED":
       return {
         text: "Tạm dừng",
-        className: "bg-red-100 text-red-700 border border-red-200",
+        className: "bg-rose-100/80 text-rose-700 border-rose-200",
       };
     default:
       return {
         text: "Khác",
-        className: "bg-slate-100 text-slate-700 border border-slate-200",
+        className: "bg-slate-100 text-slate-700 border-slate-200",
       };
   }
 };
@@ -61,7 +63,7 @@ export default function CourseContentPage() {
   const [loadingSubjects, setLoadingSubjects] = useState<boolean>(true);
   const [errorSubjects, setErrorSubjects] = useState<string | null>(null);
 
-  // 1. Fetch Thống kê tổng quan
+  // 1. Fetch Thống kê
   useEffect(() => {
     setLoadingStats(true);
     fetchInstructorStatistics()
@@ -74,7 +76,7 @@ export default function CourseContentPage() {
       .finally(() => setLoadingStats(false));
   }, []);
 
-  // 2. Fetch Tìm kiếm Môn học được phân công (Debounce 400ms)
+  // 2. Fetch danh sách môn học phân công
   useEffect(() => {
     setLoadingSubjects(true);
     setErrorSubjects(null);
@@ -84,7 +86,9 @@ export default function CourseContentPage() {
         .then((data) => setSubjects(data || []))
         .catch((err) => {
           console.error("Lỗi tải môn học:", err?.message || err);
-          setErrorSubjects(err?.message || "Không thể tải danh sách môn học.");
+          setErrorSubjects(
+            err?.message || "Không thể tải danh sách môn học được phân công.",
+          );
         })
         .finally(() => setLoadingSubjects(false));
     }, 400);
@@ -93,179 +97,218 @@ export default function CourseContentPage() {
   }, [searchTerm]);
 
   return (
-    <div className="min-h-screen bg-slate-100 pb-16">
+    <div className="min-h-screen bg-slate-50 text-slate-900 pb-16">
       <Navbar />
 
-      {/* Header Banner */}
-      <section className="bg-gradient-to-r from-[#66CCFF] to-[#0066FF] text-white">
-        <div className="max-w-7xl mx-auto px-6 py-14">
-          <h1 className="text-4xl font-bold">Môn Học Giảng Dạy</h1>
-          <p className="mt-3 text-blue-100 text-lg max-w-3xl">
-            Danh sách các môn học bạn được phân công. Bạn có thể xem cấu trúc
-            Module/Lesson hoặc truy cập trực tiếp Ngân hàng câu hỏi của từng
-            môn.
-          </p>
-        </div>
-      </section>
+      <main className="max-w-7xl mx-auto px-6 py-8 space-y-8">
+        {/* Banner Header */}
+        <div className="bg-white p-6 sm:p-8 rounded-xl border border-slate-200 shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">
+              Môn Học Được Phân Công
+            </h1>
+            <p className="text-slate-500 text-sm sm:text-base mt-1 max-w-2xl">
+              Danh sách các môn học bạn phụ trách giảng dạy. Nhấn vào từng môn
+              học để cập nhật bài học, tài nguyên và đề cương.
+            </p>
+          </div>
 
-      <section className="max-w-7xl mx-auto px-6 py-10">
+          <div className="flex items-center gap-2 bg-blue-50 text-blue-700 px-3.5 py-2 rounded-lg text-xs font-medium border border-blue-100">
+            <Info size={16} className="shrink-0 text-blue-600" />
+            <span>Chỉ hiển thị môn học do Quản trị viên/Bộ môn phân công.</span>
+          </div>
+        </div>
+
         {/* Khối Thống kê */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
-          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
-            <BookOpen className="text-[#0066FF] mb-3" size={34} />
-            <p className="text-slate-500 text-sm">Môn Được Phân Công</p>
-            <h2 className="text-3xl font-bold text-[#0066FF] mt-2">
-              {loadingStats ? "..." : (stats?.total_subjects ?? 0)}
-            </h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+          <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm flex items-center gap-4">
+            <div className="p-3.5 bg-blue-50 text-blue-600 rounded-xl">
+              <BookOpen size={24} />
+            </div>
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+                Môn Đảm Nhận
+              </p>
+              <h3 className="text-2xl font-bold text-slate-900 mt-0.5">
+                {loadingStats ? (
+                  <Loader2 className="animate-spin text-slate-400" size={20} />
+                ) : (
+                  (stats?.total_subjects ?? 0)
+                )}
+              </h3>
+            </div>
           </div>
 
-          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
-            <FolderKanban className="text-[#0066FF] mb-3" size={34} />
-            <p className="text-slate-500 text-sm">Tổng Số Module</p>
-            <h2 className="text-3xl font-bold text-[#0066FF] mt-2">
-              {loadingStats ? "..." : (stats?.total_modules ?? 0)}
-            </h2>
+          <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm flex items-center gap-4">
+            <div className="p-3.5 bg-indigo-50 text-indigo-600 rounded-xl">
+              <FolderKanban size={24} />
+            </div>
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+                Tổng Số Module
+              </p>
+              <h3 className="text-2xl font-bold text-slate-900 mt-0.5">
+                {loadingStats ? (
+                  <Loader2 className="animate-spin text-slate-400" size={20} />
+                ) : (
+                  (stats?.total_modules ?? 0)
+                )}
+              </h3>
+            </div>
           </div>
 
-          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
-            <CheckCircle className="text-emerald-500 mb-3" size={34} />
-            <p className="text-slate-500 text-sm">Môn Đang Hoạt Động</p>
-            <h2 className="text-3xl font-bold text-emerald-600 mt-2">
-              {loadingStats ? "..." : (stats?.total_active_subject ?? 0)}
-            </h2>
+          <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm flex items-center gap-4">
+            <div className="p-3.5 bg-emerald-50 text-emerald-600 rounded-xl">
+              <CheckCircle size={24} />
+            </div>
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+                Đang Giảng Dạy
+              </p>
+              <h3 className="text-2xl font-bold text-slate-900 mt-0.5">
+                {loadingStats ? (
+                  <Loader2 className="animate-spin text-slate-400" size={20} />
+                ) : (
+                  (stats?.total_active_subject ?? 0)
+                )}
+              </h3>
+            </div>
           </div>
 
-          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
-            <FileText className="text-amber-500 mb-3" size={34} />
-            <p className="text-slate-500 text-sm">Môn Đang Phát Triển</p>
-            <h2 className="text-3xl font-bold text-amber-600 mt-2">
-              {loadingStats ? "..." : (stats?.total_developing_subject ?? 0)}
-            </h2>
+          <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm flex items-center gap-4">
+            <div className="p-3.5 bg-amber-50 text-amber-600 rounded-xl">
+              <FileText size={24} />
+            </div>
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+                Đang Biên Soạn
+              </p>
+              <h3 className="text-2xl font-bold text-slate-900 mt-0.5">
+                {loadingStats ? (
+                  <Loader2 className="animate-spin text-slate-400" size={20} />
+                ) : (
+                  (stats?.total_developing_subject ?? 0)
+                )}
+              </h3>
+            </div>
           </div>
         </div>
 
-        {/* Ô Tìm kiếm Realtime */}
-        <div className="relative mb-8">
+        {/* Ô Tìm kiếm */}
+        <div className="relative">
           <Search
             className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
-            size={20}
+            size={18}
           />
           <input
             type="text"
-            placeholder="Tìm kiếm nhanh tên hoặc mô tả môn học..."
+            placeholder="Tìm kiếm môn học theo tên hoặc mã môn..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full rounded-2xl bg-white border border-slate-200 py-3.5 pl-12 pr-10 outline-none focus:ring-2 focus:ring-[#66CCFF] text-slate-800 shadow-sm"
+            className="w-full rounded-xl bg-white border border-slate-200 py-3 pl-11 pr-10 text-sm text-slate-800 placeholder-slate-400 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition shadow-sm"
           />
           {searchTerm && (
             <button
               onClick={() => setSearchTerm("")}
-              className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+              className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1"
             >
-              <X size={18} />
+              <X size={16} />
             </button>
           )}
         </div>
 
-        {/* Trạng thái Đang Fetch API */}
+        {/* Loading */}
         {loadingSubjects && (
-          <div className="flex flex-col items-center justify-center py-16 gap-3 text-slate-500">
-            <Loader2 size={36} className="animate-spin text-[#0066FF]" />
-            <p>Đang tải danh sách môn học...</p>
+          <div className="flex flex-col items-center justify-center py-20 gap-3 text-slate-500">
+            <Loader2 size={32} className="animate-spin text-blue-600" />
+            <p className="text-sm font-medium">Đang tải danh sách môn học...</p>
           </div>
         )}
 
-        {/* Trạng thái Lỗi */}
+        {/* Error */}
         {!loadingSubjects && errorSubjects && (
-          <div className="bg-red-50 border border-red-200 rounded-2xl p-6 text-center text-red-600 mb-8 flex items-center justify-center gap-2">
-            <AlertCircle size={20} />
+          <div className="bg-rose-50 border border-rose-200 rounded-xl p-5 text-center text-rose-600 text-sm flex items-center justify-center gap-2">
+            <AlertCircle size={18} />
             <span>{errorSubjects}</span>
           </div>
         )}
 
-        {/* Danh sách Môn học Fetch từ Backend */}
+        {/* Danh sách Môn học dạng Grid */}
         {!loadingSubjects && !errorSubjects && (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {subjects.map((subject) => {
               const statusConfig = getStatusBadge(subject.status_id);
 
               return (
                 <div
                   key={subject.subject_id}
-                  className="bg-white rounded-2xl shadow-sm border border-slate-200 hover:shadow-lg transition p-7 flex flex-col justify-between"
+                  className="bg-white rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition duration-200 flex flex-col justify-between"
                 >
-                  <div>
-                    <div className="flex justify-between items-start gap-4">
+                  <div className="p-6 space-y-4">
+                    <div className="flex justify-between items-start gap-3">
                       <h2
                         onClick={() =>
                           router.push(
                             `/instructor-management/course-content/${subject.subject_id}`,
                           )
                         }
-                        className="text-xl font-bold text-slate-800 hover:text-[#0066FF] transition cursor-pointer line-clamp-2"
+                        className="text-lg font-bold text-slate-800 hover:text-blue-600 transition cursor-pointer line-clamp-2 leading-snug"
                       >
                         {subject.title}
                       </h2>
 
                       <span
-                        className={`px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap ${statusConfig.className}`}
+                        className={`px-2.5 py-1 rounded-full text-xs font-semibold border whitespace-nowrap ${statusConfig.className}`}
                       >
                         {statusConfig.text}
                       </span>
                     </div>
 
-                    <p className="text-slate-500 text-sm mt-3 leading-relaxed line-clamp-3">
-                      {subject.description ||
-                        "Chưa có mô tả chi tiết cho môn học này."}
+                    <p className="text-slate-600 text-sm leading-relaxed line-clamp-2">
+                      {subject.description || "Chưa có mô tả môn học."}
                     </p>
+
+                    <div className="pt-2 flex items-center gap-6 text-xs text-slate-600 border-t border-slate-100">
+                      <div className="flex items-center gap-1.5 font-medium">
+                        <Layers size={16} className="text-blue-500" />
+                        <span>
+                          <strong>{subject.total_modules || 0}</strong> Modules
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-1.5 font-medium">
+                        <FileQuestion size={16} className="text-indigo-500" />
+                        <span>
+                          <strong>{subject.total_lessons || 0}</strong> Bài học
+                        </span>
+                      </div>
+                    </div>
                   </div>
 
-                  <div>
-                    {/* Thống kê Module & Lesson */}
-                    <div className="flex gap-6 mt-6 pt-4 border-t border-slate-100">
-                      <div className="flex items-center gap-2">
-                        <FolderKanban size={18} className="text-[#0066FF]" />
-                        <span className="text-slate-600 text-sm font-medium">
-                          {subject.total_modules || 0} Modules
-                        </span>
-                      </div>
+                  {/* Footer Card: Điều hướng trực tiếp vào biên soạn nội dung */}
+                  <div className="bg-slate-50/80 px-6 py-3.5 border-t border-slate-200 rounded-b-xl flex items-center justify-between gap-3">
+                    <button
+                      onClick={() =>
+                        router.push(
+                          `/instructor-management/questions-bank/${subject.subject_id}`,
+                        )
+                      }
+                      className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-600 hover:text-blue-600 transition"
+                    >
+                      <HelpCircle size={15} />
+                      Ngân hàng câu hỏi
+                    </button>
 
-                      <div className="flex items-center gap-2">
-                        <FileQuestion size={18} className="text-[#0066FF]" />
-                        <span className="text-slate-600 text-sm font-medium">
-                          {subject.total_lessons || 0} Lessons
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Các Nút Thao Tác Chuyển Hướng */}
-                    <div className="flex items-center justify-between gap-3 mt-5 pt-3 border-t border-slate-100">
-                      {/* Nút vào Ngân hàng câu hỏi */}
-                      <button
-                        onClick={() =>
-                          router.push(
-                            `/instructor-management/questions-bank/${subject.subject_id}`,
-                          )
-                        }
-                        className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-slate-200 text-slate-700 hover:bg-slate-50 hover:text-blue-600 text-xs font-semibold transition"
-                      >
-                        <HelpCircle size={15} />
-                        Ngân hàng câu hỏi
-                      </button>
-
-                      {/* Nút Quản lý chi tiết môn học */}
-                      <button
-                        onClick={() =>
-                          router.push(
-                            `/instructor-management/course-content/${subject.subject_id}`,
-                          )
-                        }
-                        className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-blue-50 text-[#0066FF] hover:bg-blue-100 text-xs font-bold transition"
-                      >
-                        Nội dung & Đề cương
-                        <ArrowRight size={15} />
-                      </button>
-                    </div>
+                    <button
+                      onClick={() =>
+                        router.push(
+                          `/instructor-management/course-content/${subject.subject_id}`,
+                        )
+                      }
+                      className="inline-flex items-center gap-1 text-xs font-bold text-blue-600 hover:text-blue-700 transition"
+                    >
+                      Soạn nội dung & Đề cương
+                      <ArrowRight size={14} />
+                    </button>
                   </div>
                 </div>
               );
@@ -273,18 +316,18 @@ export default function CourseContentPage() {
           </div>
         )}
 
-        {/* Trạng thái Không tìm thấy dữ liệu */}
+        {/* Empty State */}
         {!loadingSubjects && !errorSubjects && subjects.length === 0 && (
-          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-12 text-center text-slate-400 flex flex-col items-center justify-center gap-3">
-            <AlertCircle size={40} className="text-slate-300" />
-            <span>
+          <div className="bg-white rounded-xl border border-slate-200 p-12 text-center text-slate-500 flex flex-col items-center justify-center gap-3 shadow-sm">
+            <AlertCircle size={36} className="text-slate-400" />
+            <p className="text-sm font-medium">
               {searchTerm
-                ? `Không tìm thấy môn học nào phù hợp với từ khóa "${searchTerm}".`
-                : "Bạn chưa được phân công môn học nào."}
-            </span>
+                ? `Không tìm thấy môn học nào khớp với từ khóa "${searchTerm}".`
+                : "Bạn hiện chưa được phân công đảm nhận môn học nào."}
+            </p>
           </div>
         )}
-      </section>
+      </main>
     </div>
   );
 }
