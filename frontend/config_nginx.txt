@@ -38,7 +38,8 @@ server {
         sendfile on;
         tcp_nopush on;
         tcp_nodelay on;
-        
+        autoindex on;
+
         proxy_set_header Range $http_range;
         proxy_set_header If-Range $http_if_range;
         expires 7d;
@@ -46,9 +47,7 @@ server {
         # Cho phép các domain khác gọi đến nếu cần (CORS)
         add_header 'Access-Control-Allow-Origin' '*' always;
 
-
-
-
+    }
 
     location / {
         proxy_pass http://127.0.0.1:8001;

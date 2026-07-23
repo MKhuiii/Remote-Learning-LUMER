@@ -62,7 +62,7 @@ def create_subject(
         title=subject_dict["title"],
         description=subject_dict["description"],
         order_index=subject_dict["order_index"],
-        status_id=SubjectStatus.DEVELOPING.value
+        status_id=SubjectStatus.SUBJECT_DEVELOPING.value
     )
 
     return crud_subject.create(db, db_subject)

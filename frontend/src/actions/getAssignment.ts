@@ -91,7 +91,7 @@ export async function assignInstructorAction(payload: { course_id: string; instr
 export const updateInstructorAction = async (payload: { course_id: string; instructor_id: string }) => {
     try {
         const response = await fetch(`${BACKEND_URL}/assignments`, {
-            method: 'PUT', 
+            method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload),
         });

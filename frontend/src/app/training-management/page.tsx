@@ -11,12 +11,12 @@ export default function FacultyDashboard() {
       icon: "📋",
       path: "/training-management/curriculum",
     },
-    {
-      title: "Phân công giảng dạy",
-      desc: "Lịch dạy chi tiết và điều phối công việc giảng viên",
-      icon: "👥",
-      path: "/training-management/course-assignment",
-    },
+    // {
+    //   title: "Phân công giảng dạy",
+    //   desc: "Lịch dạy chi tiết và điều phối công việc giảng viên",
+    //   icon: "👥",
+    //   path: "/training-management/course-assignment",
+    // },
     {
       title: "Duyệt khóa học",
       desc: "Kiểm tra, đánh giá chất lượng và phê duyệt các khóa học mới",

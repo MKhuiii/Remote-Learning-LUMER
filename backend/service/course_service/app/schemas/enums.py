@@ -43,19 +43,24 @@ class CourseType(str, Enum):
     LONG_TERM = "LONG_TERM"
     SHORT_TERM = "SHORT_TERM"
 
-# 🟢 Curriculum trong Postgres lưu CÓ tiền tố "CURRICULUM_"
 class CurriculumStatus(str, Enum):
     CURRICULUM_DRAFT = "CURRICULUM_DRAFT"
     CURRICULUM_PENDING = "CURRICULUM_PENDING"
     CURRICULUM_ACTIVE = "CURRICULUM_ACTIVE"
     CURRICULUM_ARCHIVED = "CURRICULUM_ARCHIVED"
 
-# 🟢 Syllabus trong Postgres lưu KHÔNG CÓ tiền tố (Chỉ có "DRAFT")
 class SyllabusStatus(str, Enum):
     SYLLABUS_DRAFT = "SYLLABUS_DRAFT"
     SYLLABUS_REVIEWING = "SYLLABUS_REVIEWING"
     SYLLABUS_APPROVED = "SYLLABUS_APPROVED"
     SYLLABUS_REJECTED = "SYLLABUS_REJECTED"
+
+# # 🟢 Sửa lại Value cho trùng khớp với Postgres Enum (syllabusstatus)
+# class SyllabusStatus(str, Enum):
+#     SYLLABUS_DRAFT = "DRAFT"
+#     SYLLABUS_REVIEWING = "REVIEWING"
+#     SYLLABUS_APPROVED = "APPROVED"
+#     SYLLABUS_REJECTED = "REJECTED"
 
 class CourseStatus(str, Enum):
     COURSE_REGISTRATION = "COURSE_REGISTRATION"
