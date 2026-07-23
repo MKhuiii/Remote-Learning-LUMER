@@ -8,13 +8,16 @@ from app.schemas.enums import CourseType
 from app.core.security import RoleChecker, get_current_user_role
 from app.crud.course import crud_course
 from app.crud.course_media import crud_course_media
-from app.schemas.course import CourseCreate, CourseImageUploadResponse, CourseRead, CourseUpdate, CourseLessonsResponse
+from app.schemas.subject import SubjectPreview
+from app.schemas.module import ModulePreview
+from app.schemas.course import CourseCreate, CourseImageUploadResponse, CourseRead, CourseUpdate, CourseLessonsResponse, CoursePreview
 from app.core.config import settings
 import httpx
 
 router = APIRouter(prefix="/courses", tags=["courses"])
 
 PROGRESS_SERVICE_URL = settings.BACKEND_LEARNING_PROGRESS_URL
+USER_SERVICE_BASE_URL = settings.BACKEND_USER_URL
 
 def format_course_response(course_obj: Any, enrollment_count: int = 0) -> Dict[str, Any]:
     """Helper format dữ liệu khóa học chuẩn định dạng cho Frontend Landing Page"""
@@ -45,6 +48,73 @@ def format_course_response(course_obj: Any, enrollment_count: int = 0) -> Dict[s
         "tags": tags_list,
     }
 
+def fetch_user_name_by_id(user_id: UUID) -> Optional[str]:
+    """
+    Hàm trợ lý gọi API sang User Service để lấy tên người dùng theo user_id.
+    Target endpoint: GET /get-name/{user_id}
+    """
+    url = f"{USER_SERVICE_BASE_URL}/get-name/{user_id}"
+    try:
+        with httpx.Client(timeout=5.0) as client:
+            response = client.get(url)
+            if response.status_code == 200:
+                return response.json()  
+            return None
+    except httpx.RequestError as exc:
+        print(f"Lỗi khi kết nối tới User Service: {exc}")
+        return None
+
+@router.get("/preview/{course_id}", response_model=CoursePreview)
+def get_course_preview(
+    db: SessionDep,
+    course_id: UUID
+):
+    # 1. Query Course kèm Subjects, Syllabus, Modules, Tags
+    course = crud_course.get_course_with_preview_data(db, course_id)
+    if not course:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Course not found"
+        )
+
+    instructor_list: list[str] = []
+    course_structure: list[SubjectPreview] = []
+
+    # 2. Duyệt qua từng môn học
+    for subject in course.subjects:
+        modules_preview = [
+            ModulePreview(title=mod.title) 
+            for mod in subject.module
+        ]
+        
+        subject_instructor_name: Optional[str] = None
+        
+        # Lấy instructor_id từ Syllabus của subject (nếu có)
+        if subject.syllabus and subject.syllabus.instructor_id:
+            subject_instructor_name = fetch_user_name_by_id(subject.syllabus.instructor_id)
+            
+            # Thêm tên giảng viên vào danh sách tổng của khóa học (tránh trùng lặp)
+            if subject_instructor_name and subject_instructor_name not in instructor_list:
+                instructor_list.append(subject_instructor_name)
+
+        course_structure.append(
+            SubjectPreview(
+                title=subject.title,
+                instructor_name=subject_instructor_name,
+                modules_preview=modules_preview
+            )
+        )
+
+    # 3. Lấy danh sách tên Tag
+    tag_list = [tag.tag_name for tag in course.tags]
+
+    # 4. Trả về thông tin CoursePreview
+    return CoursePreview(
+        title=course.title,
+        instructor_list=instructor_list,
+        course_structure=course_structure,
+        tag_list=tag_list
+    )
 
 @router.get("/featured")
 async def get_featured_courses(db: SessionDep):
@@ -236,4 +306,5 @@ def get_course_total_lessons(db: SessionDep, course_id: UUID):
     if not crud_course.exists(db, course_id=course_id):
         raise HTTPException(status_code=404, detail="Khóa học không tồn tại.")
     return crud_course.get_total_lessons(db, course_id=course_id)
+
 

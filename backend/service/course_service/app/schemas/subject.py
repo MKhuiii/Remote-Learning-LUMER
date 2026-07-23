@@ -1,6 +1,7 @@
 from pydantic import BaseModel
 from uuid import UUID
-from typing import Optional
+from typing import Optional, List
+from app.schemas.module import ModulePreview
 
 class SubjectBase(BaseModel):
     title: str
@@ -15,6 +16,11 @@ class SubjectUpdate(BaseModel):
     title: Optional[str] = None
     order_index: Optional[int] = None
     description: str = None
+
+class SubjectPreview(BaseModel):
+    title: str
+    instructor_name: Optional[str] = None
+    modules_preview: List[ModulePreview]
 
 # class SubjectRead(SubjectBase):
 #     subject_id: UUID

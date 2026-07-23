@@ -3,10 +3,11 @@
 import { revalidatePath } from "next/cache";
 import { cookies } from "next/headers";
 import { Course } from "@/types/course";
-import { GeneralCourseInfo, CourseType, CourseSearchParams, CourseSearchPaginatedResponse, FeaturedCoursesResponse } from "@/types/course";
+import { GeneralCourseInfo, CoursePreview, CourseType, CourseSearchParams, CourseSearchPaginatedResponse, FeaturedCoursesResponse, CourseEnrollmentResponse } from "@/types/course";
 
 // const BACKEND_URL = process.env.NEXT_PUBLIC_COURSE_BACKEND_URL || "http://localhost:8001";
 const BACKEND_URL = process.env.NEXT_PUBLIC_COURSE_BACKEND_URL;
+const LEARNING_PROGRESS_URL = process.env.NEXT_PUBLIC_PROGRESS_BACKEND_URL;
 async function getServerToken(): Promise<string> {
   const cookieStore = await cookies();
   const tokenObj = cookieStore.get("token");
@@ -283,5 +284,59 @@ export async function getFeaturedCourses(): Promise<GeneralCourseInfo[]> {
   } catch (error) {
     console.error("Lỗi kết nối tới Course Service:", error);
     return [];
+  }
+}
+
+export async function fetchCoursePreview(courseId: string): Promise<CoursePreview | null> {
+  try {
+    const response = await fetch(`${BACKEND_URL}/courses/preview/${courseId}`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      cache: 'no-store', // Giúp lấy dữ liệu mới nhất
+    });
+
+    if (!response.ok) return null;
+    return await response.json();
+  } catch (error) {
+    console.error('Failed to fetch course preview:', error);
+    return null;
+  }
+}
+
+export async function enrollCourseAction(courseId: string): Promise<{ success: boolean; message?: string; data?: CourseEnrollmentResponse }> {
+  try {
+    const token = await getServerToken();
+
+    // SỬA ĐƯỜNG DẪN: Đổi /enrollments/ thành /course_enrollment/ theo đúng APIRouter prefix ở backend
+    const response = await fetch(`${LEARNING_PROGRESS_URL}/course_enrollment/`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+      body: JSON.stringify({ course_id: courseId }),
+    });
+
+    const resData = await response.json();
+
+    if (!response.ok) {
+      return {
+        success: false,
+        message: resData.detail || 'Đăng ký khóa học thất bại.',
+      };
+    }
+
+    return {
+      success: true,
+      data: resData,
+    };
+  } catch (error: any) {
+    console.error('Failed to enroll course:', error);
+    return {
+      success: false,
+      message: error.message || 'Lỗi hệ thống. Vui lòng thử lại sau!',
+    };
   }
 }

@@ -16,3 +16,6 @@ class ModuleUpdate(BaseModel):
 class ModuleRead(ModuleBase):
     module_id: UUID
     subject_id: UUID
+
+class ModulePreview(BaseModel):
+    title: str

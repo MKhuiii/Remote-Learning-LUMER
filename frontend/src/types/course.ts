@@ -76,3 +76,33 @@ export interface FeaturedCoursesResponse {
   success: boolean;
   data: GeneralCourseInfo[];
 }
+
+export interface ModulePreview {
+  title: string;
+}
+
+export interface SubjectPreview {
+  title: string;
+  instructor_name: string | null;
+  modules_preview: ModulePreview[];
+}
+
+export interface CoursePreview {
+  title: string;
+  instructor_list: string[];
+  course_structure: SubjectPreview[];
+  tag_list: string[];
+}
+
+// Payload gửi lên API đăng ký
+export interface CourseEnrollmentCreate {
+  course_id: string;
+}
+
+// Response trả về từ API đăng ký
+export interface CourseEnrollmentResponse {
+  enrollment_id: string;
+  user_id: string;
+  course_id: string;
+  created_at?: string;
+}

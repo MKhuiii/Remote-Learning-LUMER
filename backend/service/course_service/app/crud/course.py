@@ -165,4 +165,22 @@ class CRUDCourse(CRUDBase[Course, CourseCreate, CourseUpdate, UUID]):
             .limit(limit)
         )
         return db.exec(statement).all()
+    
+    def get_course_with_preview_data(self, db: Session, course_id: UUID) -> Optional[Course]:
+        """
+        Lấy thông tin Course cùng với Subjects, Syllabus (chứa instructor_id), 
+        Modules và Tags bằng eager loading.
+        """
+        statement = (
+            select(Course)
+            .where(Course.course_id == course_id)
+            .options(
+                selectinload(Course.subjects).options(
+                    selectinload(Subject.module),
+                    selectinload(Subject.syllabus)  # Eager load Syllabus để lấy instructor_id
+                ),
+                selectinload(Course.tags)
+            )
+        )
+        return db.exec(statement).first()
 crud_course = CRUDCourse(Course)
