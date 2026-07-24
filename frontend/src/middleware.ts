@@ -16,11 +16,13 @@ export function middleware(request: NextRequest) {
   console.log(`👉 Token lấy được: ${token ? "ĐÃ CÓ TOKEN (OK)" : "TRỐNG (NULL)"}`);
   console.log(`👉 Role lấy được từ Cookie: "${userRole}"`);
 
+  // 1. THÊM '/home' VÀO MẢNG BẢO MẬT
   const isProtectedPath = [
     '/admin',
     '/training-management',
     '/dashboard-student',
-    '/instructor-management'
+    '/instructor-management',
+    '/home' 
   ].some(p => path.startsWith(p))
 
   if (isProtectedPath && !token) {
@@ -42,15 +44,14 @@ export function middleware(request: NextRequest) {
     }
 
     if (path.startsWith('/instructor-management')) {
-      if (roleClean !== 'manager' && roleClean !== 'instructor') {
+      if (roleClean !== 'instructor') {
         console.log(`❌ Bị chặn vì: Vào khu vực Giảng viên nhưng Role thực tế là "${roleClean}"`);
         return NextResponse.redirect(new URL('/unauthorized', request.url))
       }
     }
 
-    // 2. Kiểm tra khu vực Quản lý đào tạo
     if (path.startsWith('/training-management')) {
-      if (roleClean !== 'faculty' && roleClean !== 'instructor' && roleClean !== 'manager') {
+      if (roleClean !== 'manager') {
         console.log(`❌ Bị chặn vì: Vào khu vực Đào tạo nhưng Role thực tế là "${roleClean}"`);
         return NextResponse.redirect(new URL('/unauthorized', request.url))
       }
@@ -58,6 +59,12 @@ export function middleware(request: NextRequest) {
 
     if (path.startsWith('/dashboard-student') && roleClean !== 'user' && roleClean !== 'student') {
       console.log(`❌ Bị chặn vì: Vào khu vực Sinh viên nhưng Role thực tế là "${roleClean}"`);
+      return NextResponse.redirect(new URL('/unauthorized', request.url))
+    }
+
+    // 2. THÊM ĐIỀU KIỆN CHECK ROLE CHO /home
+    if (path.startsWith('/home') && roleClean !== 'student' && roleClean !== 'user') {
+      console.log(`❌ Bị chặn vì: Vào Trang chủ Sinh viên nhưng Role thực tế là "${roleClean}"`);
       return NextResponse.redirect(new URL('/unauthorized', request.url))
     }
 
@@ -81,5 +88,6 @@ export const config = {
     '/dashboard-student/:path*',
     '/instructor-management',
     '/instructor-management/:path*',
+
   ],
 }
