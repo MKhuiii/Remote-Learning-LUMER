@@ -24,6 +24,8 @@ class LessonUpdate(BaseModel):
 class LessonLearningStructure(BaseModel):
     title: str
     lesson_id: UUID
+    video_url: Optional[str] = None
+    content_body: Optional[str] = None
     duration_minutes: int = 0 # Nếu thời gian bằng 0 nghĩa là bài giảng ko có video
     is_optional: bool
     is_quiz: bool 

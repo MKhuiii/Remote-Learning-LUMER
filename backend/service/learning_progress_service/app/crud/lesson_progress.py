@@ -9,6 +9,11 @@ from app.core.config import settings
 import httpx
 
 class CRUDLessonProgress(CRUDBase[LessonProgress, LessonProgressCreate, LessonProgressUpdate, UUID]):
+    def get_by_id(self, db: Session, progress_id: UUID) -> LessonProgress:
+        statement = select(LessonProgress).where(
+            LessonProgress.progress_id == progress_id
+        )
+        return db.exec(statement).first()
     
     # Lấy tiến độ của 1 bài học cụ thể thuộc 1 học viên
     def get_by_lesson(self, db: Session, user_id: UUID, lesson_id: UUID) -> LessonProgress | None:
@@ -79,10 +84,10 @@ class CRUDLessonProgress(CRUDBase[LessonProgress, LessonProgressCreate, LessonPr
         return len(results)
 
     def complete_and_unlock_next(
-        self, db: Session, user_id: UUID, course_id: UUID, current_lesson_id: UUID, ordered_lessons: list[dict]
+        self, db: Session, user_id: UUID, progress_id: UUID, ordered_lessons: list[dict]
     ) -> LessonProgress:
         # 1. Đánh dấu bài hiện tại thành COMPLETED
-        current_progress = self.get_by_lesson(db, user_id=user_id, lesson_id=current_lesson_id)
+        current_progress = self.get_by_id(db, progress_id)
         if current_progress:
             current_progress.status = LessonStatus.COMPLETED
             current_progress.updated_at = datetime.now(timezone.utc)
@@ -93,7 +98,7 @@ class CRUDLessonProgress(CRUDBase[LessonProgress, LessonProgressCreate, LessonPr
         
         try:
             # So sánh UUID vs UUID sẽ tìm được index chính xác
-            current_index = lesson_ids.index(current_lesson_id)
+            current_index = lesson_ids.index(current_progress.lesson_id)
             
             # Thuật toán tìm bài tiếp theo cần mở khóa
             for next_index in range(current_index + 1, len(lesson_ids)):
@@ -112,7 +117,7 @@ class CRUDLessonProgress(CRUDBase[LessonProgress, LessonProgressCreate, LessonPr
                     
         except ValueError:
             # In ra log để debug nếu sau này lộ trình lấy về bị lỗi cấu trúc dữ liệu
-            print(f"DEBUG: Không tìm thấy lesson_id {current_lesson_id} trong mảng lộ trình.")
+            print(f"DEBUG: Không tìm thấy lesson_id {current_progress.lesson_id} trong mảng lộ trình.")
             pass
 
         db.commit()

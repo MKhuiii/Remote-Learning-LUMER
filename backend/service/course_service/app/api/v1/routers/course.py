@@ -84,7 +84,7 @@ def get_course_preview(
     for subject in course.subjects:
         modules_preview = [
             ModulePreview(title=mod.title) 
-            for mod in subject.module
+            for mod in subject.modules
         ]
         
         subject_instructor_name: Optional[str] = None

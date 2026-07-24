@@ -176,7 +176,7 @@ class CRUDCourse(CRUDBase[Course, CourseCreate, CourseUpdate, UUID]):
             .where(Course.course_id == course_id)
             .options(
                 selectinload(Course.subjects).options(
-                    selectinload(Subject.module),
+                    selectinload(Subject.modules),
                     selectinload(Subject.syllabus)  # Eager load Syllabus để lấy instructor_id
                 ),
                 selectinload(Course.tags)

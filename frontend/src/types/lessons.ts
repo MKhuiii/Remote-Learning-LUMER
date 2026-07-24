@@ -27,6 +27,8 @@ export interface Lesson {
 export interface LessonLearningStructure {
     title: string;
     lesson_id: string;
+    video_url?: string | null;
+    content_body?: string | null;
     duration_minutes: number;
     is_optional: boolean;
     is_quiz: boolean;

@@ -11,9 +11,8 @@ import { SubjectLearningStructure } from '@/types/subjects';
 import { ModuleLearningStructure } from '@/types/modules';
 import { LessonLearningStructure } from '@/types/lessons';
 
-// Các imports Types & Mock Data liên quan đến Notes, Quiz, Peer Review
-import { CURRENT_USER, mockNotes, mockPeerReviewAssignments, mockQuizSubmissions } from '@/data/course';
-import { PeerReviewAssignment, QuizSubmission } from "@/types/examinations";
+// Các imports Types & Mock Data
+import { CURRENT_USER, mockNotes } from '@/data/course';
 import { UserLessonNote } from "@/types/progresses";
 import { LessonStatus } from "@/types/statuses";
 import { VideoProgress } from "@/types/video";
@@ -22,21 +21,12 @@ type TabKey = 'lecture' | 'resources' | 'notes' | 'quiz';
 
 const SUBJECT_ACCENTS = ['#5B5FEF', '#12B886', '#F2A93B', '#E5484D', '#0EA5E9'];
 
-const EXTENSION_COLORS: Record<string, { bg: string; text: string }> = {
-  pdf: { bg: '#FDE8E8', text: '#C81E3A' },
-  docx: { bg: '#E5EAFD', text: '#3F3FC9' },
-  doc: { bg: '#E5EAFD', text: '#3F3FC9' },
-  zip: { bg: '#FDF3DA', text: '#9A6B00' },
-  xlsx: { bg: '#E1F5EA', text: '#0F8A4E' },
-  pptx: { bg: '#FCE8F4', text: '#B02E7A' },
+// Kiểu dữ liệu Lesson bao gồm các thuộc tính mới và field status từ API
+type LessonWithStatus = LessonLearningStructure & {
+  status?: LessonStatus;
+  video_url?: string | null;
+  content_body?: string | null;
 };
-
-function extensionColor(ext: string) {
-  return EXTENSION_COLORS[ext.toLowerCase()] ?? { bg: '#EEEFF6', text: '#5B5FEF' };
-}
-
-// Kiểu dữ liệu Lesson đã có field status từ API
-type LessonWithStatus = LessonLearningStructure & { status?: LessonStatus };
 
 export default function CourseLearningPage() {
   const params = useParams();
@@ -56,14 +46,9 @@ export default function CourseLearningPage() {
   const [expandedModules, setExpandedModules] = useState<Record<string, boolean>>({});
   const [activeTab, setActiveTab] = useState<TabKey>('lecture');
 
-  // State mock cho Tiến độ, Ghi chú & Quiz
+  // State Tiến độ & Ghi chú
   const [notes, setNotes] = useState<UserLessonNote[]>(mockNotes);
   const [noteDraft, setNoteDraft] = useState('');
-  const [submissions] = useState<QuizSubmission[]>(mockQuizSubmissions);
-  const [peerAssignments, setPeerAssignments] = useState<PeerReviewAssignment[]>(mockPeerReviewAssignments);
-  const [gradingId, setGradingId] = useState<string | null>(null);
-  const [gradingScores, setGradingScores] = useState<Record<string, number>>({});
-  const [gradingComment, setGradingComment] = useState('');
 
   // Call Server Action để lấy dữ liệu khóa học và status của các bài học
   useEffect(() => {
@@ -74,10 +59,8 @@ export default function CourseLearningPage() {
         setLoading(true);
         setErrorMessage(null);
 
-        // 1. Fetch cấu trúc khóa học
         const rawCourse = await getLearningCourse(id);
 
-        // 2. Tải status song song cho toàn bộ bài học trong tất cả các môn/module bằng Server Action attachStatusToLessons
         const updatedSubjects = await Promise.all(
           rawCourse.subjects.map(async (subject) => {
             const updatedModules = await Promise.all(
@@ -103,7 +86,7 @@ export default function CourseLearningPage() {
 
         setCourse(courseWithStatus);
 
-        // Khởi tạo bài học mặc định (Môn 1 -> Module 1 -> Lesson 1)
+        // Khởi tạo bài học mặc định
         const firstSubject = courseWithStatus.subjects[0];
         const firstModule = firstSubject?.modules[0];
         const firstLesson = firstModule?.lessons[0] as LessonWithStatus | undefined;
@@ -117,6 +100,7 @@ export default function CourseLearningPage() {
         }
         if (firstLesson) {
           setCurrentLesson(firstLesson);
+          setActiveTab(firstLesson.is_quiz ? 'quiz' : 'lecture');
         }
       } catch (err: any) {
         setErrorMessage(err.message || 'Không thể lấy dữ liệu khóa học');
@@ -128,9 +112,8 @@ export default function CourseLearningPage() {
     fetchLearningData();
   }, [id]);
 
-  // Phẳng hóa danh sách bài học để phục vụ việc chuyển bài kế tiếp & tính tiến độ
   const flatLessons = useMemo(() => {
-    if (!course) return [] as { subject: SubjectLearningStructure; module: ModuleLearningStructure; lesson: LessonWithStatus }[];
+    if (!course) return [];
     const flat: { subject: SubjectLearningStructure; module: ModuleLearningStructure; lesson: LessonWithStatus }[] = [];
     course.subjects.forEach((subject) => {
       subject.modules.forEach((mod) => {
@@ -140,7 +123,6 @@ export default function CourseLearningPage() {
     return flat;
   }, [course]);
 
-  // Đếm số lượng bài học đã hoàn thành dựa vào status từ API /get-status/{lesson_id}
   const completedCount = flatLessons.filter(
     (f) => f.lesson.status === LessonStatus.COMPLETED
   ).length;
@@ -166,11 +148,17 @@ export default function CourseLearningPage() {
     is_finished: false,
   };
 
+  // Chọn bài học từ sidebar
   const selectLesson = (subject: SubjectLearningStructure, lesson: LessonWithStatus) => {
     if (lesson.status === LessonStatus.LOCKED) return;
     setCurrentSubject(subject);
     setCurrentLesson(lesson);
-    setActiveTab('lecture');
+
+    if (lesson.is_quiz) {
+      setActiveTab('quiz');
+    } else {
+      setActiveTab('lecture');
+    }
   };
 
   const toggleSubject = (subjectId: string) =>
@@ -197,7 +185,36 @@ export default function CourseLearningPage() {
     setNoteDraft('');
   };
 
-  // Màn hình Loading
+  // Trình phát Video hỗ trợ Youtube embed / file MP4
+  const renderVideoPlayer = (url: string) => {
+    if (url.includes('youtube.com') || url.includes('youtu.be')) {
+      const embedUrl = url.includes('embed')
+        ? url
+        : url.replace('watch?v=', 'embed/').replace('youtu.be/', 'youtube.com/embed/');
+
+      return (
+        <div className="relative w-full aspect-video rounded-2xl overflow-hidden bg-black shadow-sm">
+          <iframe
+            src={embedUrl}
+            title={currentLesson?.title}
+            className="w-full h-full border-0"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowFullScreen
+          />
+        </div>
+      );
+    }
+
+    return (
+      <div className="relative w-full aspect-video rounded-2xl overflow-hidden bg-black shadow-sm">
+        <video controls className="w-full h-full object-contain">
+          <source src={url} type="video/mp4" />
+          Trình duyệt của bạn không hỗ trợ xem video trực tiếp.
+        </video>
+      </div>
+    );
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-[#F7F8FB] flex items-center justify-center">
@@ -209,22 +226,16 @@ export default function CourseLearningPage() {
     );
   }
 
-  // Màn hình Error / Chưa đăng ký
   if (errorMessage || !course) {
     return (
       <div className="min-h-screen bg-[#F7F8FB] flex flex-col items-center justify-center p-4">
         <div className="bg-white p-8 rounded-3xl border border-[#ECEAF0] text-center max-w-md shadow-sm space-y-4">
-          <div className="w-12 h-12 bg-[#FDE8E8] text-[#E5484D] rounded-full flex items-center justify-center mx-auto text-lg font-bold">
-            !
-          </div>
+          <div className="w-12 h-12 bg-[#FDE8E8] text-[#E5484D] rounded-full flex items-center justify-center mx-auto text-lg font-bold">!</div>
           <div>
             <h3 className="font-display text-base font-bold text-[#161826]">Không thể truy cập</h3>
             <p className="text-xs text-[#565A70] mt-1.5 leading-relaxed">{errorMessage || 'Khóa học không tồn tại.'}</p>
           </div>
-          <button
-            onClick={() => router.push('/home')}
-            className="w-full py-2.5 bg-[#5B5FEF] text-white rounded-full text-xs font-bold transition-transform hover:scale-[1.02]"
-          >
+          <button onClick={() => router.push('/home')} className="w-full py-2.5 bg-[#5B5FEF] text-white rounded-full text-xs font-bold transition-transform hover:scale-[1.02]">
             Quay về trang chủ
           </button>
         </div>
@@ -234,29 +245,6 @@ export default function CourseLearningPage() {
 
   return (
     <div className="min-h-screen bg-[#F7F8FB] flex flex-col text-[#161826]" style={{ fontFamily: "'Inter', ui-sans-serif, system-ui, sans-serif" }}>
-      <style jsx global>{`
-        @import url('https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700;800&family=Inter:wght@400;500;600;700&display=swap');
-        .font-display { font-family: 'Sora', ui-sans-serif, system-ui, sans-serif; }
-        @keyframes fadeInUp {
-          from { opacity: 0; transform: translateY(8px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-        @keyframes softPulse {
-          0%, 100% { box-shadow: 0 0 0 0 rgba(91,95,239,0.35); }
-          50% { box-shadow: 0 0 0 6px rgba(91,95,239,0); }
-        }
-        .anim-fade-up { animation: fadeInUp 0.4s ease-out both; }
-        .anim-pulse-ring { animation: softPulse 2s ease-in-out infinite; }
-        .accordion-grid {
-          display: grid;
-          transition: grid-template-rows 0.35s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-        .accordion-grid > div { overflow: hidden; }
-        ::-webkit-scrollbar { width: 8px; height: 8px; }
-        ::-webkit-scrollbar-thumb { background: #DEE1EC; border-radius: 999px; }
-        ::-webkit-scrollbar-track { background: transparent; }
-      `}</style>
-
       <Navbar />
 
       {/* Header thanh công cụ lớp học */}
@@ -283,8 +271,6 @@ export default function CourseLearningPage() {
             onClick={() => router.push('/home')}
             className="text-[11px] font-bold px-3.5 py-1.5 rounded-full transition-all duration-200 cursor-pointer"
             style={{ backgroundColor: 'rgba(229,72,77,0.12)', color: '#F17075', border: '1px solid rgba(229,72,77,0.25)' }}
-            onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = '#E5484D'; (e.currentTarget as HTMLButtonElement).style.color = '#fff'; }}
-            onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'rgba(229,72,77,0.12)'; (e.currentTarget as HTMLButtonElement).style.color = '#F17075'; }}
           >
             Rời khỏi lớp học
           </button>
@@ -316,18 +302,12 @@ export default function CourseLearningPage() {
                     <span className="absolute left-0 top-0 bottom-0 w-[3px]" style={{ backgroundColor: accent }} />
                     <div className="space-y-0.5 min-w-0">
                       <span className="text-[9px] font-bold uppercase tracking-wider block" style={{ color: accent }}>
-                        Môn {subIdx + 1}
+                        Môn học {subIdx + 1}
                       </span>
                       <span className="text-xs font-bold text-[#2B2D3D] flex items-center gap-1.5 line-clamp-1">
                         {subject.title}
                       </span>
                     </div>
-                    <span
-                      className="shrink-0 w-4 h-4 flex items-center justify-center transition-transform duration-300"
-                      style={{ transform: subjectExpanded ? 'rotate(90deg)' : 'rotate(0deg)' }}
-                    >
-                      <span className="block w-0 h-0" style={{ borderTop: '4px solid transparent', borderBottom: '4px solid transparent', borderLeft: `5px solid ${accent}` }} />
-                    </span>
                   </button>
 
                   <div className="accordion-grid" style={{ gridTemplateRows: subjectExpanded ? '1fr' : '0fr' }}>
@@ -343,10 +323,7 @@ export default function CourseLearningPage() {
                                 className="w-full text-left px-3.5 py-2.5 flex justify-between items-center transition-colors duration-200 hover:bg-[#FAFAFD] rounded-xl"
                               >
                                 <span className="text-[11px] font-bold text-[#565A70] line-clamp-1">
-                                  {modIdx + 1}. {mod.title}
-                                </span>
-                                <span className="shrink-0 w-3.5 h-3.5 rounded-full border border-[#D8DAE6] flex items-center justify-center transition-transform duration-300" style={{ transform: isExpanded ? 'rotate(45deg)' : 'rotate(0deg)' }}>
-                                  <span className="block w-1.5 h-[1.5px] bg-[#8A8FA3]" />
+                                  Module {modIdx + 1}. {mod.title}
                                 </span>
                               </button>
 
@@ -369,13 +346,9 @@ export default function CourseLearningPage() {
                                         >
                                           <span className="shrink-0 relative w-3.5 h-3.5 flex items-center justify-center">
                                             {isCompleted ? (
-                                              <span className="w-3 h-3 rounded-full flex items-center justify-center text-[8px] text-white font-bold" style={{ backgroundColor: '#12B886' }}>
-                                                ✓
-                                              </span>
+                                              <span className="w-3 h-3 rounded-full flex items-center justify-center text-[8px] text-white font-bold" style={{ backgroundColor: '#12B886' }}>✓</span>
                                             ) : isSelected ? (
                                               <span className="w-3 h-3 rounded-full anim-pulse-ring" style={{ backgroundColor: '#5B5FEF' }} />
-                                            ) : isLocked ? (
-                                              <span className="w-3 h-3 rounded-full border-2 border-[#D8DAE6]" />
                                             ) : (
                                               <span className="w-3 h-3 rounded-full border-2" style={{ borderColor: accent }} />
                                             )}
@@ -390,9 +363,6 @@ export default function CourseLearningPage() {
                                               KT
                                             </span>
                                           )}
-                                          <span className="shrink-0 text-[9px] text-[#B0B3C4] font-bold tabular-nums">
-                                            {lesson.duration_minutes}p
-                                          </span>
                                         </button>
                                       );
                                     })}
@@ -429,109 +399,116 @@ export default function CourseLearningPage() {
               </h1>
             </div>
 
-            {/* Các Tab Nội Dung */}
-            <div className="flex gap-1 relative">
-              {(
-                [
-                  ['lecture', 'Bài giảng'],
-                  ['resources', 'Tài liệu'],
-                  ['notes', `Ghi chú${lessonNotes.length ? ` · ${lessonNotes.length}` : ''}`],
-                  ...(currentLesson?.is_quiz ? [['quiz', 'Bài kiểm tra'] as [TabKey, string]] : []),
-                ] as [TabKey, string][]
-              ).map(([key, label]) => (
-                <button
-                  key={key}
-                  onClick={() => setActiveTab(key)}
-                  className={`relative px-4 py-2.5 text-xs font-bold transition-colors duration-200 ${activeTab === key ? 'text-[#161826]' : 'text-[#B0B3C4] hover:text-[#565A70]'}`}
-                >
-                  {label}
-                  <span
-                    className="absolute left-4 right-4 -bottom-px h-[2px] rounded-full transition-all duration-300"
-                    style={{
-                      backgroundColor: activeTab === key ? '#5B5FEF' : 'transparent',
-                      transform: activeTab === key ? 'scaleX(1)' : 'scaleX(0)',
-                    }}
-                  />
-                </button>
-              ))}
-              <span className="absolute left-0 right-0 bottom-0 h-px bg-[#ECEAF0]" />
-            </div>
+            {/* THANH MỤC / TAB (Ẩn nếu bài học là Quiz) */}
+            {!currentLesson?.is_quiz && (
+              <div className="flex gap-1 relative">
+                {(
+                  [
+                    ['lecture', 'Bài giảng'],
+                    ['resources', 'Tài liệu'],
+                    ['notes', `Ghi chú${lessonNotes.length ? ` · ${lessonNotes.length}` : ''}`],
+                  ] as [TabKey, string][]
+                ).map(([key, label]) => (
+                  <button
+                    key={key}
+                    onClick={() => setActiveTab(key)}
+                    className={`relative px-4 py-2.5 text-xs font-bold transition-colors duration-200 ${activeTab === key ? 'text-[#161826]' : 'text-[#B0B3C4] hover:text-[#565A70]'}`}
+                  >
+                    {label}
+                    <span
+                      className="absolute left-4 right-4 -bottom-px h-[2px] rounded-full transition-all duration-300"
+                      style={{
+                        backgroundColor: activeTab === key ? '#5B5FEF' : 'transparent',
+                        transform: activeTab === key ? 'scaleX(1)' : 'scaleX(0)',
+                      }}
+                    />
+                  </button>
+                ))}
+                <span className="absolute left-0 right-0 bottom-0 h-px bg-[#ECEAF0]" />
+              </div>
+            )}
 
             {/* TAB BÀI GIẢNG */}
-            {activeTab === 'lecture' && (
+            {activeTab === 'lecture' && !currentLesson?.is_quiz && (
               <div key="lecture" className="anim-fade-up space-y-6 pb-10">
                 {currentLesson ? (
-                  <VideoTracking
-                    progressData={currentVideoProgress}
-                    onProgressUpdate={handleProgressUpdate}
-                  />
+                  <>
+                    {/* 1. HIỂN THỊ VIDEO */}
+                    {currentLesson.video_url && currentLesson.video_url.trim() !== '' ? (
+                      renderVideoPlayer(currentLesson.video_url)
+                    ) : currentLesson.duration_minutes > 0 ? (
+                      /* Nếu có duration_minutes > 0 nhưng chưa có video_url cụ thể thì dùng VideoTracking */
+                      <VideoTracking
+                        progressData={currentVideoProgress}
+                        onProgressUpdate={handleProgressUpdate}
+                      />
+                    ) : null}
+
+                    {/* 2. HIỂN THỊ NỘI DUNG VĂN BẢN (content_body) */}
+                    {currentLesson.content_body && currentLesson.content_body.trim() !== '' ? (
+                      <div className="bg-white border border-[#ECEAF0] rounded-2xl p-6 space-y-4 shadow-sm">
+                        <div className="flex items-center gap-2 text-[#5B5FEF] font-bold text-xs uppercase tracking-wider">
+                          <span>📖 Nội dung bài học</span>
+                        </div>
+                        <div
+                          className="prose prose-sm max-w-none text-[#3E4054] leading-relaxed"
+                          dangerouslySetInnerHTML={{ __html: currentLesson.content_body }}
+                        />
+                      </div>
+                    ) : (
+                      !currentLesson.video_url && currentLesson.duration_minutes === 0 && (
+                        <div className="bg-white border border-[#ECEAF0] rounded-2xl p-6 text-center text-xs text-[#8A8FA3]">
+                          Bài học này hiện chưa có nội dung chi tiết.
+                        </div>
+                      )
+                    )}
+                  </>
                 ) : (
-                  <div
-                    className="w-full aspect-video rounded-[28px] flex flex-col items-center justify-center relative overflow-hidden"
-                    style={{ background: 'linear-gradient(135deg, #1B1E33 0%, #12141C 55%, #1E1440 100%)' }}
-                  >
-                    <div className="z-10 text-center space-y-4">
-                      <p className="text-xs font-bold text-white/85 tracking-wide">Vui lòng chọn một bài học</p>
-                    </div>
+                  <div className="w-full aspect-video rounded-[28px] flex flex-col items-center justify-center bg-[#12141C] text-white">
+                    <p className="text-xs font-bold text-white/85">Vui lòng chọn một bài học</p>
                   </div>
                 )}
               </div>
             )}
 
             {/* TAB TÀI LIỆU */}
-            {activeTab === 'resources' && (
+            {activeTab === 'resources' && !currentLesson?.is_quiz && (
               <div key="resources" className="anim-fade-up space-y-2 pb-10">
                 <p className="text-xs text-[#B0B3C4] font-medium py-8 text-center">Bài học này chưa có tài liệu đính kèm.</p>
               </div>
             )}
 
             {/* TAB GHI CHÚ */}
-            {activeTab === 'notes' && (
+            {activeTab === 'notes' && !currentLesson?.is_quiz && (
               <div key="notes" className="anim-fade-up space-y-5 pb-10">
                 <div className="flex gap-2">
                   <input
                     value={noteDraft}
                     onChange={(e) => setNoteDraft(e.target.value)}
                     placeholder="Viết ghi chú cho bài học này..."
-                    className="flex-1 text-xs bg-white border border-[#E7E9F0] rounded-full px-4 py-3 focus:outline-none focus:border-[#5B5FEF] transition-colors duration-200"
+                    className="flex-1 text-xs bg-white border border-[#E7E9F0] rounded-full px-4 py-3 focus:outline-none focus:border-[#5B5FEF]"
                     onKeyDown={(e) => e.key === 'Enter' && addNote()}
                   />
-                  <button onClick={addNote} className="text-white text-xs font-bold px-5 rounded-full transition-transform duration-200 hover:scale-[1.03]" style={{ background: 'linear-gradient(135deg, #6C6FF2, #4A4DDB)' }}>Lưu</button>
+                  <button onClick={addNote} className="text-white text-xs font-bold px-5 rounded-full bg-[#5B5FEF]">Lưu</button>
                 </div>
-
-                {lessonNotes.length ? (
-                  <div className="relative pl-5 space-y-4">
-                    <span className="absolute left-[5px] top-1.5 bottom-1.5 w-px bg-[#ECEAF0]" />
-                    {lessonNotes.map((note) => (
-                      <div key={note.noteId} className="relative">
-                        <span className="absolute -left-5 top-1.5 w-2.5 h-2.5 rounded-full ring-4 ring-[#F7F8FB]" style={{ backgroundColor: '#5B5FEF' }} />
-                        <div className="bg-white border border-[#ECEAF0] rounded-2xl px-4 py-3">
-                          <span className="text-[9px] font-bold text-[#5B5FEF] block mb-1 tabular-nums">
-                            {Math.floor(note.timestampSeconds / 60)}:{String(note.timestampSeconds % 60).padStart(2, '0')}
-                          </span>
-                          <p className="text-xs text-[#3E4054]">{note.content}</p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-xs text-[#B0B3C4] font-medium py-8 text-center">Bạn chưa có ghi chú nào.</p>
-                )}
               </div>
             )}
 
-            {/* TAB BÀI KIỂM TRA */}
-            {activeTab === 'quiz' && currentLesson?.is_quiz && (
+            {/* BÀI KIỂM TRA (Tự động hiển thị khi chọn bài quiz) */}
+            {(activeTab === 'quiz' || currentLesson?.is_quiz) && (
               <div key="quiz" className="anim-fade-up space-y-7 pb-10">
                 <div className="bg-white border border-[#ECEAF0] rounded-2xl p-6">
                   <div className="flex items-start justify-between">
                     <div>
-                      <h3 className="font-display text-lg font-bold text-[#161826]">{currentLesson.title}</h3>
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#FDF3DA] text-[#9A6B00] mb-2 inline-block">
+                        Bài kiểm tra đánh giá
+                      </span>
+                      <h3 className="font-display text-lg font-bold text-[#161826]">{currentLesson?.title}</h3>
                       <p className="text-[11px] text-[#565A70] mt-1">Hoàn thành bài kiểm tra để đánh giá kiến thức đã học.</p>
                     </div>
                   </div>
 
-                  <button className="mt-6 text-white text-xs font-bold py-3 px-6 rounded-full w-full transition-transform duration-200 hover:scale-[1.01]" style={{ background: 'linear-gradient(135deg, #6C6FF2, #4A4DDB)' }}>
+                  <button className="mt-6 text-white text-xs font-bold py-3 px-6 rounded-full w-full bg-[#5B5FEF] transition-transform hover:scale-[1.01]">
                     Bắt đầu làm bài
                   </button>
                 </div>
