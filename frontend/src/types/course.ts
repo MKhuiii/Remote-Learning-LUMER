@@ -1,3 +1,6 @@
+import { Subject, SubjectLearningStructure } from "./subjects";
+import { CourseStatus } from "./statuses";
+
 export interface Lesson {
   lesson_id: string;
   module_id: string;
@@ -15,19 +18,17 @@ export interface Module {
 }
 
 export interface Course {
-  course_id: string;
-  curriculum_id: string;
-  instructor_id: string;
+  courseId: string;
+  curriculumId: string;
   title: string;
-  course_type: string;
-  description: string | null;
+  courseType: CourseType;
+  description?: string;
   price: number;
-  image_url: string | null;
-  created_at?: string;
-  status_id: string;
-  assigner_id?: string;
-  modules?: Module[];
+  statusId: CourseStatus;
+  totalLessons: number;
+  subjects: Subject[];
 }
+
 
 export interface CurriculumCreatePayload {
   curriculum_name: string;
@@ -105,4 +106,9 @@ export interface CourseEnrollmentResponse {
   user_id: string;
   course_id: string;
   created_at?: string;
+}
+
+export interface CourseLearningStructure {
+  title: string;
+  subjects: SubjectLearningStructure[];
 }

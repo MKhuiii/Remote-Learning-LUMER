@@ -15,5 +15,5 @@ class Module(SQLModel, table=True):
 
     # Quan hệ
     # Một module thuộc về một môn học
-    subject: Optional["Subject"] = Relationship(back_populates="module")
+    subject: Optional["Subject"] = Relationship(back_populates="modules")
     lessons: List["Lesson"] = Relationship(back_populates="module")

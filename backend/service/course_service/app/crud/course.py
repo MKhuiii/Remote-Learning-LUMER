@@ -183,4 +183,19 @@ class CRUDCourse(CRUDBase[Course, CourseCreate, CourseUpdate, UUID]):
             )
         )
         return db.exec(statement).first()
+    def get_learning_structure(self, db: Session, course_id: UUID) -> Optional[Course]:
+        """
+        Truy vấn cây cấu trúc học tập của Khóa học (Course -> Subject -> Module -> Lesson).
+        Tối ưu hóa bằng Eager Loading (selectinload) để tránh N+1 Query Problem.
+        """
+        statement = (
+            select(Course)
+            .where(Course.course_id == course_id)
+            .options(
+                selectinload(Course.subjects)
+                .selectinload(Subject.modules)  
+                .selectinload(Module.lessons)
+            )
+        )
+        return db.scalar(statement)
 crud_course = CRUDCourse(Course)

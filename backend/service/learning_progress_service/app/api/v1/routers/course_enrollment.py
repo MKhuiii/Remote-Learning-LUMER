@@ -224,4 +224,12 @@ def get_top_enrolled_courses(session: SessionDep):
     """
     data = crud_course_enrollment.get_top_5_course_ids(session)
     return {"success": True, "data": data}
-    
+
+@router.get("/is-enrolled/{course_id}", response_model=bool)
+def is_enrolled_course(
+    db: SessionDep,
+    course_id: UUID,
+    current_user: dict = Depends(get_current_user_role)
+):
+    user_id = current_user["user_id"]
+    return crud_course_enrollment.check_already_enrolled(db, user_id, course_id)

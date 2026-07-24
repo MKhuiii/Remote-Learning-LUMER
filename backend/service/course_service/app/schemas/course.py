@@ -2,7 +2,7 @@ from datetime import date
 from typing import Optional, List
 from uuid import UUID
 from app.schemas.enums import CourseType
-from app.schemas.subject import SubjectPreview
+from app.schemas.subject import SubjectPreview, SubjectLearningStructure
 from pydantic import BaseModel
 
 
@@ -73,3 +73,7 @@ class CoursePreview(BaseModel):
     instructor_list: List[str]
     course_structure: List[SubjectPreview]
     tag_list: List[str]
+
+class CourseLearningStructure(BaseModel):
+    title: str
+    subjects: List[SubjectLearningStructure]

@@ -36,3 +36,7 @@ class LessonProgressResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+class LessonStatusResponse(BaseModel):
+    lesson_id: str
+    status: Optional[LessonStatus] = LessonStatus.LOCKED

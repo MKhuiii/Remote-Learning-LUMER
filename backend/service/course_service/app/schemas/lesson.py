@@ -11,6 +11,7 @@ class LessonCreate(BaseModel):
     duration_minutes: int | None = None
     order_index: int
     is_optional: bool | None = None
+    is_quiz: bool | None = None
 
 class LessonUpdate(BaseModel):
     title: str | None = None
@@ -19,3 +20,10 @@ class LessonUpdate(BaseModel):
     content_body: str | None = None
     order_index: int | None = None
     is_optional: bool | None = None
+
+class LessonLearningStructure(BaseModel):
+    title: str
+    lesson_id: UUID
+    duration_minutes: int = 0 # Nếu thời gian bằng 0 nghĩa là bài giảng ko có video
+    is_optional: bool
+    is_quiz: bool 

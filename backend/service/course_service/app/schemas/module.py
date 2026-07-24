@@ -1,6 +1,7 @@
 from pydantic import BaseModel
 from uuid import UUID
-from typing import Optional
+from typing import Optional, List
+from app.schemas.lesson import LessonLearningStructure
 
 class ModuleBase(BaseModel):
     title: str
@@ -19,3 +20,8 @@ class ModuleRead(ModuleBase):
 
 class ModulePreview(BaseModel):
     title: str
+
+class ModuleLearningStructure(BaseModel):
+    title: str
+    module_id: UUID
+    lessons: List[LessonLearningStructure]

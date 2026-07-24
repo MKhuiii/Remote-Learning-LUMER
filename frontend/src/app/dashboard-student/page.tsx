@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import Navbar from "@/components/Navbar";
 import { fetchCurrentUser, fetchUserProfile, updateUserData, updateUserProfile } from "@/actions/getUser";
 import { fetchUserStatistics, fetchInprogressCourses, fetchCompletedCourses } from "@/actions/getEnrollment";
@@ -18,6 +19,7 @@ const ROLE_TRANSLATIONS: Record<string, string> = {
 };
 
 export default function DashboardPage() {
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState("learning");
   const [user, setUser] = useState<UserDataInfo | null>(null);
   const [profile, setProfile] = useState<ProfileInfo | null>(null);
@@ -32,7 +34,7 @@ export default function DashboardPage() {
   const [learningCourses, setLearningCourses] = useState<CourseInProgress[]>([]);
   const [completedCourses, setCompletedCourses] = useState<CourseInProgress[]>([]);
 
-  // 2. State lưu danh sách chứng chỉ thật từ API
+  // State lưu danh sách chứng chỉ thật từ API
   const [certificates, setCertificates] = useState<CertificateItem[]>([]);
 
   const [isEditing, setIsEditing] = useState<boolean>(false);
@@ -52,7 +54,6 @@ export default function DashboardPage() {
       setLoading(true);
       setError(null);
 
-      // 3. Đưa fetchUserCertificates vào Promise.all để chạy song song tối ưu hóa hiệu năng
       const [
         userData,
         profileData,
@@ -74,7 +75,7 @@ export default function DashboardPage() {
       setStatistics(statsData);
       setLearningCourses(inprogressData);
       setCompletedCourses(completedData);
-      setCertificates(certificatesData); // Cập nhật danh sách chứng chỉ thật
+      setCertificates(certificatesData);
 
       if (userData && profileData) {
         setFormData({
@@ -104,6 +105,11 @@ export default function DashboardPage() {
       ...prev,
       [name]: value
     }));
+  };
+
+  // Hàm chuyển trang sang chi tiết khóa học khi bấm Tiếp tục học
+  const handleContinueLearning = (courseId: string | number) => {
+    router.push(`/course/${courseId}`);
   };
 
   const handleFormSubmit = async (e: React.FormEvent) => {
@@ -229,8 +235,8 @@ export default function DashboardPage() {
                   key={tab}
                   onClick={() => setActiveTab(tab)}
                   className={`pb-3 font-medium transition ${activeTab === tab
-                    ? "border-b-2 border-[#0056D2] text-[#0056D2]"
-                    : "text-slate-500 hover:text-[#0056D2]"
+                      ? "border-b-2 border-[#0056D2] text-[#0056D2]"
+                      : "text-slate-500 hover:text-[#0056D2]"
                     }`}
                 >
                   {tabLabels[tab]}
@@ -253,9 +259,11 @@ export default function DashboardPage() {
                 {learningCourses.length > 0 ? (
                   learningCourses.map((course, index) => (
                     <CourseProgressCard
-                      key={index}
+                      key={course.course_id || index}
+                      courseId={course.course_id}
                       title={course.course_title}
                       progress={course.current_overall_progress}
+                      onContinue={handleContinueLearning}
                     />
                   ))
                 ) : (
@@ -284,7 +292,7 @@ export default function DashboardPage() {
             </div>
           )}
 
-          {/* TAB: CHỨNG CHỈ (Thay bằng dữ liệu thật từ API) */}
+          {/* TAB: CHỨNG CHỈ */}
           {activeTab === "certificate" && (
             <div className="bg-white rounded-2xl border border-slate-200 p-6">
               <h2 className="text-2xl font-bold text-slate-900 mb-6">Chứng chỉ đã đạt được</h2>
@@ -493,7 +501,7 @@ export default function DashboardPage() {
   );
 }
 
-// Các sub-component phụ trợ
+// Sub-components
 function StatCard({ title, text }: { title: string; text: string }) {
   return (
     <div className="bg-white rounded-2xl border border-slate-200 p-6 text-center hover:shadow-md transition">
@@ -503,7 +511,14 @@ function StatCard({ title, text }: { title: string; text: string }) {
   );
 }
 
-function CourseProgressCard({ title, progress }: { title: string; progress: number }) {
+interface CourseProgressCardProps {
+  courseId: string | number;
+  title: string;
+  progress: number;
+  onContinue: (id: string | number) => void;
+}
+
+function CourseProgressCard({ title, progress, courseId, onContinue }: CourseProgressCardProps) {
   return (
     <div className="border border-slate-200 rounded-xl p-5">
       <div className="flex justify-between mb-3">
@@ -511,9 +526,16 @@ function CourseProgressCard({ title, progress }: { title: string; progress: numb
         <span className="font-semibold text-[#0056D2]">{progress}%</span>
       </div>
       <div className="w-full bg-slate-100 h-2 rounded-full">
-        <div className="bg-[#0056D2] h-2 rounded-full" style={{ width: `${progress}%` }} />
+        <div
+          className="bg-[#0056D2] h-2 rounded-full transition-all duration-300"
+          style={{ width: `${progress}%` }}
+        />
       </div>
-      <button className="mt-4 bg-[#0056D2] hover:bg-[#0046AE] text-white px-5 py-2 rounded-md font-medium transition">
+      <button
+        type="button"
+        className="mt-4 bg-[#0056D2] hover:bg-[#0046AE] text-white px-5 py-2 rounded-md font-medium transition cursor-pointer"
+        onClick={() => onContinue(courseId)}
+      >
         Tiếp tục học
       </button>
     </div>

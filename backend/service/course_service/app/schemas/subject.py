@@ -1,7 +1,7 @@
 from pydantic import BaseModel
 from uuid import UUID
 from typing import Optional, List
-from app.schemas.module import ModulePreview
+from app.schemas.module import ModulePreview, ModuleLearningStructure
 
 class SubjectBase(BaseModel):
     title: str
@@ -52,3 +52,8 @@ class SubjectRead(BaseModel):
 
     class Config:
         from_attributes = True
+
+class SubjectLearningStructure(BaseModel):
+    title: str
+    subject_id: UUID
+    modules: List[ModuleLearningStructure]

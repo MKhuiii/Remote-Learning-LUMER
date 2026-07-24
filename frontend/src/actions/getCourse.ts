@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { cookies } from "next/headers";
 import { Course } from "@/types/course";
-import { GeneralCourseInfo, CoursePreview, CourseType, CourseSearchParams, CourseSearchPaginatedResponse, FeaturedCoursesResponse, CourseEnrollmentResponse } from "@/types/course";
+import { GeneralCourseInfo, CoursePreview, CourseType, CourseSearchParams, CourseSearchPaginatedResponse, FeaturedCoursesResponse, CourseEnrollmentResponse, CourseLearningStructure } from "@/types/course";
 
 // const BACKEND_URL = process.env.NEXT_PUBLIC_COURSE_BACKEND_URL || "http://localhost:8001";
 const BACKEND_URL = process.env.NEXT_PUBLIC_COURSE_BACKEND_URL;
@@ -359,4 +359,51 @@ export async function enrollCourseAction(courseId: string) {
       message: error?.message || "Lỗi kết nối máy chủ, vui lòng thử lại sau.",
     };
   }
+}
+
+export async function getLearningCourse(courseId: string): Promise<CourseLearningStructure> {
+  // 1. Lấy token từ Server Cookie
+  const token = await getServerToken();
+
+  // 2. Gọi API sang Backend FastAPI
+  const response = await fetch(`${BACKEND_URL}/courses/get-learning-course/${courseId}`, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    cache: 'no-store',
+  });
+
+  // 3. Xử lý phản hồi lỗi từ Backend
+  if (!response.ok) {
+    let errorMessage = 'Đã có lỗi xảy ra khi tải dữ liệu khóa học.';
+
+    try {
+      const errorData = await response.json();
+      if (errorData?.detail) {
+        errorMessage = typeof errorData.detail === 'string'
+          ? errorData.detail
+          : JSON.stringify(errorData.detail);
+      }
+    } catch {
+      // Giữ nguyên errorMessage mặc định nếu không parse được JSON
+    }
+
+    if (response.status === 401) {
+      throw new Error('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại!');
+    }
+    if (response.status === 403) {
+      throw new Error(errorMessage || 'Bạn chưa đăng ký khóa học này.');
+    }
+    if (response.status === 404) {
+      throw new Error('Khóa học không tồn tại.');
+    }
+
+    throw new Error(errorMessage);
+  }
+
+  // 4. Trả về kết quả
+  const data: CourseLearningStructure = await response.json();
+  return data;
 }

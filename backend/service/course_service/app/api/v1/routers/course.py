@@ -5,12 +5,12 @@ from typing import Optional, Any, Dict, List
 from app.api.v1.deps import SessionDep
 from app.schemas.course import CourseSearchPaginatedResponse
 from app.schemas.enums import CourseType
-from app.core.security import RoleChecker, get_current_user_role
+from app.core.security import RoleChecker, get_current_user_role, oauth2_scheme
 from app.crud.course import crud_course
 from app.crud.course_media import crud_course_media
 from app.schemas.subject import SubjectPreview
 from app.schemas.module import ModulePreview
-from app.schemas.course import CourseCreate, CourseImageUploadResponse, CourseRead, CourseUpdate, CourseLessonsResponse, CoursePreview
+from app.schemas.course import CourseCreate, CourseImageUploadResponse, CourseRead, CourseUpdate, CourseLessonsResponse, CoursePreview, CourseLearningStructure
 from app.core.config import settings
 import httpx
 
@@ -307,4 +307,62 @@ def get_course_total_lessons(db: SessionDep, course_id: UUID):
         raise HTTPException(status_code=404, detail="Khóa học không tồn tại.")
     return crud_course.get_total_lessons(db, course_id=course_id)
 
+LEARNING_PROGRESS_SERVICE = settings.BACKEND_LEARNING_PROGRESS_URL
 
+@router.get("/get-learning-course/{course_id}", response_model=CourseLearningStructure)
+async def get_learning_course(
+    course_id: UUID,
+    db: SessionDep,
+    current_user: dict = Depends(get_current_user_role),
+    token: str = Depends(oauth2_scheme) 
+):
+    async with httpx.AsyncClient() as client:
+        try:
+            # Truyền token vào Header
+            headers = {"Authorization": f"Bearer {token}"}
+            
+            response = await client.get(
+                f"{LEARNING_PROGRESS_SERVICE}/course_enrollment/is-enrolled/{course_id}",
+                headers=headers,
+                timeout=5.0
+            )
+            
+            if response.status_code == 401:
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Xác thực không thành công tại Enrollment Service (Token không hợp lệ hoặc hết hạn)"
+                )
+            elif response.status_code != 200:
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail="Không thể xác thực thông tin đăng ký từ Enrollment Service"
+                )
+                
+            is_enrolled = response.json()
+
+        except httpx.RequestError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail=f"Lỗi kết nối tới Enrollment Service: {exc}"
+            )
+        # 2. Nếu chưa đăng ký -> Từ chối quyền truy cập
+    if not is_enrolled:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Bạn chưa đăng ký khóa học này. Vui lòng đăng ký để truy cập bài học."
+        )
+
+    # 3. Đã đăng ký -> Truy vấn cây bài học qua CRUD
+    course = crud_course.get_learning_structure(db=db, course_id=course_id)
+    
+    if not course:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, 
+            detail="Không tìm thấy khóa học"
+        )
+
+    # FastAPI/Pydantic sẽ tự động ép kiểu dữ liệu từ ORM model `course` 
+    # sang đúng cấu trúc của `CourseLearningStructure`
+    return course
+        
+    

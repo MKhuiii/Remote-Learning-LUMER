@@ -12,6 +12,11 @@ class CRUDLesson(CRUDBase[Lesson, LessonCreate, LessonUpdate, UUID]):
     def create(self, db: Session, obj_in: LessonCreate) -> Lesson:
         
         db_obj = self.model.model_validate(obj_in)
+        
+        # 1. Logic nghiệp vụ: Nếu là bài thi/kiểm tra thì bắt buộc không được tự chọn
+        if db_obj.is_quiz:
+            db_obj.is_optional = False
+
         db.add(db_obj)
         db.flush()  # Đẩy dữ liệu xuống DB tạm thời để lấy ID nếu cần, chưa commit
 

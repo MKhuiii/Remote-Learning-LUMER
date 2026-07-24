@@ -34,4 +34,4 @@ class Subject(SQLModel, table=True):
     # Một môn học có một đề cương môn học
     syllabus: Optional["Syllabus"] = Relationship(back_populates="subject")
     # Một môn học có 1 hoặc nhiều module
-    module: List["Module"] = Relationship(back_populates="subject")
+    modules: List["Module"] = Relationship(back_populates="subject")

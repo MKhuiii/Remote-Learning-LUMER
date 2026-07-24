@@ -18,7 +18,7 @@ class CRUDLessonProgress(CRUDBase[LessonProgress, LessonProgressCreate, LessonPr
         )
         return db.exec(statement).first()
 
-    # Lấy toàn bộ tiến độ các bài học trong một     của học viên
+    # Lấy toàn bộ tiến độ các bài học trong một của học viên
     def get_by_course(self, db: Session, user_id: UUID, course_id: UUID) -> list[LessonProgress]:
         statement = select(self.model).where(
             self.model.user_id == user_id,
@@ -120,5 +120,10 @@ class CRUDLessonProgress(CRUDBase[LessonProgress, LessonProgressCreate, LessonPr
             db.refresh(current_progress)
         return current_progress
     
+    def get_lesson_progress_status(self, db: Session, lesson_id: UUID) -> LessonStatus:
+        statement = select(LessonProgress.status).where(
+            LessonProgress.lesson_id == lesson_id
+        )
+        return db.exec(statement).first()
     
 crud_lesson_progress = CRUDLessonProgress(LessonProgress)

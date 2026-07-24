@@ -30,6 +30,9 @@ class Lesson(SQLModel, table=True):
     # Bài học này là bắt buộc hay tự chọn
     is_optional: bool = Field(default=False, nullable=False)
 
+    # Có phải là bài thi/kiểm tra không
+    is_quiz: bool = Field(default=False, nullable=False)
+
     # Quan hệ
     module: Optional["Module"] = Relationship(back_populates="lessons")
     

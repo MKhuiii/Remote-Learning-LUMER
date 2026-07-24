@@ -94,3 +94,18 @@ async def complete_lesson(
                 is_completed=is_completed
             )
     return updated_progress
+
+@router.get("/get-status/{lesson_id}", response_model=LessonStatus) 
+async def get_lesson_progress_status(
+    lesson_id: str,
+    db: SessionDep,
+    current_user = Depends(get_current_user_role)
+):
+    # Lấy status từ DB hoặc CRUD service
+    status = crud_lesson_progress.get_lesson_progress_status(db, lesson_id=lesson_id)
+    
+    # NẾU STATUS LÀ NONE (Chưa có record tiến độ) -> Trả về status mặc định
+    if status is None:
+        return "LOCKED"  # Hoặc "UNLOCKED" / "IN_PROGRESS" tùy thuộc bài học đầu hay bài tiếp theo
+        
+    return status
